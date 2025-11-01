@@ -201,13 +201,16 @@ export class ArweaveClient {
       });
       return result.id; // Arweave transaction ID
     } catch (error: any) {
-      // Enhanced error handling for credit/payment failures
+      // Error handling for upload failures
+      // Note: Turbo provides free uploads for files <100KB, so typical agent
+      // registrations (1-10KB) and feedback (<1KB) won't require credits
       if (error.message?.includes('credit') ||
           error.message?.includes('balance') ||
           error.message?.includes('insufficient')) {
         throw new Error(
-          'Insufficient Turbo credits for Arweave upload. ' +
-          'Please top up at https://turbo.ardrive.io. ' +
+          'Turbo upload failed due to service limits. ' +
+          'Files under 100KB are typically free. ' +
+          'For larger files or high volume, visit https://turbo.ardrive.io. ' +
           `Details: ${error.message}`
         );
       }
@@ -716,7 +719,7 @@ describe('ArweaveClient - Unit Tests', () => {
 });
 ```
 
-**7.3 Integration Tests** (optional, requires credits)
+**7.3 Integration Tests**
 
 **New file**: `tests/registration-arweave.test.ts`
 
@@ -727,13 +730,6 @@ import { CHAIN_ID, RPC_URL, AGENT_PRIVATE_KEY } from './config';
 describe('Agent Registration with Arweave', () => {
   let sdk: SDK;
   let agentId: string;
-
-  beforeAll(() => {
-    // Skip if no credits available
-    if (!process.env.ARWEAVE_INTEGRATION_TESTS) {
-      test.skip('Arweave integration tests require ARWEAVE_INTEGRATION_TESTS=true');
-    }
-  });
 
   it('should register new agent with Arweave storage', async () => {
     sdk = new SDK({
@@ -786,9 +782,10 @@ describe('Agent Registration with Arweave', () => {
 
 Run tests:
 ```bash
-npm test                                    # Unit tests (always)
-ARWEAVE_INTEGRATION_TESTS=true npm test   # Integration tests (manual)
+npm test   # All tests including integration (agent files are <100KB, no cost)
 ```
+
+**Note**: Agent registration files are typically 1-4KB, well under Turbo's 100KB free tier. Integration tests can run in CI without cost concerns.
 
 ---
 
@@ -802,13 +799,6 @@ Add new section after IPFS documentation:
 ## Arweave Permanent Storage via AR.IO Network
 
 Agent0 SDK supports permanent Arweave storage using ArDrive Turbo SDK for uploads and AR.IO Network for resilient data retrieval.
-
-### Features
-
-- ✅ **Permanent, immutable storage** - Pay once, store forever on Arweave
-- ✅ **Immediate availability** - Data accessible instantly via Turbo's optimistic caching
-- ✅ **Resilient retrieval** - Wayfinder routes to healthy AR.IO gateways automatically
-- ✅ **No recurring fees** - One-time payment, no ongoing pinning costs
 
 ### Configuration
 
@@ -824,21 +814,13 @@ const sdk = new SDK({
 });
 ```
 
-### Getting Turbo Credits
-
-Turbo SDK requires credits for permanent Arweave uploads:
-
-1. Visit [turbo.ardrive.io](https://turbo.ardrive.io)
-2. Top up with ETH, MATIC, SOL, or other supported tokens
-3. Credits are used for permanent Arweave storage (pay once, store forever)
-
 ### Usage Example
 
 ```typescript
 // Create agent
 const agent = sdk.createAgent(
   'My AI Agent',
-  'Permanent agent with Arweave storage'
+  'Agent with permanent Arweave storage'
 );
 
 // Configure endpoints
@@ -854,21 +836,30 @@ const reloaded = await sdk.loadAgent(registration.agentId!);
 console.log('Retrieved:', reloaded.name);
 ```
 
-### How It Works
+### Storage Characteristics
 
-1. **Upload**: Turbo SDK uploads data to Arweave and returns transaction ID
-2. **Immediate Cache**: Data optimistically cached on arweave.net for instant access
-3. **Background Settlement**: Data settles to Arweave network (transparent, ~2-5 min)
-4. **Resilient Retrieval**: Wayfinder routes to healthy AR.IO gateways (prefers arweave.net)
+**Data Availability:**
+1. **Upload**: Turbo SDK uploads to Arweave, returns transaction ID
+2. **Immediate Cache**: Data cached on arweave.net for instant access
+3. **Background Settlement**: Data settles to Arweave network (~2-5 min, transparent)
+4. **Retrieval**: Wayfinder routes to available AR.IO gateways
 
-### IPFS vs Arweave Comparison
+**File Sizes:**
+- Agent registrations: 1-4 KB (typical), up to ~10 KB (large MCP servers)
+- Feedback files: 0.5-1 KB (typical)
+- Turbo provides free uploads for files <100 KB (covers typical agent use cases)
 
-| Feature | IPFS (Pinata/Filecoin) | Arweave (via Turbo) |
-|---------|----------------------|---------------------|
-| **Storage Model** | Pinning service | Permanent blockchain |
-| **Cost Model** | Recurring fees | One-time payment |
-| **Availability** | Depends on pinning | Immediate via cache |
-| **Permanence** | Requires active pinning | Guaranteed permanent |
+**For Large Files or High Volume:**
+Credits can be purchased at [turbo.ardrive.io](https://turbo.ardrive.io) with ETH, MATIC, SOL, or other supported tokens.
+
+### Storage Model Comparison
+
+| Aspect | IPFS | Arweave |
+|--------|------|---------|
+| **Permanence** | Requires active pinning | Native to protocol |
+| **Cost Structure** | Recurring (pinning service) | Per-upload (under 100KB free via Turbo) |
+| **Retrieval** | Gateway-dependent | AR.IO Network routing |
+| **Mutability** | Content-addressed (immutable) | Transaction-based (immutable) |
 | **Registration Method** | `registerIPFS()` | `registerArweave()` |
 | **URI Format** | `ipfs://{cid}` | `ar://{txId}` |
 ```
@@ -918,6 +909,23 @@ Turbo SDK provides immediate data availability:
 - Uploads cached optimistically on arweave.net with final TxID
 - Background settlement to Arweave (transparent, ~2-5 minutes)
 - No waiting required - data accessible immediately after upload
+
+### File Size Characteristics
+
+**Typical agent registration files:**
+- Basic agent (name, description, 2-3 endpoints): ~1 KB
+- Agent with MCP tools (10-20 tools): ~1-2 KB
+- Large MCP server (50+ tools): ~3-4 KB
+- Maximum realistic size (100+ tools, extensive metadata): ~10 KB
+
+**Feedback files:**
+- Basic feedback (score + tags): ~0.3-0.5 KB
+- Rich feedback (with context, proof of payment): ~0.5-1 KB
+
+**Cost Implications:**
+- Turbo SDK provides free uploads for files <100 KB
+- Agent registrations and feedback are typically well under this limit
+- Credits only needed for edge cases (files >100 KB) or high volume operations
 ```
 
 **8.3 Add JSDoc Comments**
