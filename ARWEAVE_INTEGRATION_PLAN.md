@@ -4,6 +4,8 @@
 
 Add Arweave permanent storage to Agent0 SDK via separate `ArweaveClient` class, using ArDrive Turbo SDK for uploads and parallel gateway fallback for resilient retrieval. Zero breaking changes, immediate data availability, production-ready resilience with architectural consistency to IPFS implementation.
 
+**Subgraph Support**: The Graph natively supports Arweave file data sources (since v0.33.0). Full searchability of ar:// agents is achievable via straightforward subgraph update in separate repository (planned for future release after SDK ships).
+
 ---
 
 ## Core Principles
@@ -931,6 +933,39 @@ Turbo SDK provides immediate data availability:
 - Turbo SDK provides free uploads for files <100 KB
 - Agent registrations and feedback are typically well under this limit
 - Credits only needed for edge cases (files >100 KB) or high volume operations
+
+### Subgraph Integration Path
+
+**Current Status**: SDK supports ar:// URIs. Subgraph support planned for separate release.
+
+**The Graph Native Support**: The Graph has built-in support for Arweave file data sources since version 0.33.0, making full searchability achievable with straightforward subgraph updates.
+
+**Required Implementation** (in separate `../subgraph/` repository):
+
+1. **Add Arweave File Data Source Template** to `subgraph.yaml`:
+   ```yaml
+   templates:
+     - name: ArweaveRegistrationFile
+       kind: file/arweave  # Native support in The Graph
+       mapping:
+         handler: handleArweaveRegistrationFile
+   ```
+
+2. **Update Event Handler** to extract transaction ID from `ar://` URIs and create file data source
+
+3. **Implement Handler** using same parsing logic as IPFS flow (reuse existing code)
+
+4. **Configure Graph Node** with Arweave gateway URLs
+
+**Benefits When Implemented**:
+- ✅ Full parity with IPFS agents in search results
+- ✅ ar:// agents discoverable via GraphQL API
+- ✅ Capabilities and skills indexed for filtering
+- ✅ Uses The Graph's production-ready Arweave support
+
+**Timeline**: SDK ships first (Phase 1-8), subgraph update follows in next release (Phase 9).
+
+See Phase 9 in ARWEAVE_INTEGRATION_PLAN.md for complete implementation details.
 ```
 
 **8.3 Add JSDoc Comments**
@@ -942,6 +977,179 @@ Ensure all new methods have comprehensive JSDoc:
 - Error conditions
 - Example usage
 - Performance notes (immediate availability)
+
+---
+
+### Phase 9: Subgraph Integration (Separate Repository)
+
+**Status**: Planned for future release after SDK implementation
+
+**Repository**: `../subgraph/` (separate from SDK)
+
+The Graph has native support for Arweave file data sources since version 0.33.0, making full searchability of ar:// agents achievable with straightforward updates to the subgraph repository.
+
+**9.1 Add Arweave File Data Source Template**
+
+**Modify**: `../subgraph/subgraph.yaml`
+
+Add file data source template for Arweave content:
+
+```yaml
+templates:
+  - name: ArweaveRegistrationFile
+    kind: file/arweave           # Native Arweave support in The Graph
+    mapping:
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Agent
+        - Endpoint
+        - Capability
+      handler: handleArweaveRegistrationFile
+      file: ./src/mappings/registration-file.ts
+```
+
+**9.2 Update Event Handler to Support ar:// URIs**
+
+**Modify**: `../subgraph/src/mappings/agent-registry.ts`
+
+In the `handleSetAgentUri` function (or equivalent):
+
+```typescript
+export function handleSetAgentUri(event: SetAgentUriEvent): void {
+  let uri = event.params.uri;
+  let tokenId = event.params.tokenId;
+
+  if (uri.startsWith("ipfs://")) {
+    // Existing IPFS handling
+    let cid = uri.slice(7);
+    IPFSRegistrationFile.create(cid);
+
+  } else if (uri.startsWith("ar://")) {
+    // NEW: Handle Arweave URIs
+    let txId = uri.slice(5);  // Extract transaction ID
+    ArweaveRegistrationFile.create(txId);
+
+  } else if (uri.startsWith("http://") || uri.startsWith("https://")) {
+    // Existing HTTP handling
+    // ...
+  }
+}
+```
+
+**9.3 Implement Arweave File Handler**
+
+**Modify**: `../subgraph/src/mappings/registration-file.ts`
+
+Add handler for Arweave registration files (same pattern as IPFS):
+
+```typescript
+export function handleArweaveRegistrationFile(content: Bytes): void {
+  let txId = dataSource.stringParam();  // Get transaction ID
+
+  // Parse JSON content (same as IPFS flow)
+  let value = json.fromBytes(content);
+  if (!value || value.kind !== JSONValueKind.OBJECT) {
+    log.error("Invalid Arweave content for txId: {}", [txId]);
+    return;
+  }
+
+  let data = value.toObject();
+
+  // Extract agent metadata (same logic as IPFS)
+  // - Parse name, description, image
+  // - Parse endpoints array
+  // - Parse capabilities (MCP tools, A2A skills)
+  // - Parse trust models
+  // - Update Agent entity
+  // - Create/update Endpoint entities
+  // - Create/update Capability entities
+
+  // ... (reuse existing registration file parsing logic)
+}
+```
+
+**9.4 Configure Arweave Gateway**
+
+**Modify**: Graph Node configuration or deployment settings
+
+Ensure Graph Node is configured with Arweave gateway URL(s):
+
+```toml
+[arweave]
+gateway = "https://arweave.net"
+# Optional: Add fallback gateways
+# gateways = ["https://arweave.net", "https://turbo-gateway.com"]
+```
+
+**9.5 Update Schema (if needed)**
+
+**Check**: `../subgraph/schema.graphql`
+
+Verify that existing schema supports both IPFS and Arweave URIs:
+
+```graphql
+type Agent @entity {
+  id: ID!
+  tokenId: BigInt!
+  uri: String!              # Can be ipfs:// or ar:// or https://
+  name: String
+  description: String
+  # ... rest of schema
+}
+```
+
+No changes needed if URI field is generic string type.
+
+**9.6 Testing**
+
+Create test cases for Arweave integration:
+
+```typescript
+// ../subgraph/tests/arweave-registration.test.ts
+import { test, assert } from "matchstick-as/assembly/index";
+import { Bytes } from "@graphprotocol/graph-ts";
+import { handleArweaveRegistrationFile } from "../src/mappings/registration-file";
+
+test("Should index Arweave registration file correctly", () => {
+  // Mock Arweave file content
+  let content = Bytes.fromUTF8(JSON.stringify({
+    type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+    name: "Test Agent",
+    description: "Test description",
+    endpoints: [/* ... */],
+    // ...
+  }));
+
+  handleArweaveRegistrationFile(content);
+
+  // Assert Agent entity was created with correct data
+  // ...
+});
+```
+
+**9.7 Deployment**
+
+Deploy updated subgraph to The Graph:
+
+```bash
+cd ../subgraph
+npm run codegen
+npm run build
+graph deploy --studio agent0-sepolia  # Or hosted service
+```
+
+**Benefits of Subgraph Update:**
+- ✅ Full parity with IPFS agents in search results
+- ✅ ar:// agents discoverable via GraphQL queries
+- ✅ Capabilities and skills indexed for filtering
+- ✅ Reputation and feedback associated correctly
+- ✅ Uses The Graph's native Arweave support (production-ready)
+
+**Timeline:**
+1. **Phase 1-8**: Ship SDK with Arweave support (this plan)
+2. **Phase 9**: Update subgraph in separate PR/release
+3. **Result**: Full Arweave + search integration
 
 ---
 
@@ -1031,6 +1239,30 @@ Ensure all new methods have comprehensive JSDoc:
 - Parallel requests use more bandwidth (4 concurrent requests per retrieval)
 - For 1-10KB files, this is negligible
 - Can optimize to sequential if telemetry shows it's needed
+
+### Future Enhancement: Subgraph Integration
+
+**Timeline**: Planned for separate release after SDK implementation
+
+**Repository**: `../subgraph/` (separate from SDK)
+
+**Scope**:
+- Add Arweave file data source template (`kind: file/arweave`)
+- Update event handler to extract transaction IDs from `ar://` URIs
+- Implement file content handler (reuse existing IPFS parsing logic)
+- Configure Graph Node with Arweave gateway URLs
+
+**Feasibility**: ✅ Straightforward implementation using The Graph's native Arweave support (since v0.33.0)
+
+**Impact When Implemented**:
+- ar:// agents will be fully searchable via GraphQL API
+- Full parity with IPFS agents in all search operations
+- Capabilities, skills, and metadata indexed for filtering
+- No SDK changes needed (already supports ar:// retrieval)
+
+**Key Insight**: This is a **timeline decision**, not a **technical limitation**. The Graph has production-ready Arweave support. Shipping SDK first allows immediate use of Arweave storage, with searchability following in next release.
+
+See **Phase 9** above for complete implementation guide.
 
 ---
 
