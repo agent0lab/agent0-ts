@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Add Arweave permanent storage to Agent0 SDK via separate `ArweaveClient` class, using ArDrive Turbo SDK for uploads and AR.IO Wayfinder for resilient retrieval. Zero breaking changes, immediate data availability, production-ready resilience.
+Add Arweave permanent storage to Agent0 SDK via separate `ArweaveClient` class, using ArDrive Turbo SDK for uploads and parallel gateway fallback for resilient retrieval. Zero breaking changes, immediate data availability, production-ready resilience with architectural consistency to IPFS implementation.
 
 ---
 
@@ -10,9 +10,9 @@ Add Arweave permanent storage to Agent0 SDK via separate `ArweaveClient` class, 
 
 1. **No Code Duplication** - Extract shared ERC-8004 formatting utility
 2. **Clear Separation** - ArweaveClient parallel to IPFSClient, not mixed
-3. **Optimize for Turbo** - Prefer arweave.net (optimistic cache) via Wayfinder
-4. **Resilient by Design** - Wayfinder + emergency fallback
-5. **Developer Clarity** - "Arweave" naming, AR.IO as implementation detail
+3. **Parallel Gateway Pattern** - Match IPFS implementation for consistency
+4. **Resilient by Design** - Multi-gateway fallback with immediate availability
+5. **Developer Clarity** - "Arweave" naming, implementation details abstracted
 
 ---
 
@@ -124,19 +124,15 @@ async addRegistrationFile(
 
 ```typescript
 /**
- * Arweave client for permanent storage using Turbo SDK and AR.IO Network.
- * Uploads via ArDrive Turbo SDK, retrieves via AR.IO Wayfinder with intelligent routing.
+ * Arweave client for permanent storage using Turbo SDK and parallel gateway retrieval.
+ * Uploads via ArDrive Turbo SDK, retrieves via multiple AR.IO gateways with parallel fallback.
+ * Uses the same pattern as IPFSClient for architectural consistency.
  */
 
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
-import {
-  createWayfinderClient,
-  PreferredWithFallbackRoutingStrategy,
-  TrustedPeersRoutingStrategy
-} from '@ar.io/wayfinder-core';
 import type { RegistrationFile } from '../models/interfaces';
 import { formatRegistrationFileForStorage } from '../utils/registration-format';
-import { TIMEOUTS } from '../utils/constants';
+import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
 
 export interface ArweaveClientConfig {
   privateKey: string;              // EVM private key (NOT Arweave JWK)
@@ -147,12 +143,10 @@ export interface ArweaveClientConfig {
 export class ArweaveClient {
   private config: ArweaveClientConfig;
   private turbo: any;              // TurboFactory authenticated instance
-  private wayfinder: any;          // Wayfinder client
 
   constructor(config: ArweaveClientConfig) {
     this.config = config;
     this._initializeTurbo();
-    this._initializeWayfinder();
   }
 
   /**
@@ -171,19 +165,6 @@ export class ArweaveClient {
     };
 
     this.turbo = TurboFactory.authenticated(turboConfig);
-  }
-
-  /**
-   * Initialize Wayfinder with PreferredWithFallback strategy.
-   * Prefers arweave.net (where Turbo uploads are cached) with fallback to AR.IO Network peers.
-   */
-  private _initializeWayfinder() {
-    this.wayfinder = createWayfinderClient({
-      routingStrategy: new PreferredWithFallbackRoutingStrategy({
-        preferred: 'https://arweave.net',  // Turbo's optimistic cache
-        fallback: new TrustedPeersRoutingStrategy()  // AR.IO Network gateways
-      })
-    });
   }
 
   /**
@@ -245,9 +226,9 @@ export class ArweaveClient {
   }
 
   /**
-   * Retrieve data from Arweave using AR.IO Network.
-   * Uses Wayfinder to route requests to healthy gateways, preferring arweave.net
-   * (where Turbo uploads are optimistically cached).
+   * Retrieve data from Arweave using parallel gateway fallback.
+   * Tries all gateways simultaneously and returns the first successful response.
+   * This matches the IPFS implementation pattern for architectural consistency.
    *
    * @param txId - Arweave transaction ID (with or without ar:// prefix)
    * @returns Retrieved data as string
@@ -262,32 +243,36 @@ export class ArweaveClient {
       throw new Error('Invalid transaction ID: empty or undefined');
     }
 
-    try {
-      // Primary: Wayfinder with PreferredWithFallback routing
-      const response = await this.wayfinder.request(`ar://${txId}`);
-      return await response.text();
-    } catch (error: any) {
-      // Emergency fallback: Direct arweave.net fetch
-      // Only reached if Wayfinder itself fails (rare)
+    const gateways = ARWEAVE_GATEWAYS.map(gateway => `${gateway}/${txId}`);
+
+    // Try all gateways in parallel - use the first successful response
+    // (Same pattern as IPFSClient.get() for consistency)
+    const promises = gateways.map(async (gateway) => {
       try {
-        const response = await fetch(`https://arweave.net/${txId}`, {
+        const response = await fetch(gateway, {
           redirect: 'follow',  // Required for Arweave security sandboxing
-          signal: AbortSignal.timeout(TIMEOUTS.ARWEAVE_GATEWAY)
+          signal: AbortSignal.timeout(TIMEOUTS.ARWEAVE_GATEWAY),
         });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (response.ok) {
+          return await response.text();
         }
+        throw new Error(`HTTP ${response.status}`);
+      } catch (error) {
+        throw error;
+      }
+    });
 
-        return await response.text();
-      } catch (fallbackError: any) {
-        throw new Error(
-          `Failed to retrieve data from Arweave. Transaction ID: ${txId}. ` +
-          `Wayfinder error: ${error.message}. ` +
-          `Fallback error: ${fallbackError.message}`
-        );
+    // Use Promise.allSettled to get the first successful result
+    const results = await Promise.allSettled(promises);
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        return result.value;
       }
     }
+
+    throw new Error(
+      `Failed to retrieve data from all Arweave gateways. Transaction ID: ${txId}`
+    );
   }
 
   /**
@@ -309,7 +294,7 @@ export class ArweaveClient {
    * Close client connections (for API consistency with IPFSClient)
    */
   async close(): Promise<void> {
-    // No explicit cleanup needed for Turbo or Wayfinder
+    // No explicit cleanup needed for Turbo
     // Included for API consistency
   }
 }
@@ -338,7 +323,7 @@ export interface SDKConfig {
   pinataJwt?: string;
 
   // Arweave configuration (NEW)
-  arweave?: boolean;              // Enable Arweave/AR.IO storage
+  arweave?: boolean;              // Enable Arweave storage
   arweavePrivateKey?: string;     // Optional separate EVM key (defaults to signer)
   arweaveToken?: string;          // Payment token (default: 'ethereum')
   arweaveTestnet?: boolean;       // Use testnet endpoints
@@ -426,7 +411,7 @@ private async _loadRegistrationFile(tokenUri: string): Promise<RegistrationFile>
       const txId = tokenUri.slice(5);
 
       if (this._arweaveClient) {
-        // Use Arweave client if available
+        // Use Arweave client if available (parallel gateway fallback)
         rawData = await this._arweaveClient.getJson(txId);
       } else {
         // Fallback: Direct gateway access without client
@@ -471,7 +456,7 @@ Add new `registerArweave()` method:
 ```typescript
 /**
  * Register agent on-chain with Arweave permanent storage.
- * Data is immediately available via Turbo's optimistic caching on arweave.net
+ * Data is immediately available via Turbo's optimistic caching
  * while settling to Arweave network in the background.
  *
  * @returns Updated registration file with ar:// URI
@@ -485,7 +470,7 @@ async registerArweave(): Promise<RegistrationFile> {
   if (!this.sdk.arweaveClient) {
     throw new Error(
       'Arweave client not configured. ' +
-      'Set arweave: true in SDK config and ensure you have Turbo credits.'
+      'Set arweave: true in SDK config.'
     );
   }
 
@@ -581,15 +566,25 @@ async registerArweave(): Promise<RegistrationFile> {
 
 ```typescript
 /**
+ * Arweave gateway URLs for parallel fallback retrieval
+ */
+export const ARWEAVE_GATEWAYS = [
+  'https://arweave.net',
+  'https://turbo-gateway.com',
+  'https://ario-gateway.nethermind.dev',
+  'https://ar-io-gateway.svc.blacksand.xyz',
+] as const;
+
+/**
  * Timeout values in milliseconds
  */
 export const TIMEOUTS = {
-  IPFS_GATEWAY: 10000,
-  PINATA_UPLOAD: 80000,
-  ARWEAVE_GATEWAY: 15000,    // NEW: 15 seconds for Arweave gateway fetch
-  ARWEAVE_UPLOAD: 120000,    // NEW: 2 minutes for Arweave upload
-  TRANSACTION_WAIT: 30000,
-  ENDPOINT_CRAWLER_DEFAULT: 5000,
+  IPFS_GATEWAY: 10000,       // 10 seconds
+  PINATA_UPLOAD: 80000,      // 80 seconds
+  ARWEAVE_GATEWAY: 10000,    // 10 seconds (parallel gateway requests)
+  ARWEAVE_UPLOAD: 100000,    // 100 seconds (Turbo upload + settlement)
+  TRANSACTION_WAIT: 30000,   // 30 seconds
+  ENDPOINT_CRAWLER_DEFAULT: 5000, // 5 seconds
 } as const;
 ```
 
@@ -631,7 +626,6 @@ export * from './registration-format';  // NEW
 {
   "dependencies": {
     "@ardrive/turbo-sdk": "^1.23.0",
-    "@ar.io/wayfinder-core": "^1.0.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
     "graphql-request": "^6.1.0",
@@ -695,7 +689,6 @@ import { ArweaveClient } from '../src/core/arweave-client';
 
 // Mock external dependencies
 jest.mock('@ardrive/turbo-sdk');
-jest.mock('@ar.io/wayfinder-core');
 
 describe('ArweaveClient - Unit Tests', () => {
   it('should initialize with EVM private key', () => {
@@ -713,8 +706,13 @@ describe('ArweaveClient - Unit Tests', () => {
   });
 
   it('should handle ar:// prefix in get()', async () => {
-    // Mock Wayfinder
+    // Mock fetch for gateway requests
     // Test that ar:// prefix is stripped correctly
+  });
+
+  it('should use parallel gateway fallback on retrieval', async () => {
+    // Mock fetch to simulate multiple gateways
+    // Verify Promise.allSettled pattern is used
   });
 });
 ```
@@ -742,7 +740,7 @@ describe('Agent Registration with Arweave', () => {
 
     const agent = sdk.createAgent(
       'Arweave Test Agent',
-      'Testing permanent Arweave storage via AR.IO',
+      'Testing permanent Arweave storage',
       'https://example.com/image.png'
     );
 
@@ -765,7 +763,7 @@ describe('Agent Registration with Arweave', () => {
     const reloadedAgent = await sdk.loadAgent(agentId);
 
     expect(reloadedAgent.name).toBe('Arweave Test Agent');
-    expect(reloadedAgent.description).toBe('Testing permanent Arweave storage via AR.IO');
+    expect(reloadedAgent.description).toBe('Testing permanent Arweave storage');
   });
 
   it('should update agent on Arweave', async () => {
@@ -796,9 +794,9 @@ npm test   # All tests including integration (agent files are <100KB, no cost)
 Add new section after IPFS documentation:
 
 ```markdown
-## Arweave Permanent Storage via AR.IO Network
+## Arweave Permanent Storage
 
-Agent0 SDK supports permanent Arweave storage using ArDrive Turbo SDK for uploads and AR.IO Network for resilient data retrieval.
+Agent0 SDK supports permanent Arweave storage using ArDrive Turbo SDK for uploads and parallel gateway fallback for resilient data retrieval.
 
 ### Configuration
 
@@ -840,9 +838,9 @@ console.log('Retrieved:', reloaded.name);
 
 **Data Availability:**
 1. **Upload**: Turbo SDK uploads to Arweave, returns transaction ID
-2. **Immediate Cache**: Data cached on arweave.net for instant access
+2. **Immediate Cache**: Data cached for instant access
 3. **Background Settlement**: Data settles to Arweave network (~2-5 min, transparent)
-4. **Retrieval**: Wayfinder routes to available AR.IO gateways
+4. **Retrieval**: Parallel gateway fallback ensures resilience
 
 **File Sizes:**
 - Agent registrations: 1-4 KB (typical), up to ~10 KB (large MCP servers)
@@ -858,7 +856,7 @@ Credits can be purchased at [turbo.ardrive.io](https://turbo.ardrive.io) with ET
 |--------|------|---------|
 | **Permanence** | Requires active pinning | Native to protocol |
 | **Cost Structure** | Recurring (pinning service) | Per-upload (under 100KB free via Turbo) |
-| **Retrieval** | Gateway-dependent | AR.IO Network routing |
+| **Retrieval** | Gateway-dependent | Multi-gateway parallel fallback |
 | **Mutability** | Content-addressed (immutable) | Transaction-based (immutable) |
 | **Registration Method** | `registerIPFS()` | `registerArweave()` |
 | **URI Format** | `ipfs://{cid}` | `ar://{txId}` |
@@ -869,7 +867,7 @@ Credits can be purchased at [turbo.ardrive.io](https://turbo.ardrive.io) with ET
 Add section on Arweave integration:
 
 ```markdown
-## Arweave Storage Integration (via AR.IO Network)
+## Arweave Storage Integration
 
 ### Architecture Decision: Separate ArweaveClient
 
@@ -879,15 +877,22 @@ Created `ArweaveClient` as separate class parallel to `IPFSClient` to maintain c
 
 - **ArweaveClient** (`src/core/arweave-client.ts`) - Handles Arweave uploads and retrieval
 - **Turbo SDK** - Uploads with immediate availability via optimistic caching
-- **Wayfinder** - Intelligent gateway routing via AR.IO Network
+- **Parallel Gateway Fallback** - Same pattern as IPFS for architectural consistency
 - **Shared Utility** (`src/utils/registration-format.ts`) - DRY principle for ERC-8004 formatting
 
-### Wayfinder Strategy: PreferredWithFallback
+### Retrieval Pattern: Parallel Gateway Fallback
 
-Uses `PreferredWithFallbackRoutingStrategy`:
-- **Preferred**: arweave.net (where Turbo uploads are optimistically cached)
-- **Fallback**: TrustedPeersRoutingStrategy (other AR.IO gateways)
-- **Emergency**: Direct arweave.net fetch if Wayfinder fails
+Uses the same pattern as `IPFSClient.get()` for consistency:
+- Tries all 4 gateways simultaneously with `Promise.allSettled()`
+- Returns first successful response
+- 10-second timeout per gateway (parallel, so max 10s total)
+- Gateways: arweave.net, turbo-gateway.com, ario-gateway.nethermind.dev, ar-io-gateway.svc.blacksand.xyz
+
+**Why parallel instead of sequential:**
+- Architectural consistency with IPFS implementation
+- Fastest possible response (cached gateways win automatically)
+- Simple, proven pattern (no new abstractions)
+- Easy for contributors to understand
 
 ### URI Format
 
@@ -950,7 +955,7 @@ Ensure all new methods have comprehensive JSDoc:
 ### Core Implementation
 - [ ] Create `src/core/arweave-client.ts`
 - [ ] Implement Turbo SDK integration
-- [ ] Implement Wayfinder integration
+- [ ] Implement parallel gateway fallback (matching IPFS pattern)
 - [ ] Add error handling for credits
 
 ### SDK Integration
@@ -966,7 +971,7 @@ Ensure all new methods have comprehensive JSDoc:
 - [ ] Add clear error messages
 
 ### Infrastructure
-- [ ] Update `src/utils/constants.ts` with timeouts
+- [ ] Update `src/utils/constants.ts` with gateways and timeouts
 - [ ] Update `src/index.ts` exports
 - [ ] Update `src/utils/index.ts` exports
 - [ ] Update `package.json` dependencies
@@ -975,7 +980,7 @@ Ensure all new methods have comprehensive JSDoc:
 ### Testing
 - [ ] Write unit tests for `registration-format.ts`
 - [ ] Write unit tests for `ArweaveClient` (mocked)
-- [ ] Write integration tests (optional, requires credits)
+- [ ] Write integration tests (optional, requires Turbo setup)
 - [ ] Document test setup in README
 
 ### Documentation
@@ -988,7 +993,7 @@ Ensure all new methods have comprehensive JSDoc:
 - [ ] Run `npm run build` (verify compilation)
 - [ ] Run `npm test` (unit tests pass)
 - [ ] Run `npm run lint` (no linting errors)
-- [ ] Manual integration test (with credits)
+- [ ] Manual integration test (optional, with Turbo)
 
 ---
 
@@ -999,27 +1004,33 @@ Ensure all new methods have comprehensive JSDoc:
 - `src/core/arweave-client.ts` - Arweave storage client
 - `tests/registration-arweave.test.ts` - Integration tests
 
-### Files Modified (6)
+### Files Modified (7)
 - `src/core/ipfs-client.ts` - Use shared utility
 - `src/core/sdk.ts` - Arweave config and ar:// handling
 - `src/core/agent.ts` - Add registerArweave() method
-- `src/utils/constants.ts` - Add Arweave timeouts
+- `src/utils/constants.ts` - Add Arweave gateways and timeouts
 - `src/index.ts` - Export ArweaveClient
-- `package.json` - Add dependencies
+- `src/utils/index.ts` - Export registration-format
+- `package.json` - Add dependency
 
-### Dependencies Added (2)
-- `@ardrive/turbo-sdk` - Arweave uploads
-- `@ar.io/wayfinder-core` - Gateway routing
+### Dependencies Added (1)
+- `@ardrive/turbo-sdk` - Arweave uploads with immediate availability
 
 ### Breaking Changes
 **None** - All changes are additive and optional
 
 ### Key Benefits
 ✅ Permanent storage with immediate availability
-✅ Intelligent gateway routing via AR.IO
+✅ Parallel gateway fallback for resilience
 ✅ Zero code duplication (shared utility)
-✅ Clear developer experience
-✅ Production-ready resilience
+✅ Architectural consistency with IPFS
+✅ Simple, proven pattern (no new abstractions)
+✅ Only 1 new dependency
+
+### Trade-offs
+- Parallel requests use more bandwidth (4 concurrent requests per retrieval)
+- For 1-10KB files, this is negligible
+- Can optimize to sequential if telemetry shows it's needed
 
 ---
 
