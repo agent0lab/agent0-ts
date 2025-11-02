@@ -24,6 +24,8 @@ interface SDKConfig {
 }
 ```
 
+> **Hedera testnet:** The SDK ships registry defaults for chain ID `296`, but no built-in subgraph URL. Provide a `subgraphOverrides` entry (e.g., `{ 296: 'https://your-hedera-subgraph.example' }`) when instantiating the SDK to enable subgraph-backed features on Hedera.
+
 ### Chain & Registry Methods
 ```typescript
 async chainId(): Promise<ChainId>

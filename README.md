@@ -71,6 +71,20 @@ const sdk = new SDK({
   pinataJwt: process.env.PINATA_JWT // For Pinata
   // Subgraph URL auto-defaults from DEFAULT_SUBGRAPH_URLS
   // Override subgraphUrl/subgraphOverrides when supplying your own endpoint
+  // Hedera testnet (chainId 296) requires providing subgraphOverrides: { 296: 'https://your-hedera-subgraph.example' }
+});
+```
+
+> **Note:** Hedera testnet (chainId `296`) includes default registry addresses but does not have a bundled subgraph URL. When targeting Hedera, pass a `subgraphOverrides` entry during SDK initialization, for example:
+
+```typescript
+const sdk = new SDK({
+  chainId: 296,
+  rpcUrl: process.env.RPC_URL!,
+  subgraphOverrides: {
+    296: 'https://your-hedera-subgraph.example',
+  },
+  // ...other config options
 });
 ```
 
