@@ -59,6 +59,20 @@ const sdk = new SDK({
   ipfs: 'pinata', // Options: 'pinata', 'filecoinPin', 'node'
   pinataJwt: process.env.PINATA_JWT // For Pinata
   // Subgraph URL auto-defaults from DEFAULT_SUBGRAPH_URLS
+  // Hedera testnet (chainId 296) requires providing subgraphOverrides: { 296: 'https://your-hedera-subgraph.example' }
+});
+```
+
+> **Note:** Hedera testnet (chainId `296`) includes default registry addresses but does not have a bundled subgraph URL. When targeting Hedera, pass a `subgraphOverrides` entry during SDK initialization, for example:
+
+```typescript
+const sdk = new SDK({
+  chainId: 296,
+  rpcUrl: process.env.RPC_URL!,
+  subgraphOverrides: {
+    296: 'https://your-hedera-subgraph.example',
+  },
+  // ...other config options
 });
 ```
 
@@ -197,7 +211,7 @@ await agent.registerHTTP('https://example.com/agent-registration.json');
 
 ## 🚀 Coming Soon
 
-- More chains (currently Ethereum Sepolia only)
+- Additional chains (Hedera testnet supported today via manual subgraph override)
 - Support for validations
 - Multi-chain agents search
 - Enhanced x402 payments
