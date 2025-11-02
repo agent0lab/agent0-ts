@@ -11,25 +11,26 @@ import type {
   SearchResultMeta,
   RegistrationFile,
   Endpoint,
-} from '../models/interfaces.js';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types.js';
-import type { AgentId, ChainId, Address, URI } from '../models/types.js';
-import { EndpointType, TrustModel } from '../models/enums.js';
-import { formatAgentId, parseAgentId } from '../utils/id-format.js';
-import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
-import { Web3Client, type TransactionOptions } from './web3-client.js';
-import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
-import { SubgraphClient } from './subgraph-client.js';
-import { FeedbackManager } from './feedback-manager.js';
-import { AgentIndexer } from './indexer.js';
-import { Agent } from './agent.js';
+} from '../models/interfaces';
+import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types';
+import type { AgentId, ChainId, Address, URI } from '../models/types';
+import { EndpointType, TrustModel } from '../models/enums';
+import { formatAgentId, parseAgentId } from '../utils/id-format';
+import { IPFS_GATEWAYS, ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
+import { Web3Client, type TransactionOptions } from './web3-client';
+import { IPFSClient, type IPFSClientConfig } from './ipfs-client';
+import { ArweaveClient, type ArweaveClientConfig } from './arweave-client';
+import { SubgraphClient } from './subgraph-client';
+import { FeedbackManager } from './feedback-manager';
+import { AgentIndexer } from './indexer';
+import { Agent } from './agent';
 import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
   VALIDATION_REGISTRY_ABI,
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
-} from './contracts.js';
+} from './contracts';
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -41,6 +42,11 @@ export interface SDKConfig {
   ipfsNodeUrl?: string;
   filecoinPrivateKey?: string;
   pinataJwt?: string;
+  // Arweave configuration
+  arweave?: boolean;              // Enable Arweave storage
+  arweavePrivateKey?: string;     // Optional separate EVM key (defaults to signer)
+  arweaveToken?: string;          // Payment token (default: 'ethereum')
+  arweaveTestnet?: boolean;       // Use testnet endpoints
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
@@ -52,6 +58,7 @@ export interface SDKConfig {
 export class SDK {
   private readonly _web3Client: Web3Client;
   private _ipfsClient?: IPFSClient;
+  private _arweaveClient?: ArweaveClient;
   private _subgraphClient?: SubgraphClient;
   private readonly _feedbackManager: FeedbackManager;
   private readonly _indexer: AgentIndexer;
@@ -99,6 +106,11 @@ export class SDK {
     // Initialize IPFS client
     if (config.ipfs) {
       this._ipfsClient = this._initializeIpfsClient(config);
+    }
+
+    // Initialize Arweave client
+    if (config.arweave) {
+      this._arweaveClient = this._initializeArweaveClient(config);
     }
 
     // Initialize feedback manager (will set registries after they're created)
@@ -149,6 +161,26 @@ export class SDK {
     }
 
     return new IPFSClient(ipfsConfig);
+  }
+
+  /**
+   * Initialize Arweave client with EVM signer
+   */
+  private _initializeArweaveClient(config: SDKConfig): ArweaveClient {
+    const privateKey = config.arweavePrivateKey || config.signer;
+
+    if (!privateKey) {
+      throw new Error(
+        'Arweave storage requires an EVM private key. ' +
+        'Provide signer or arweavePrivateKey in SDK config.'
+      );
+    }
+
+    return new ArweaveClient({
+      privateKey,
+      token: config.arweaveToken,
+      testnet: config.arweaveTestnet
+    });
   }
 
   /**
@@ -591,7 +623,7 @@ export class SDK {
    */
   private async _loadRegistrationFile(tokenUri: string): Promise<RegistrationFile> {
     try {
-      // Fetch from IPFS or HTTP
+      // Fetch from IPFS, Arweave, or HTTP
       let rawData: unknown;
       if (tokenUri.startsWith('ipfs://')) {
         const cid = tokenUri.slice(7);
@@ -622,6 +654,26 @@ export class SDK {
             throw new Error('Failed to retrieve data from all IPFS gateways');
           }
         }
+      } else if (tokenUri.startsWith('ar://')) {
+        // Handle Arweave URIs
+        const txId = tokenUri.slice(5);
+
+        if (this._arweaveClient) {
+          // Use Arweave client if available (parallel gateway fallback)
+          rawData = await this._arweaveClient.getJson(txId);
+        } else {
+          // Fallback: Direct gateway access without client
+          const response = await fetch(`https://arweave.net/${txId}`, {
+            redirect: 'follow',
+            signal: AbortSignal.timeout(TIMEOUTS.ARWEAVE_GATEWAY)
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch from Arweave: HTTP ${response.status}`);
+          }
+
+          rawData = await response.json();
+        }
       } else if (tokenUri.startsWith('http://') || tokenUri.startsWith('https://')) {
         const response = await fetch(tokenUri);
         if (!response.ok) {
@@ -630,7 +682,7 @@ export class SDK {
         rawData = await response.json();
       } else if (tokenUri.startsWith('data:')) {
         // Data URIs are not supported
-        throw new Error(`Data URIs are not supported. Expected HTTP(S) or IPFS URI, got: ${tokenUri}`);
+        throw new Error(`Data URIs are not supported. Expected HTTP(S), IPFS, or Arweave URI, got: ${tokenUri}`);
       } else if (!tokenUri || tokenUri.trim() === '') {
         // Empty URI - return empty registration file (agent registered without URI)
         return this._createEmptyRegistrationFile();
@@ -643,7 +695,7 @@ export class SDK {
         throw new Error('Invalid registration file format: expected an object');
       }
 
-      // Transform IPFS/HTTP file format to RegistrationFile format
+      // Transform IPFS/Arweave/HTTP file format to RegistrationFile format
       return this._transformRegistrationFile(rawData as Record<string, unknown>);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -786,6 +838,13 @@ export class SDK {
 
   get ipfsClient(): IPFSClient | undefined {
     return this._ipfsClient;
+  }
+
+  /**
+   * Get Arweave client (if configured)
+   */
+  get arweaveClient(): ArweaveClient | undefined {
+    return this._arweaveClient;
   }
 
   get subgraphClient(): SubgraphClient | undefined {
