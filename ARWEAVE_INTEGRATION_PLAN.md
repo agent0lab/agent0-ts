@@ -1621,8 +1621,23 @@ When documenting the tagging feature:
 - [x] Update `package.json` dependencies (@ardrive/turbo-sdk ^1.23.0)
 - [x] Run `npm install` (268 packages added successfully)
 
+### Tagging Implementation (November 2, 2025)
+- [x] Add `SDK_VERSION` constant to `src/utils/constants.ts`
+- [x] Create `src/utils/arweave-tags.ts` utility (pure function for tag generation)
+- [x] Update `ArweaveClient.add()` to accept optional tags parameter
+- [x] Update `ArweaveClient.addJson()` to accept and forward tags
+- [x] Update `ArweaveClient.addRegistrationFile()` to generate and apply tags
+- [x] Write comprehensive unit tests (`tests/arweave-tags.test.ts` - 12 tests, all passing)
+
+**Implementation Details**:
+- Tags include: Content-Type, App-Name, Protocol, Chain-Id, Schema-Version, Agent-Id (conditional), Has-MCP, Has-A2A, Has-Wallet, Active, Timestamp
+- All tags cryptographically signed via EthereumSigner (Turbo SDK)
+- Tag generation extracted to testable utility following DRY principle
+- 12/12 unit tests passing with comprehensive coverage
+
 ### Testing
 - [x] Write unit tests for `registration-format.ts` (10 tests, all passing)
+- [x] Write unit tests for `arweave-tags.ts` (12 tests, all passing)
 - [~] ~~Write unit tests for `ArweaveClient` (mocked)~~ - **SKIPPED** (see Testing Approach Note below)
 - [x] Write integration tests for Arweave registration (`tests/registration-arweave.test.ts` - 126 lines, complete)
 - [x] Update `tests/config.ts` with Arweave configuration section (lines 24-28)
@@ -1883,18 +1898,20 @@ After thorough analysis of the existing test suite (`tests/*.test.ts`), discover
 
 ## Summary
 
-### Files Created (4)
+### Files Created (5)
 - `src/utils/registration-format.ts` - Shared ERC-8004 formatting ✅
+- `src/utils/arweave-tags.ts` - Tag generation utility ✅
 - `src/core/arweave-client.ts` - Arweave storage client ✅
 - `tests/registration-format.test.ts` - Unit tests for shared utility (10 tests) ✅
+- `tests/arweave-tags.test.ts` - Unit tests for tag generation (12 tests) ✅
 - `tests/registration-arweave.test.ts` - Integration tests (3 tests, 126 lines) ✅
 
-### Files Modified (8 complete, 0 pending)
+### Files Modified (9 complete, 0 pending)
 - ✅ `src/core/ipfs-client.ts` - Use shared utility (commit: 4a93089)
-- ✅ `src/utils/constants.ts` - Add Arweave gateways and timeouts (commit: 842a25e)
-- ✅ `src/utils/index.ts` - Export registration-format (commit: 4a93089)
+- ✅ `src/utils/constants.ts` - Add SDK_VERSION, Arweave gateways and timeouts
+- ✅ `src/utils/index.ts` - Export registration-format and arweave-tags utilities
 - ✅ `package.json` - Add dependency (commit: 842a25e)
-- ✅ `src/core/sdk.ts` - Arweave config and ar:// handling (commit: 8c0f7ab) **Phase 3 Complete**
+- ✅ `src/core/sdk.ts` - Arweave config and ar:// handling (commit: 8c0f7ab)
 - ✅ `src/core/agent.ts` - Add registerArweave() method **Phase 4 Complete** (lines 367-458)
 - ✅ `src/index.ts` - Export ArweaveClient and ArweaveClientConfig **Phase 5 Complete** (lines 20-21)
 - ✅ `tests/config.ts` - Add Arweave configuration section **Phase 7 Complete** (lines 24-28)
@@ -2093,10 +2110,45 @@ See **Phase 9** above for complete implementation guide.
 
 **Current State (November 2, 2025)**:
 - **Phases 1-7**: Complete and ready for testing
+- **Tagging Implementation**: ✅ Complete (tags + Content-Type support)
+  - Tag generation utility: `src/utils/arweave-tags.ts`
+  - 12 comprehensive tag types (Essential, Conditional, Metadata)
+  - 12/12 unit tests passing
+  - Tags cryptographically signed via EthereumSigner
 - **Build Status**: Working with temporary GraphQL fix
-- **Testing**: Enabled via `npm pack` + external test project
+- **Testing**: Unit tests pass (22/22: registration-format + arweave-tags)
 - **Package**: `agent0-sdk-0.2.1.tgz` created and ready
 - **Blockers**: None for Arweave functionality testing
 - **Next**: Phase 8 (Documentation) or revert temp fix after testing
 
 **⚠️ Remember**: Revert temporary GraphQL fixes in `sdk.ts` and `subgraph-client.ts` before final release!
+
+### Pre-Merge Checklist
+
+**🚨 CRITICAL - Must Complete Before Merging to Main:**
+
+- [ ] **Revert Temporary GraphQL Fixes**
+  - [ ] `src/core/sdk.ts` (lines 14-15): Uncomment GraphQL type import
+  - [ ] `src/core/subgraph-client.ts` (lines 8-11): Uncomment GraphQL type imports, remove placeholders
+
+- [ ] **Fix Underlying GraphQL Schema Issue**
+  - [ ] Ensure `../subgraph/schema.graphql` is available
+  - [ ] Run `npm run codegen` successfully
+  - [ ] Verify generated types in `src/models/generated/subgraph-types.ts`
+
+- [ ] **Verify Build & Tests**
+  - [ ] Run `npm run build` - must succeed with proper types
+  - [ ] Run `npm test` - all tests passing including subgraph queries
+  - [ ] Run `npm run lint` - no linting errors
+
+- [ ] **Integration Testing**
+  - [ ] Test Arweave registration flow end-to-end
+  - [ ] Verify tags are correctly applied to uploads
+  - [ ] Confirm subgraph client works with restored types
+
+- [ ] **Documentation Review**
+  - [ ] Update README.md with Arweave examples (Phase 8)
+  - [ ] Update CLAUDE.md with architecture notes (Phase 8)
+  - [ ] Add JSDoc to all new methods
+
+**Note**: The temporary fixes were added solely to enable local testing via `npm pack`. They must be removed before production release to restore proper type safety.

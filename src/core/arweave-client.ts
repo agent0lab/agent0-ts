@@ -7,6 +7,7 @@
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import type { RegistrationFile } from '../models/interfaces';
 import { formatRegistrationFileForStorage } from '../utils/registration-format';
+import { generateArweaveRegistrationTags } from '../utils/arweave-tags';
 import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
 
 export interface ArweaveClientConfig {
@@ -50,10 +51,11 @@ export class ArweaveClient {
    * @param data - String data to upload
    * @returns Arweave transaction ID
    */
-  async add(data: string): Promise<string> {
+  async add(data: string, tags?: Array<{ name: string; value: string }>): Promise<string> {
     try {
       const result = await this.turbo.upload({
         data,
+        ...(tags && { dataItemOpts: { tags } }), // Include tags if provided
       });
       return result.id; // Arweave transaction ID
     } catch (error: any) {
@@ -79,9 +81,12 @@ export class ArweaveClient {
   /**
    * Upload JSON data to Arweave
    */
-  async addJson(data: Record<string, unknown>): Promise<string> {
+  async addJson(
+    data: Record<string, unknown>,
+    tags?: Array<{ name: string; value: string }>
+  ): Promise<string> {
     const jsonStr = JSON.stringify(data, null, 2);
-    return this.add(jsonStr);
+    return this.add(jsonStr, tags);
   }
 
   /**
@@ -99,7 +104,10 @@ export class ArweaveClient {
       identityRegistryAddress
     );
 
-    return this.addJson(data);
+    // Generate tags if chainId is provided
+    const tags = chainId ? generateArweaveRegistrationTags(registrationFile, chainId) : undefined;
+
+    return this.addJson(data, tags);
   }
 
   /**
@@ -147,9 +155,7 @@ export class ArweaveClient {
       }
     }
 
-    throw new Error(
-      `Failed to retrieve data from all Arweave gateways. Transaction ID: ${txId}`
-    );
+    throw new Error(`Failed to retrieve data from all Arweave gateways. Transaction ID: ${txId}`);
   }
 
   /**

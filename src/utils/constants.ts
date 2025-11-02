@@ -3,6 +3,11 @@
  */
 
 /**
+ * SDK version for tagging and identification
+ */
+export const SDK_VERSION = '0.2.1';
+
+/**
  * IPFS gateway URLs for fallback retrieval
  */
 export const IPFS_GATEWAYS = [

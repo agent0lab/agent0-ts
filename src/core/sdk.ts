@@ -12,7 +12,8 @@ import type {
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types';
+// TEMPORARY: Commented out due to missing GraphQL types (pre-existing build issue)
+// import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types';
 import type { AgentId, ChainId, Address, URI } from '../models/types';
 import { EndpointType, TrustModel } from '../models/enums';
 import { formatAgentId, parseAgentId } from '../utils/id-format';
