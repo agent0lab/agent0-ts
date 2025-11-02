@@ -7,7 +7,11 @@
  * 3. Get agent summaries
  */
 
+import * as dotenv from 'dotenv';
 import { SDK } from '../src/index';
+
+// Load environment variables from .env file
+dotenv.config();
 
 async function main() {
   // Initialize SDK (read-only mode is fine for searching)
