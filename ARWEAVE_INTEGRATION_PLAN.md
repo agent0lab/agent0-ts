@@ -1174,11 +1174,19 @@ graph deploy --studio agent0-sepolia  # Or hosted service
 - All methods compile and type-check correctly
 
 ### SDK Integration
-- [ ] Update `SDKConfig` interface
-- [ ] Add `_arweaveClient` to SDK class
-- [ ] Add `_initializeArweaveClient()` method
-- [ ] Update `_loadRegistrationFile()` for `ar://` URIs
-- [ ] Expose `arweaveClient` getter
+- [x] Update `SDKConfig` interface (commit: 8c0f7ab)
+- [x] Add `_arweaveClient` to SDK class (commit: 8c0f7ab)
+- [x] Add `_initializeArweaveClient()` method (commit: 8c0f7ab)
+- [x] Update `_loadRegistrationFile()` for `ar://` URIs (commit: 8c0f7ab)
+- [x] Expose `arweaveClient` getter (commit: 8c0f7ab)
+
+**Implementation Details**:
+- Added 4 Arweave config fields to SDKConfig (arweave, arweavePrivateKey, arweaveToken, arweaveTestnet)
+- ArweaveClient initialization follows same pattern as IPFS (conditional in constructor)
+- Private key reuses `signer` if no separate `arweavePrivateKey` provided
+- ar:// URI handling uses ArweaveClient when available, falls back to direct arweave.net fetch
+- Parallel gateway fallback pattern matches IPFS implementation for consistency
+- All changes compile without Arweave-specific errors
 
 ### Agent Method
 - [ ] Add `registerArweave()` to Agent class
@@ -1218,12 +1226,12 @@ graph deploy --studio agent0-sepolia  # Or hosted service
 - `src/utils/registration-format.ts` - Shared ERC-8004 formatting ✅
 - `src/core/arweave-client.ts` - Arweave storage client ✅
 
-### Files Modified (4 complete, 3 pending)
-- ✅ `src/core/ipfs-client.ts` - Use shared utility
-- ✅ `src/utils/constants.ts` - Add Arweave gateways and timeouts
-- ✅ `src/utils/index.ts` - Export registration-format
-- ✅ `package.json` - Add dependency
-- ⏳ `src/core/sdk.ts` - Arweave config and ar:// handling (Phase 3)
+### Files Modified (5 complete, 2 pending)
+- ✅ `src/core/ipfs-client.ts` - Use shared utility (commit: 4a93089)
+- ✅ `src/utils/constants.ts` - Add Arweave gateways and timeouts (commit: 842a25e)
+- ✅ `src/utils/index.ts` - Export registration-format (commit: 4a93089)
+- ✅ `package.json` - Add dependency (commit: 842a25e)
+- ✅ `src/core/sdk.ts` - Arweave config and ar:// handling (commit: 8c0f7ab) **Phase 3 Complete**
 - ⏳ `src/core/agent.ts` - Add registerArweave() method (Phase 4)
 - ⏳ `src/index.ts` - Export ArweaveClient (Phase 5)
 
