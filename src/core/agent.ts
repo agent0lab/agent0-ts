@@ -358,6 +358,107 @@ export class Agent {
   }
 
   /**
+   * Register agent on-chain with Arweave permanent storage.
+   * Data is immediately available via Turbo's optimistic caching
+   * while settling to Arweave network in the background.
+   *
+   * @returns Updated registration file with ar:// URI
+   */
+  async registerArweave(): Promise<RegistrationFile> {
+    // Validate basic requirements
+    if (!this.registrationFile.name || !this.registrationFile.description) {
+      throw new Error('Agent must have name and description before registration');
+    }
+
+    if (!this.sdk.arweaveClient) {
+      throw new Error(
+        'Arweave client not configured. ' +
+        'Set arweave: true in SDK config.'
+      );
+    }
+
+    if (this.registrationFile.agentId) {
+      // Update existing agent
+      const chainId = await this.sdk.chainId();
+      const identityRegistryAddress = await this.sdk.getIdentityRegistry().getAddress();
+
+      // Upload to Arweave
+      const txId = await this.sdk.arweaveClient.addRegistrationFile(
+        this.registrationFile,
+        chainId,
+        identityRegistryAddress
+      );
+
+      // Update metadata on-chain if changed
+      if (this._dirtyMetadata.size > 0) {
+        try {
+          await this._updateMetadataOnChain();
+        } catch (error) {
+          // Transaction sent, will eventually confirm - continue
+        }
+      }
+
+      // Update agent URI on-chain to ar://{txId}
+      const { tokenId } = parseAgentId(this.registrationFile.agentId);
+      const txHash = await this.sdk.web3Client.transactContract(
+        this.sdk.getIdentityRegistry(),
+        'setAgentUri',
+        {},
+        BigInt(tokenId),
+        `ar://${txId}`
+      );
+
+      try {
+        await this.sdk.web3Client.waitForTransaction(txHash, TIMEOUTS.TRANSACTION_WAIT);
+      } catch (error) {
+        // Transaction sent, will eventually confirm - continue
+      }
+
+      // Clear dirty flags
+      this._lastRegisteredWallet = this.walletAddress;
+      this._lastRegisteredEns = this.ensEndpoint;
+      this._dirtyMetadata.clear();
+
+      this.registrationFile.agentURI = `ar://${txId}`;
+      return this.registrationFile;
+
+    } else {
+      // First time registration
+      await this._registerWithoutUri();
+
+      const chainId = await this.sdk.chainId();
+      const identityRegistryAddress = await this.sdk.getIdentityRegistry().getAddress();
+
+      // Upload to Arweave
+      const txId = await this.sdk.arweaveClient.addRegistrationFile(
+        this.registrationFile,
+        chainId,
+        identityRegistryAddress
+      );
+
+      // Set agent URI on-chain
+      const { tokenId } = parseAgentId(this.registrationFile.agentId!);
+      const txHash = await this.sdk.web3Client.transactContract(
+        this.sdk.getIdentityRegistry(),
+        'setAgentUri',
+        {},
+        BigInt(tokenId),
+        `ar://${txId}`
+      );
+
+      await this.sdk.web3Client.waitForTransaction(txHash);
+
+      // Clear dirty flags
+      this._lastRegisteredWallet = this.walletAddress;
+      this._lastRegisteredEns = this.ensEndpoint;
+      this._dirtyMetadata.clear();
+
+      this.registrationFile.agentURI = `ar://${txId}`;
+      return this.registrationFile;
+    }
+  }
+
+  /**
    * Register agent on-chain with HTTP URI
    */
   async registerHTTP(agentUri: string): Promise<RegistrationFile> {
