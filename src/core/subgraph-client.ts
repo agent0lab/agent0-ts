@@ -65,9 +65,11 @@ export class SubgraphClient {
     const supportedWhere: Record<string, unknown> = {};
     if (where.agentId) supportedWhere.agentId = where.agentId;
     if (where.owner) supportedWhere.owner = where.owner;
+    if (where.owner_in) supportedWhere.owner_in = where.owner_in;
+    if (where.operators_contains) supportedWhere.operators_contains = where.operators_contains;
     if (where.agentURI) supportedWhere.agentURI = where.agentURI;
     if (where.registrationFile_not !== undefined) supportedWhere.registrationFile_not = where.registrationFile_not;
-    
+
     // Support nested registrationFile filters (pushed to subgraph level)
     // Note: Python SDK uses "registrationFile_" (with underscore) for nested filters
     if (where.registrationFile) {
@@ -296,9 +298,10 @@ export class SubgraphClient {
 
     // Note: Most search fields are in registrationFile, so we need to filter after fetching
     // For now, we'll do basic filtering on Agent fields and then filter on registrationFile fields
-    if (params.active !== undefined || params.mcp !== undefined || params.a2a !== undefined || 
-        params.x402support !== undefined || params.ens || params.walletAddress || 
-        params.supportedTrust || params.a2aSkills || params.mcpTools || params.name) {
+    if (params.active !== undefined || params.mcp !== undefined || params.a2a !== undefined ||
+        params.x402support !== undefined || params.ens || params.walletAddress ||
+        params.supportedTrust || params.a2aSkills || params.mcpTools || params.name ||
+        params.owners || params.operators) {
       // Push basic filters to subgraph using nested registrationFile filters
       const registrationFileFilters: Record<string, unknown> = {};
       if (params.active !== undefined) registrationFileFilters.active = params.active;
@@ -311,18 +314,37 @@ export class SubgraphClient {
       if (params.a2a !== undefined) {
         registrationFileFilters[params.a2a ? 'a2aEndpoint_not' : 'a2aEndpoint'] = null;
       }
-      
+
       const whereWithFilters: Record<string, unknown> = {};
       if (Object.keys(registrationFileFilters).length > 0) {
         // Python SDK uses "registrationFile_" (with underscore) for nested filters
         whereWithFilters.registrationFile_ = registrationFileFilters;
       }
-      
+
+      // Owner filtering (at Agent level, not registrationFile)
+      if (params.owners && params.owners.length > 0) {
+        // Normalize addresses to lowercase for case-insensitive matching
+        const normalizedOwners = params.owners.map(owner => owner.toLowerCase());
+        if (normalizedOwners.length === 1) {
+          whereWithFilters.owner = normalizedOwners[0];
+        } else {
+          whereWithFilters.owner_in = normalizedOwners;
+        }
+      }
+
+      // Operator filtering (at Agent level, not registrationFile)
+      if (params.operators && params.operators.length > 0) {
+        // Normalize addresses to lowercase for case-insensitive matching
+        const normalizedOperators = params.operators.map(op => op.toLowerCase());
+        // For operators (array field), use contains to check if any operator matches
+        whereWithFilters.operators_contains = normalizedOperators;
+      }
+
       // Fetch records with filters and pagination applied at subgraph level
       const allAgents = await this.getAgents({ where: whereWithFilters, first, skip });
-      
+
       // Only filter client-side for fields that can't be filtered at subgraph level
-      // Fields already filtered at subgraph level: active, x402support, mcp, a2a, ens, walletAddress
+      // Fields already filtered at subgraph level: active, x402support, mcp, a2a, ens, walletAddress, owners, operators
       return allAgents.filter((agent) => {
         // Name filtering (substring search - not supported at subgraph level)
         if (params.name && !agent.name.toLowerCase().includes(params.name.toLowerCase())) {
@@ -330,19 +352,19 @@ export class SubgraphClient {
         }
         // Array contains filtering (supportedTrust, a2aSkills, mcpTools) - these require array contains logic
         if (params.supportedTrust && params.supportedTrust.length > 0) {
-          const hasAllTrusts = params.supportedTrust.every(trust => 
+          const hasAllTrusts = params.supportedTrust.every(trust =>
             agent.supportedTrusts.includes(trust)
           );
           if (!hasAllTrusts) return false;
         }
         if (params.a2aSkills && params.a2aSkills.length > 0) {
-          const hasAllSkills = params.a2aSkills.every(skill => 
+          const hasAllSkills = params.a2aSkills.every(skill =>
             agent.a2aSkills.includes(skill)
           );
           if (!hasAllSkills) return false;
         }
         if (params.mcpTools && params.mcpTools.length > 0) {
-          const hasAllTools = params.mcpTools.every(tool => 
+          const hasAllTools = params.mcpTools.every(tool =>
             agent.mcpTools.includes(tool)
           );
           if (!hasAllTools) return false;

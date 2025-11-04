@@ -135,5 +135,83 @@ describe('Agent Search and Discovery', () => {
       }
     }
   });
+
+  it('should search agents by single owner address', async () => {
+    // First get a sample agent with an owner
+    const allAgents = await sdk.searchAgents({}, undefined, 10);
+    expect(allAgents.items.length).toBeGreaterThan(0);
+
+    const agentWithOwner = allAgents.items.find(a => a.owners && a.owners.length > 0);
+    if (!agentWithOwner) {
+      console.log('No agents with owners found, skipping test');
+      return;
+    }
+
+    const testOwner = agentWithOwner.owners[0];
+
+    // Search by owner
+    const ownerResults = await sdk.searchAgents({ owners: [testOwner] });
+    expect(ownerResults.items.length).toBeGreaterThan(0);
+
+    // Verify all results have the correct owner
+    ownerResults.items.forEach(agent => {
+      const hasOwner = agent.owners.some(owner =>
+        owner.toLowerCase() === testOwner.toLowerCase()
+      );
+      expect(hasOwner).toBe(true);
+    });
+  });
+
+  it('should search agents by multiple owner addresses', async () => {
+    // Get sample agents with owners
+    const allAgents = await sdk.searchAgents({}, undefined, 20);
+    const agentsWithOwners = allAgents.items.filter(a => a.owners && a.owners.length > 0);
+
+    if (agentsWithOwners.length < 2) {
+      console.log('Not enough agents with owners found, skipping test');
+      return;
+    }
+
+    const owner1 = agentsWithOwners[0].owners[0];
+    const owner2 = agentsWithOwners[1].owners[0];
+
+    // Search by multiple owners
+    const results = await sdk.searchAgents({ owners: [owner1, owner2] });
+    expect(results.items.length).toBeGreaterThan(0);
+
+    // Verify all results have at least one of the specified owners
+    results.items.forEach(agent => {
+      const hasMatchingOwner = agent.owners.some(owner =>
+        owner.toLowerCase() === owner1.toLowerCase() ||
+        owner.toLowerCase() === owner2.toLowerCase()
+      );
+      expect(hasMatchingOwner).toBe(true);
+    });
+  });
+
+  it('should search agents by operator addresses', async () => {
+    // First get a sample agent with an operator
+    const allAgents = await sdk.searchAgents({}, undefined, 50);
+    const agentWithOperator = allAgents.items.find(a => a.operators && a.operators.length > 0);
+
+    if (!agentWithOperator) {
+      console.log('No agents with operators found, skipping test');
+      return;
+    }
+
+    const testOperator = agentWithOperator.operators[0];
+
+    // Search by operator
+    const operatorResults = await sdk.searchAgents({ operators: [testOperator] });
+    expect(operatorResults.items.length).toBeGreaterThan(0);
+
+    // Verify all results have the correct operator
+    operatorResults.items.forEach(agent => {
+      const hasOperator = agent.operators.some(op =>
+        op.toLowerCase() === testOperator.toLowerCase()
+      );
+      expect(hasOperator).toBe(true);
+    });
+  });
 });
 
