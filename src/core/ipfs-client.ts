@@ -7,6 +7,7 @@
 
 import type { IPFSHTTPClient } from 'ipfs-http-client';
 import type { RegistrationFile } from '../models/interfaces';
+import { EndpointType } from '../models/enums';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants';
 
 export interface IPFSClientConfig {
@@ -308,8 +309,14 @@ export class IPFSClient {
     identityRegistryAddress?: string
   ): Promise<string> {
     // Convert from internal format { type, value, meta } to ERC-8004 format { name, endpoint, version }
+    // Filter out wallet endpoints - they're handled separately via agentWallet
     const endpoints: Array<Record<string, unknown>> = [];
     for (const ep of registrationFile.endpoints) {
+      // Skip wallet endpoints - they're handled separately via agentWallet below
+      if (ep.type === EndpointType.WALLET) {
+        continue;
+      }
+      
       const endpointDict: Record<string, unknown> = {
         name: ep.type, // EndpointType enum value (e.g., "MCP", "A2A")
         endpoint: ep.value,
@@ -335,12 +342,36 @@ export class IPFSClient {
     // Build registrations array
     const registrations: Array<Record<string, unknown>> = [];
     if (registrationFile.agentId) {
-      const [, , tokenId] = registrationFile.agentId.split(':');
-      const agentRegistry = chainId && identityRegistryAddress
-        ? `eip155:${chainId}:${identityRegistryAddress}`
-        : `eip155:1:{identityRegistry}`;
+      // Parse agentId correctly - format is "chainId:tokenId" (only 2 parts)
+      const parts = registrationFile.agentId.split(':');
+      if (parts.length !== 2) {
+        throw new Error(`Invalid agentId format: ${registrationFile.agentId}. Expected "chainId:tokenId"`);
+      }
+      
+      // Parse and validate chainId
+      const chainIdFromAgentId = parseInt(parts[0], 10);
+      if (isNaN(chainIdFromAgentId) || chainIdFromAgentId <= 0) {
+        throw new Error(`Invalid chainId in agentId: ${registrationFile.agentId}. Must be a positive integer`);
+      }
+      
+      // Parse and validate tokenId
+      const tokenId = parseInt(parts[1], 10);
+      if (isNaN(tokenId) || tokenId < 0) {
+        throw new Error(`Invalid tokenId in agentId: ${registrationFile.agentId}. Must be a non-negative integer`);
+      }
+      
+      // Use chainId parameter if provided, otherwise fall back to chainId from agentId
+      // Note: If chainId parameter is provided, we assume it matches the agentId's chainId
+      const effectiveChainId = chainId ?? chainIdFromAgentId;
+      
+      // Build agentRegistry - use provided identityRegistryAddress if available
+      // Otherwise use a placeholder that indicates the chain
+      const agentRegistry = identityRegistryAddress
+        ? `eip155:${effectiveChainId}:${identityRegistryAddress}`
+        : `eip155:${effectiveChainId}:{identityRegistry}`;
+      
       registrations.push({
-        agentId: parseInt(tokenId, 10),
+        agentId: tokenId,
         agentRegistry,
       });
     }
