@@ -45,8 +45,6 @@ export interface SDKConfig {
   // Arweave configuration
   arweave?: boolean;              // Enable Arweave storage
   arweavePrivateKey?: string;     // Optional separate EVM key (defaults to signer)
-  arweaveToken?: string;          // Payment token (default: 'ethereum')
-  arweaveTestnet?: boolean;       // Use testnet endpoints
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
@@ -178,8 +176,6 @@ export class SDK {
 
     return new ArweaveClient({
       privateKey,
-      token: config.arweaveToken,
-      testnet: config.arweaveTestnet
     });
   }
 

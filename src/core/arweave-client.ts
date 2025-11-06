@@ -12,8 +12,6 @@ import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
 
 export interface ArweaveClientConfig {
   privateKey: string; // EVM private key (NOT Arweave JWK)
-  token?: string; // Payment token: 'ethereum' | 'pol' | 'solana' | 'base-eth'
-  testnet?: boolean; // Use testnet endpoints for development
 }
 
 export class ArweaveClient {
@@ -33,11 +31,7 @@ export class ArweaveClient {
 
     const turboConfig: any = {
       signer,
-      token: this.config.token || 'ethereum',
-      ...(this.config.testnet && {
-        paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
-        uploadServiceConfig: { url: 'https://upload.ardrive.dev' },
-      }),
+      token: 'ethereum',
     };
 
     this.turbo = TurboFactory.authenticated(turboConfig);
@@ -68,9 +62,9 @@ export class ArweaveClient {
         error.message?.includes('insufficient')
       ) {
         throw new Error(
-          'Turbo upload failed due to service limits. ' +
-            'Files under 100KB are typically free. ' +
-            'For larger files or high volume, visit https://turbo.ardrive.io. ' +
+          'Arweave upload failed: Insufficient Turbo credits. ' +
+            'Files under 100KB are typically free. For larger files or if you have ' +
+            'exceeded the free tier, purchase credits at https://turbo.ar.io. ' +
             `Details: ${error.message}`
         );
       }
