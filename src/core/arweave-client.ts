@@ -73,7 +73,13 @@ export class ArweaveClient {
   }
 
   /**
-   * Upload JSON data to Arweave
+   * Upload JSON data to Arweave via Turbo SDK.
+   * Automatically stringifies the data and uploads with optional tags.
+   * Data is immediately available via optimistic caching.
+   *
+   * @param data - JavaScript object to upload as JSON
+   * @param tags - Optional array of Arweave tags for metadata and searchability
+   * @returns Arweave transaction ID
    */
   async addJson(
     data: Record<string, unknown>,
@@ -84,8 +90,18 @@ export class ArweaveClient {
   }
 
   /**
-   * Upload registration file to Arweave with ERC-8004 format.
-   * Uses shared formatting utility to ensure consistency with IPFS.
+   * Upload agent registration file to Arweave with ERC-8004 formatting.
+   * Uses shared formatting utility to ensure consistency with IPFS implementation.
+   * Automatically generates comprehensive Arweave tags for searchability when chainId is provided.
+   *
+   * Tags include: Content-Type, App-Name, Protocol, Data-Type, Chain-Id, Agent-Id,
+   * Schema-Version, capability flags (Has-MCP, Has-A2A, Has-Wallet, Active), and timestamp.
+   * All tags are cryptographically signed via Turbo's EthereumSigner.
+   *
+   * @param registrationFile - Agent registration data to upload
+   * @param chainId - Optional blockchain network ID (enables tag generation)
+   * @param identityRegistryAddress - Optional registry contract address (included in formatted data)
+   * @returns Arweave transaction ID (permanent, immutable)
    */
   async addRegistrationFile(
     registrationFile: RegistrationFile,
@@ -153,7 +169,12 @@ export class ArweaveClient {
   }
 
   /**
-   * Get JSON data from Arweave by transaction ID
+   * Retrieve and parse JSON data from Arweave using parallel gateway fallback.
+   * Automatically parses the retrieved string data as JSON.
+   *
+   * @param txId - Arweave transaction ID (with or without ar:// prefix)
+   * @returns Parsed JSON data typed as T
+   * @throws Error if retrieval fails from all gateways or if JSON parsing fails
    */
   async getJson<T = Record<string, unknown>>(txId: string): Promise<T> {
     const data = await this.get(txId);
@@ -161,14 +182,24 @@ export class ArweaveClient {
   }
 
   /**
-   * Get registration file from Arweave by transaction ID
+   * Retrieve and parse agent registration file from Arweave.
+   * Returns a typed RegistrationFile object with full agent metadata, endpoints,
+   * trust models, and capabilities.
+   *
+   * @param txId - Arweave transaction ID (with or without ar:// prefix)
+   * @returns Typed RegistrationFile object
+   * @throws Error if retrieval fails from all gateways or if data doesn't match expected format
    */
   async getRegistrationFile(txId: string): Promise<RegistrationFile> {
     return await this.getJson<RegistrationFile>(txId);
   }
 
   /**
-   * Close client connections (for API consistency with IPFSClient)
+   * Close client connections and release resources.
+   * Included for API consistency with IPFSClient, though Turbo SDK
+   * does not require explicit cleanup.
+   *
+   * @returns Promise that resolves when cleanup is complete
    */
   async close(): Promise<void> {
     // No explicit cleanup needed for Turbo

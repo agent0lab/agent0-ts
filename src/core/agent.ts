@@ -503,11 +503,46 @@ export class Agent {
   }
 
   /**
-   * Register agent on-chain with Arweave permanent storage.
-   * Data is immediately available via Turbo's optimistic caching
-   * while settling to Arweave network in the background.
+   * Register agent on-chain with Arweave permanent storage flow.
    *
-   * @returns Updated registration file with ar:// URI
+   * **First-time registration:**
+   * 1. Register on-chain without URI to receive tokenId
+   * 2. Upload registration file to Arweave via Turbo SDK (with comprehensive tags)
+   * 3. Set agent URI on-chain to ar://{txId}
+   *
+   * **Update existing registration:**
+   * 1. Upload updated registration file to Arweave (new transaction ID)
+   * 2. Update on-chain metadata if any fields changed
+   * 3. Update agent URI on-chain to new ar://{txId}
+   *
+   * **Key Features:**
+   * - Data immediately available via Turbo optimistic caching
+   * - Permanent, immutable storage (no pinning required)
+   * - Cryptographically signed tags for searchability
+   * - Free uploads for files <100KB (typical agent files are 1-4 KB)
+   * - Background settlement to Arweave network (~2-5 minutes)
+   *
+   * **Error Handling:**
+   * - Throws if name or description missing
+   * - Throws if Arweave client not configured (set arweave: true in SDK config)
+   * - Transaction timeouts are handled gracefully (transaction sent, will eventually confirm)
+   *
+   * @returns Updated registration file with ar:// URI and agentId
+   * @throws Error if basic validation fails or Arweave client not configured
+   *
+   * @example
+   * ```typescript
+   * const agent = sdk.createAgent('My Agent', 'Description');
+   * await agent.setMCP('https://mcp.example.com/');
+   * agent.setActive(true);
+   *
+   * const registration = await agent.registerArweave();
+   * console.log(registration.agentId); // "11155111:123"
+   * console.log(registration.agentURI); // "ar://abc123..."
+   *
+   * // Data is immediately available for reload
+   * const reloaded = await sdk.loadAgent(registration.agentId!);
+   * ```
    */
   async registerArweave(): Promise<RegistrationFile> {
     // Validate basic requirements

@@ -11,8 +11,8 @@ Agent0 SDK v0.31 enables you to:
 - **OASF taxonomies** - Advertise standardized skills and domains using the Open Agentic Schema Framework (OASF) taxonomies for better discovery and interoperability
 - **Enable permissionless discovery** - Make your agent discoverable by other agents and platforms using rich search by attributes, capabilities, skills, tools, tasks, and x402 support
 - **Build reputation** - Give and receive feedback, retrieve feedback history, and search agents by reputation with cryptographic authentication
-- **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
-- **Public indexing** - Subgraph indexing both on-chain and IPFS data for fast search and retrieval
+- **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, Arweave, or HTTP URIs
+- **Public indexing** - Subgraph indexing both on-chain and decentralized storage (IPFS/Arweave) data for fast search and retrieval
 
 ## ⚠️ Alpha Release
 
@@ -28,7 +28,7 @@ Agent0 SDK v0.31 is in **alpha** with bugs and is not production ready. We're ac
 - npm or yarn package manager
 - Private key for signing transactions (or run in read-only mode)
 - Access to an Ethereum RPC endpoint (e.g., Alchemy, Infura)
-- (Optional) IPFS provider account (Pinata, Filecoin, or local IPFS node)
+- (Optional) Storage provider account (IPFS: Pinata, Filecoin, or local node; or Arweave)
 
 ### Install from npm
 
@@ -411,6 +411,21 @@ The SDK includes complete OASF v0.8.0 taxonomy files:
 
 Browse these files to find appropriate skill and domain slugs. For more information, see the [OASF specification](https://github.com/agntcy/oasf) and [Release Notes v0.31](RELEASE_NOTES_0.31.md).
 
+## Arweave Storage Configuration
+
+```typescript
+// Arweave permanent storage
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: '...',
+  signer: privateKey,
+  arweave: true,
+  arweavePrivateKey: 'your-arweave-private-key' // Optional (defaults to signer)
+});
+
+// Register with Arweave
+await agent.registerArweave();
+```
 ## 🚀 Coming Soon
 
 - Support for validations

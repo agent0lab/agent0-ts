@@ -162,7 +162,21 @@ export class SDK {
   }
 
   /**
-   * Initialize Arweave client with EVM signer
+   * Initialize Arweave client with EVM signer for permanent storage.
+   * Uses Turbo SDK with EthereumSigner for cryptographically authenticated uploads.
+   *
+   * **Private Key Priority:**
+   * 1. Uses config.arweavePrivateKey if provided (allows separate key for Arweave)
+   * 2. Falls back to config.signer if arweavePrivateKey not specified
+   *
+   * **Why EVM Keys:**
+   * - Arweave Turbo SDK supports EVM signing (no Arweave JWK needed)
+   * - Maintains consistency with SDK's Ethereum-focused design
+   * - Allows reusing existing signer or using separate key for Arweave operations
+   *
+   * @param config - SDK configuration object
+   * @returns Initialized ArweaveClient instance
+   * @throws Error if neither arweavePrivateKey nor signer provided
    */
   private _initializeArweaveClient(config: SDKConfig): ArweaveClient {
     const privateKey = config.arweavePrivateKey || config.signer;

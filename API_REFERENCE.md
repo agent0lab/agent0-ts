@@ -18,6 +18,9 @@ interface SDKConfig {
   ipfsNodeUrl?: string;
   filecoinPrivateKey?: string;
   pinataJwt?: string;
+  // Arweave configuration
+  arweave?: boolean;
+  arweavePrivateKey?: string;
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
@@ -131,6 +134,7 @@ async getReputationSummary(
 ```typescript
 get web3Client(): Web3Client
 get ipfsClient(): IPFSClient | undefined
+get arweaveClient(): ArweaveClient | undefined
 get subgraphClient(): SubgraphClient | undefined
 ```
 
@@ -190,6 +194,7 @@ getRegistrationFile(): RegistrationFile
 ### Registration Methods
 ```typescript
 async registerIPFS(): Promise<RegistrationFile>
+async registerArweave(): Promise<RegistrationFile>
 async registerHTTP(agentUri: string): Promise<RegistrationFile>
 async setAgentUri(agentUri: string): Promise<void>
 ```
@@ -233,7 +238,7 @@ function formatFeedbackId(
 type AgentId = string; // Format: "chainId:tokenId"
 type ChainId = number;
 type Address = string; // Ethereum address (0x-hex format)
-type URI = string; // https://... or ipfs://...
+type URI = string; // https://..., ipfs://..., or ar://...
 type CID = string; // IPFS CID
 type Timestamp = number; // Unix timestamp in seconds
 type IdemKey = string; // Idempotency key for write operations
