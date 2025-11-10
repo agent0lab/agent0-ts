@@ -9,6 +9,9 @@ export * from './models/index.js';
 // Export utilities
 export * from './utils/index.js';
 
+// Export semantic search module
+export * from './semantic-search/index.js';
+
 // Export core classes
 export { SDK } from './core/sdk.js';
 export type { SDKConfig } from './core/sdk.js';
