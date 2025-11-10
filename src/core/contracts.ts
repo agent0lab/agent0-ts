@@ -346,6 +346,12 @@ export const DEFAULT_REGISTRIES: Record<ChainId, Record<string, string>> = {
     REPUTATION: '0x8004bd8483b99310df121c46ED8858616b2Bba02',
     VALIDATION: '0x8004c44d1EFdd699B2A26e781eF7F77c56A9a4EB',
   },
+  80002: {
+    // Polygon Amoy
+    IDENTITY: '0x8004ad19E14B9e0654f73353e8a0B600D46C2898',
+    REPUTATION: '0x8004B12F4C2B42d00c46479e859C92e39044C930',
+    VALIDATION: '0x8004C11C213ff7BaD36489bcBDF947ba5eee289B',
+  },
 };
 
 /**
@@ -354,5 +360,9 @@ export const DEFAULT_REGISTRIES: Record<ChainId, Record<string, string>> = {
 export const DEFAULT_SUBGRAPH_URLS: Record<ChainId, string> = {
   11155111:
     'https://gateway.thegraph.com/api/00a452ad3cd1900273ea62c1bf283f93/subgraphs/id/6wQRC7geo9XYAhckfmfo8kbMRLeWU8KQd3XsJqFKmZLT', // Ethereum Sepolia
+  84532:
+    'https://gateway.thegraph.com/api/00a452ad3cd1900273ea62c1bf283f93/subgraphs/id/GjQEDgEKqoh5Yc8MUgxoQoRATEJdEiH7HbocfR1aFiHa', // Base Sepolia
+  80002:
+    'https://gateway.thegraph.com/api/00a452ad3cd1900273ea62c1bf283f93/subgraphs/id/2A1JB18r1mF2VNP4QBH4mmxd74kbHoM6xLXC8ABAKf7j', // Polygon Amoy
 };
 

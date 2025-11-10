@@ -8,6 +8,7 @@ import type {
   Feedback,
   SearchParams,
   SearchFeedbackParams,
+  SearchResultMeta,
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces.js';
@@ -103,7 +104,7 @@ export class SDK {
     }
 
     // Initialize indexer
-    this._indexer = new AgentIndexer(this._web3Client, this._subgraphClient);
+    this._indexer = new AgentIndexer(this._web3Client, this._subgraphClient, this._subgraphUrls);
 
     // Initialize IPFS client
     if (config.ipfs) {
@@ -123,6 +124,11 @@ export class SDK {
       const providers = resolveSemanticSearchProviders(config.semanticSearch);
       this._semanticSearchManager = new SemanticSearchManager(providers.embedding, providers.vectorStore);
     }
+    // Set subgraph client getter for multi-chain support
+    this._feedbackManager.setSubgraphClientGetter(
+      (chainId) => this.getSubgraphClient(chainId),
+      this._chainId
+    );
   }
 
   /**
@@ -238,6 +244,28 @@ export class SDK {
     if (!this._semanticSearchManager) {
       throw new Error('Semantic search is not configured for this SDK instance');
     }
+   * Get subgraph client for a specific chain
+   */
+  getSubgraphClient(chainId?: ChainId): SubgraphClient | undefined {
+    const targetChain = chainId !== undefined ? chainId : this._chainId;
+
+    // Check if we already have a client for this chain
+    if (targetChain === this._chainId && this._subgraphClient) {
+      return this._subgraphClient;
+    }
+
+    // Resolve URL for target chain
+    let url: string | undefined;
+    if (targetChain in this._subgraphUrls) {
+      url = this._subgraphUrls[targetChain];
+    } else if (targetChain in DEFAULT_SUBGRAPH_URLS) {
+      url = DEFAULT_SUBGRAPH_URLS[targetChain];
+    }
+
+    if (url) {
+      return new SubgraphClient(url);
+    }
+    return undefined;
   }
 
   /**
@@ -353,29 +381,56 @@ export class SDK {
 
   /**
    * Get agent summary from subgraph (read-only)
+   * Supports both default chain and explicit chain specification via chainId:tokenId format
    */
   async getAgent(agentId: AgentId): Promise<AgentSummary | null> {
-    if (!this._subgraphClient) {
-      throw new Error('Subgraph client required for getAgent');
+    // Parse agentId to extract chainId if present
+    // If no colon, assume it's just tokenId on default chain
+    let parsedChainId: number;
+    let formattedAgentId: string;
+    
+    if (agentId.includes(':')) {
+      const parsed = parseAgentId(agentId);
+      parsedChainId = parsed.chainId;
+      formattedAgentId = agentId; // Already in correct format
+    } else {
+      // No colon - use default chain
+      parsedChainId = this._chainId;
+      formattedAgentId = formatAgentId(this._chainId, parseInt(agentId, 10));
     }
-    return this._subgraphClient.getAgentById(agentId);
+    
+    // Determine which chain to query
+    const targetChainId = parsedChainId !== this._chainId ? parsedChainId : undefined;
+    
+    // Get subgraph client for the target chain (or use default)
+    const subgraphClient = targetChainId
+      ? this.getSubgraphClient(targetChainId)
+      : this._subgraphClient;
+    
+    if (!subgraphClient) {
+      throw new Error(`Subgraph client required for getAgent on chain ${targetChainId || this._chainId}`);
+    }
+    
+    return subgraphClient.getAgentById(formattedAgentId);
   }
 
   /**
    * Search agents with filters
+   * Supports multi-chain search when chains parameter is provided
    */
   async searchAgents(
     params?: SearchParams,
     sort?: string[],
     pageSize: number = 50,
     cursor?: string
-  ): Promise<{ items: AgentSummary[]; nextCursor?: string }> {
+  ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
     const searchParams: SearchParams = params || {};
-    return this._indexer.searchAgents(searchParams, pageSize, cursor);
+    return this._indexer.searchAgents(searchParams, pageSize, cursor, sort || []);
   }
 
   /**
    * Search agents by reputation
+   * Supports multi-chain search when chains parameter is provided
    */
   async searchAgentsByReputation(
     agents?: AgentId[],
@@ -389,8 +444,9 @@ export class SDK {
     includeRevoked: boolean = false,
     pageSize: number = 50,
     cursor?: string,
-    sort?: string[]
-  ): Promise<{ items: AgentSummary[]; nextCursor?: string }> {
+    sort?: string[],
+    chains?: ChainId[] | 'all'
+  ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
     // Parse cursor to skip value
     let skip = 0;
     if (cursor) {
@@ -418,7 +474,8 @@ export class SDK {
       includeRevoked,
       pageSize,
       skip,
-      sort
+      sort,
+      chains
     );
   }
 

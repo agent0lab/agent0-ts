@@ -118,7 +118,7 @@ console.log(`Updated: ${agent.agentURI}`);
 ### 4. Search Agents
 
 ```typescript
-// Search by name, capabilities, or attributes
+// Search by name, capabilities, or attributes (single chain)
 const results = await sdk.searchAgents({
   name: 'AI', // Substring search
   mcpTools: ['code_generation'], // Specific MCP tools
@@ -133,8 +133,64 @@ for (const agent of results.items) {
   console.log(`  Skills: ${agent.a2aSkills?.join(', ')}`);
 }
 
+// Multi-chain search
+const multiChainResults = await sdk.searchAgents({
+  active: true,
+  chains: [11155111, 84532, 80002] // ETH Sepolia, Base Sepolia, Polygon Amoy
+  // Or use 'all' to search all configured chains: chains: 'all'
+});
+
+console.log(`Found ${multiChainResults.items.length} agents across chains`);
+if (multiChainResults.meta) {
+  console.log(`Successful chains: ${multiChainResults.meta.successfulChains.join(', ')}`);
+}
+
 // Get single agent (read-only, faster)
-const agentSummary = await sdk.getAgent('11155111:123');
+// Supports chainId:agentId format
+const agentSummary = await sdk.getAgent('11155111:123'); // Default chain
+const baseAgent = await sdk.getAgent('84532:123'); // Base Sepolia
+```
+
+### 4a. Multi-Chain Search
+
+```typescript
+// Search across multiple chains
+const results = await sdk.searchAgents({
+  active: true,
+  chains: [11155111, 84532] // ETH Sepolia and Base Sepolia
+});
+
+// Search all configured chains
+const allResults = await sdk.searchAgents({
+  active: true,
+  chains: 'all' // Searches all configured chains
+});
+
+// Search agents by reputation across chains
+const reputationResults = await sdk.searchAgentsByReputation(
+  undefined, // agents
+  undefined, // tags
+  undefined, // reviewers
+  undefined, // capabilities
+  undefined, // skills
+  undefined, // tasks
+  undefined, // names
+  80, // minAverageScore
+  false, // includeRevoked
+  20, // pageSize
+  undefined, // cursor
+  undefined, // sort
+  [11155111, 84532] // chains
+);
+
+// Get agent from specific chain
+const agent = await sdk.getAgent('84532:123'); // Base Sepolia
+
+// Search feedback for agent on specific chain
+const feedbacks = await sdk.searchFeedback('84532:123'); // Base Sepolia
+
+// Get reputation summary for agent on specific chain
+const summary = await sdk.getReputationSummary('84532:123'); // Base Sepolia
 ```
 
 ### Semantic Search & Sync
@@ -329,11 +385,102 @@ const sdk = new SDK({ chainId: 11155111, rpcUrl: '...', signer: privateKey });
 await agent.registerHTTP('https://example.com/agent-registration.json');
 ```
 
+## Multi-Chain Support
+
+The SDK supports querying agents across multiple blockchain networks:
+
+- **Ethereum Sepolia** (Chain ID: `11155111`)
+- **Base Sepolia** (Chain ID: `84532`)
+- **Polygon Amoy** (Chain ID: `80002`)
+
+### Chain-Agnostic Agent IDs
+
+Use `chainId:agentId` format to specify which chain an agent is on:
+
+```typescript
+// Get agent from specific chain
+const agent = await sdk.getAgent('84532:1234');  // Base Sepolia
+
+// Search feedback for agent on specific chain
+const feedbacks = await sdk.searchFeedback('84532:1234');  // Base Sepolia
+const feedbacksDefault = await sdk.searchFeedback('1234');  // Uses default chain
+
+// Get reputation summary for agent on specific chain
+const summary = await sdk.getReputationSummary('84532:1234');  // Base Sepolia
+const summaryDefault = await sdk.getReputationSummary('1234');  // Uses default chain
+```
+
+### Multi-Chain Search
+
+Search across multiple chains simultaneously:
+
+```typescript
+// Search across multiple chains
+const result = await sdk.searchAgents({
+  active: true,
+  chains: [11155111, 84532]  // ETH Sepolia and Base Sepolia
+});
+
+// Search all configured chains
+const allChainsResult = await sdk.searchAgents({
+  active: true,
+  chains: 'all'  // Searches all configured chains
+});
+
+// Multi-chain reputation search
+const reputationResult = await sdk.searchAgentsByReputation(
+  undefined, // agents
+  undefined, // tags
+  undefined, // reviewers
+  undefined, // capabilities
+  undefined, // skills
+  undefined, // tasks
+  undefined, // names
+  80, // minAverageScore
+  false, // includeRevoked
+  20, // pageSize
+  undefined, // cursor
+  undefined, // sort
+  [11155111, 84532]  // Multiple chains
+);
+
+// Search all chains for agents with reputation
+const allChainsReputation = await sdk.searchAgentsByReputation(
+  undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+  80, false, 20, undefined, undefined,
+  'all'  // All configured chains
+);
+
+// Access metadata about queried chains
+if (result.meta) {
+  console.log(`Queried chains: ${result.meta.chains.join(', ')}`);
+  console.log(`Successful: ${result.meta.successfulChains.join(', ')}`);
+  console.log(`Failed: ${result.meta.failedChains.join(', ')}`);
+  console.log(`Total results: ${result.meta.totalResults}`);
+  console.log(`Query time: ${result.meta.timing.totalMs}ms`);
+}
+```
+
+### Default Chain Behavior
+
+When you initialize the SDK, you specify a default chain. Agent IDs without a `chainId:` prefix use the default chain:
+
+```typescript
+const sdk = new SDK({
+  chainId: 11155111,  // Default chain
+  rpcUrl: 'https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY'
+});
+
+// Uses default chain (11155111)
+const agent = await sdk.getAgent('1234');  // Equivalent to "11155111:1234"
+
+// Explicitly specify different chain
+const agent = await sdk.getAgent('84532:1234');  // Base Sepolia
+```
+
 ## 🚀 Coming Soon
 
-- More chains (currently Ethereum Sepolia only)
 - Support for validations
-- Multi-chain agents search
 - Enhanced x402 payments
 - Semantic/Vectorial search
 - Advanced reputation aggregation

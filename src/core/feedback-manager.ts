@@ -12,7 +12,7 @@ import type { AgentId, Address, URI, Timestamp, IdemKey } from '../models/types.
 import type { Web3Client } from './web3-client.js';
 import type { IPFSClient } from './ipfs-client.js';
 import type { SubgraphClient } from './subgraph-client.js';
-import { parseAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format.js';
+import { parseAgentId, formatAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format.js';
 import { DEFAULTS } from '../utils/constants.js';
 
 export interface FeedbackAuth {
@@ -29,6 +29,9 @@ export interface FeedbackAuth {
  * Manages feedback operations for the Agent0 SDK
  */
 export class FeedbackManager {
+  private getSubgraphClientForChain?: (chainId?: number) => SubgraphClient | undefined;
+  private defaultChainId?: number;
+
   constructor(
     private web3Client: Web3Client,
     private ipfsClient?: IPFSClient,
@@ -36,6 +39,17 @@ export class FeedbackManager {
     private identityRegistry?: ethers.Contract,
     private subgraphClient?: SubgraphClient
   ) {}
+
+  /**
+   * Set function to get subgraph client for a specific chain (for multi-chain support)
+   */
+  setSubgraphClientGetter(
+    getter: (chainId?: number) => SubgraphClient | undefined,
+    defaultChainId: number
+  ): void {
+    this.getSubgraphClientForChain = getter;
+    this.defaultChainId = defaultChainId;
+  }
 
   /**
    * Set reputation registry contract (for lazy initialization)
@@ -390,18 +404,65 @@ export class FeedbackManager {
   /**
    * Search feedback with filters
    * Uses subgraph if available, otherwise returns empty array
+   * Supports chainId:agentId format in params.agents
    */
   async searchFeedback(params: SearchFeedbackParams): Promise<Feedback[]> {
-    if (!this.subgraphClient) {
+    // Determine which subgraph client to use based on agentId chainId
+    let subgraphClientToUse = this.subgraphClient;
+    let formattedAgents: string[] | undefined;
+    
+    // If agents are specified, check if they have chainId prefixes
+    if (params.agents && params.agents.length > 0 && this.getSubgraphClientForChain) {
+      // Parse first agentId to determine chain
+      const firstAgentId = params.agents[0];
+      let chainId: number | undefined;
+      let fullAgentId: string;
+      
+      if (firstAgentId.includes(':')) {
+        const parsed = parseAgentId(firstAgentId);
+        chainId = parsed.chainId;
+        fullAgentId = firstAgentId;
+        // Get subgraph client for the specified chain
+        subgraphClientToUse = this.getSubgraphClientForChain(chainId);
+        // Format all agentIds to ensure they have chainId prefix
+        formattedAgents = params.agents.map(agentId => {
+          if (agentId.includes(':')) {
+            return agentId;
+          } else {
+            // Format with the same chainId as the first agent
+            return formatAgentId(chainId!, parseInt(agentId, 10));
+          }
+        });
+      } else {
+        // Use default chain - format agentIds with default chainId
+        chainId = this.defaultChainId;
+        if (this.defaultChainId !== undefined) {
+          formattedAgents = params.agents.map(agentId => {
+            if (agentId.includes(':')) {
+              return agentId;
+            } else {
+              return formatAgentId(this.defaultChainId!, parseInt(agentId, 10));
+            }
+          });
+        } else {
+          formattedAgents = params.agents;
+        }
+        // Don't change subgraphClientToUse - use the default one
+      }
+    } else {
+      formattedAgents = params.agents;
+    }
+
+    if (!subgraphClientToUse) {
       // Fallback not implemented (would require blockchain queries)
       // For now, return empty if subgraph unavailable
       return [];
     }
 
     // Query subgraph
-    const feedbacksData = await this.subgraphClient.searchFeedback(
+    const feedbacksData = await subgraphClientToUse.searchFeedback(
       {
-        agents: params.agents,
+        agents: formattedAgents || params.agents,
         reviewers: params.reviewers,
         tags: params.tags,
         capabilities: params.capabilities,
@@ -693,17 +754,113 @@ export class FeedbackManager {
 
   /**
    * Get reputation summary
+   * Supports chainId:agentId format
    */
   async getReputationSummary(
     agentId: AgentId,
     tag1?: string,
     tag2?: string
   ): Promise<{ count: number; averageScore: number }> {
+    // Parse chainId from agentId
+    let chainId: number | undefined;
+    let fullAgentId: string;
+    let tokenId: number;
+    
+    let subgraphClient: SubgraphClient | undefined;
+    
+    if (agentId.includes(':')) {
+      const parsed = parseAgentId(agentId);
+      chainId = parsed.chainId;
+      tokenId = parsed.tokenId;
+      fullAgentId = agentId;
+      // Get subgraph client for the specified chain
+      if (this.getSubgraphClientForChain) {
+        subgraphClient = this.getSubgraphClientForChain(chainId);
+      }
+    } else {
+      // Use default chain
+      chainId = this.defaultChainId;
+      tokenId = parseInt(agentId, 10);
+      if (this.defaultChainId !== undefined) {
+        fullAgentId = formatAgentId(this.defaultChainId, tokenId);
+      } else {
+        // Fallback: use agentId as-is if no default chain
+        fullAgentId = agentId;
+      }
+      // Use default subgraph client
+      subgraphClient = this.subgraphClient;
+    }
+
+    // Try subgraph first if available
+    if (subgraphClient) {
+      try {
+        // Use subgraph to calculate reputation
+        // Query feedback for this agent
+        const feedbacksData = await subgraphClient.searchFeedback(
+            {
+              agents: [fullAgentId],
+            },
+            1000, // first
+            0, // skip
+            'createdAt',
+            'desc'
+          );
+
+          // Filter by tags if provided
+          let filteredFeedbacks = feedbacksData;
+          if (tag1 || tag2) {
+            filteredFeedbacks = feedbacksData.filter((fb: any) => {
+              const fbTag1 = fb.tag1 || '';
+              const fbTag2 = fb.tag2 || '';
+              if (tag1 && tag2) {
+                return (fbTag1 === tag1 && fbTag2 === tag2) || (fbTag1 === tag2 && fbTag2 === tag1);
+              } else if (tag1) {
+                return fbTag1 === tag1 || fbTag2 === tag1;
+              } else if (tag2) {
+                return fbTag1 === tag2 || fbTag2 === tag2;
+              }
+              return true;
+            });
+          }
+
+          // Filter out revoked feedback
+          const validFeedbacks = filteredFeedbacks.filter((fb: any) => !fb.isRevoked);
+
+          if (validFeedbacks.length > 0) {
+            const scores = validFeedbacks
+              .map((fb: any) => fb.score)
+              .filter((score: any) => score !== null && score !== undefined && score > 0);
+            
+            if (scores.length > 0) {
+              const sum = scores.reduce((a: number, b: number) => a + b, 0);
+              const averageScore = sum / scores.length;
+              return {
+                count: validFeedbacks.length,
+                averageScore: Math.round(averageScore * 100) / 100, // Round to 2 decimals
+              };
+            }
+          }
+
+        return { count: 0, averageScore: 0 };
+      } catch (error) {
+        // Fall through to blockchain query if subgraph fails
+      }
+    }
+
+    // Fallback to blockchain query (requires matching chain)
     if (!this.reputationRegistry) {
       throw new Error('Reputation registry not available');
     }
 
-    const { tokenId } = parseAgentId(agentId);
+    // For blockchain query, we need the chain to match the SDK's default chain
+    // If chainId is specified and different, we can't use blockchain query
+    if (chainId !== undefined && this.defaultChainId !== undefined && chainId !== this.defaultChainId) {
+      throw new Error(
+        `Blockchain reputation summary not supported for chain ${chainId}. ` +
+        `SDK is configured for chain ${this.defaultChainId}. ` +
+        `Use subgraph-based summary instead.`
+      );
+    }
 
     try {
       const tag1Bytes = tag1 ? this._stringToBytes32(tag1) : '0x' + '00'.repeat(32);
