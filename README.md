@@ -54,6 +54,17 @@ npm run build
 
 ## Quick Start
 
+### Supported Test Networks
+
+| Network            | `chainId` | Notes |
+| ------------------ | --------- | ----- |
+| Ethereum Sepolia   | 11155111  | Default registry + default subgraph URL bundled with the SDK. |
+| Hedera Testnet     | 296       | Provide a Hedera JSON-RPC endpoint (e.g., `https://testnet.hashio.io/api`). Supply a subgraph URL via `subgraphUrl`/`subgraphOverrides` for search features. |
+| Base Sepolia       | 84532     | Registry addresses included. Configure `subgraphOverrides` for query support. |
+| Linea Sepolia      | 59141     | Registry addresses included. Configure `subgraphOverrides` for query support. |
+
+> ℹ️ When using Hedera Testnet, the SDK cannot auto-detect a subgraph yet. Pass a Hedera-compatible subgraph endpoint explicitly if you rely on search, feedback history, or reputation summary APIs.
+
 ### 1. Initialize SDK
 
 ```typescript
@@ -61,12 +72,27 @@ import { SDK } from 'agent0-sdk';
 
 // Initialize SDK with IPFS and subgraph
 const sdk = new SDK({
-  chainId: 11155111, // Ethereum Sepolia testnet
+  chainId: 11155111, // Default: Ethereum Sepolia (see Supported Test Networks for other chainIds)
   rpcUrl: process.env.RPC_URL!,
   signer: process.env.PRIVATE_KEY, // Optional: for write operations
   ipfs: 'pinata', // Options: 'pinata', 'filecoinPin', 'node'
   pinataJwt: process.env.PINATA_JWT // For Pinata
   // Subgraph URL auto-defaults from DEFAULT_SUBGRAPH_URLS
+  // Override subgraphUrl/subgraphOverrides when supplying your own endpoint
+  // Hedera testnet (chainId 296) requires providing subgraphOverrides: { 296: 'https://your-hedera-subgraph.example' }
+});
+```
+
+> **Note:** Hedera testnet (chainId `296`) includes default registry addresses but does not have a bundled subgraph URL. When targeting Hedera, pass a `subgraphOverrides` entry during SDK initialization, for example:
+
+```typescript
+const sdk = new SDK({
+  chainId: 296,
+  rpcUrl: process.env.RPC_URL!,
+  subgraphOverrides: {
+    296: 'https://your-hedera-subgraph.example',
+  },
+  // ...other config options
 });
 ```
 
@@ -173,7 +199,7 @@ console.log(`Average score: ${summary.averageScore}`);
 ```typescript
 // Option 1: Filecoin Pin (free for ERC-8004 agents)
 const sdk = new SDK({
-  chainId: 11155111,
+  chainId: 11155111, // Configure with the chainId for your target network
   rpcUrl: '...',
   signer: privateKey,
   ipfs: 'filecoinPin',
@@ -205,7 +231,7 @@ await agent.registerHTTP('https://example.com/agent-registration.json');
 
 ## 🚀 Coming Soon
 
-- More chains (currently Ethereum Sepolia only)
+- More chains (currently supports Ethereum Sepolia, Hedera Testnet, Base Sepolia, and Linea Sepolia; more networks coming soon)
 - Support for validations
 - Multi-chain agents search
 - Enhanced x402 payments

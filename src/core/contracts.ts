@@ -334,6 +334,12 @@ export const DEFAULT_REGISTRIES: Record<ChainId, Record<string, string>> = {
     REPUTATION: '0x8004B8FD1A363aa02fDC07635C0c5F94f6Af5B7E',
     VALIDATION: '0x8004CB39f29c09145F24Ad9dDe2A108C1A2cdfC5',
   },
+  296: {
+    // Hedera Testnet
+    IDENTITY: '0x4c74ebd72921d537159ed2053f46c12a7d8e5923',
+    REPUTATION: '0xc565edcba77e3abeade40bfd6cf6bf583b3293e0',
+    VALIDATION: '0x18df085d85c586e9241e0cd121ca422f571c2da6',
+  },
   84532: {
     // Base Sepolia
     IDENTITY: '0x8004AA63c570c570eBF15376c0dB199918BFe9Fb',
