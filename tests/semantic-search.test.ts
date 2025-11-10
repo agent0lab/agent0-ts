@@ -2,6 +2,7 @@ import {
   SemanticSearchManager,
   resolveSemanticSearchProviders,
   VeniceEmbeddingProvider,
+  OpenAIEmbeddingProvider,
   PineconeVectorStore,
   type SemanticAgentRecord,
   type SemanticQueryRequest,
@@ -57,6 +58,76 @@ describe('resolveSemanticSearchProviders', () => {
         vectorStore: { provider: 'pinecone', apiKey: 'pinecone-key', index: 'test-index' },
       })
     ).toThrow('Unsupported embedding provider');
+  });
+});
+
+describe('OpenAIEmbeddingProvider', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    if (originalFetch) {
+      global.fetch = originalFetch;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (global as unknown as { fetch?: typeof fetch }).fetch;
+    }
+    jest.resetAllMocks();
+  });
+
+  it('sends requests to configured base URL and returns embeddings', async () => {
+    const mockResponse = { data: [{ embedding: [0.25, 0.5, 0.75] }] };
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    (global as unknown as { fetch: typeof fetch }).fetch = mockFetch as unknown as typeof fetch;
+
+    const provider = new OpenAIEmbeddingProvider({
+      apiKey: 'test-openai-key',
+      model: 'text-embedding-3-small',
+      baseUrl: 'https://api.openai.com/v1',
+    });
+
+    const embedding = await provider.generateEmbedding('hello world');
+    expect(embedding).toEqual([0.25, 0.5, 0.75]);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const [, requestInit] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(requestInit?.method).toBe('POST');
+    expect(requestInit?.headers).toMatchObject({
+      Authorization: 'Bearer test-openai-key',
+      'Content-Type': 'application/json',
+    });
+
+    const parsedBody = JSON.parse(requestInit?.body as string);
+    expect(parsedBody).toMatchObject({
+      input: 'hello world',
+      model: 'text-embedding-3-small',
+    });
+  });
+
+  it('allows payload overrides via buildPayload hook', async () => {
+    const mockResponse = { data: [{ embedding: [1, 2] }] };
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    (global as unknown as { fetch: typeof fetch }).fetch = mockFetch as unknown as typeof fetch;
+
+    const provider = new OpenAIEmbeddingProvider({
+      apiKey: 'key',
+      buildPayload: body => ({
+        ...body,
+        dimensions: 256,
+      }),
+    });
+
+    await provider.generateEmbedding('payload');
+    const [, requestInit] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const parsedBody = JSON.parse(requestInit?.body as string);
+    expect(parsedBody.dimensions).toBe(256);
   });
 });
 

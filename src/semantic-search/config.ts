@@ -1,10 +1,12 @@
 import type { EmbeddingProvider, SemanticSearchProviders, VectorStoreProvider } from './interfaces.js';
 import { VeniceEmbeddingProvider, type VeniceEmbeddingConfig } from './providers/venice-embedding.js';
+import { OpenAIEmbeddingProvider, type OpenAIEmbeddingConfig } from './providers/openai-embedding.js';
 import { PineconeVectorStore, type PineconeVectorStoreConfig } from './providers/pinecone-vector-store.js';
 
 export type EmbeddingProviderDefinition =
   | EmbeddingProvider
-  | ({ provider: 'venice' } & VeniceEmbeddingConfig);
+  | ({ provider: 'venice' } & VeniceEmbeddingConfig)
+  | ({ provider: 'openai' } & OpenAIEmbeddingConfig);
 
 export type VectorStoreProviderDefinition =
   | VectorStoreProvider
@@ -38,6 +40,12 @@ function resolveEmbeddingProvider(definition: EmbeddingProviderDefinition): Embe
     const { provider: _provider, ...rest } = definition;
     void _provider;
     return new VeniceEmbeddingProvider(rest);
+  }
+
+  if (definition.provider === 'openai') {
+    const { provider: _provider, ...rest } = definition;
+    void _provider;
+    return new OpenAIEmbeddingProvider(rest);
   }
 
   throw new Error(`Unsupported embedding provider: ${(definition as { provider?: string }).provider}`);

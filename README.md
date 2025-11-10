@@ -12,6 +12,7 @@ Agent0 SDK v0.21 enables you to:
 - **Build reputation** - Give and receive feedback, retrieve feedback history, and search agents by reputation with cryptographic authentication
 - **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
 - **Public indexing** - Subgraph indexing both on-chain and IPFS data for fast search and retrieval
+- **Semantic discovery** - Optional vector search with pluggable embedding providers and vector databases (defaults: Venice AI + Pinecone)
 
 ## ⚠️ Alpha Release
 
@@ -136,6 +137,104 @@ for (const agent of results.items) {
 const agentSummary = await sdk.getAgent('11155111:123');
 ```
 
+### Semantic Search & Sync
+
+1. **Enable semantic search when initialising the SDK**
+
+   ```typescript
+   import { SDK } from 'agent0-sdk';
+
+   const sdk = new SDK({
+     chainId: 11155111,
+     rpcUrl: process.env.RPC_URL!,
+     semanticSearch: {
+       embedding: {
+         provider: 'venice',
+         apiKey: process.env.VENICE_API_KEY!,
+         model: process.env.VENICE_MODEL || 'text-embedding-bge-m3',
+       },
+       vectorStore: {
+         provider: 'pinecone',
+         apiKey: process.env.PINECONE_API_KEY!,
+         index: process.env.PINECONE_INDEX || 'agent-registry',
+         namespace: process.env.PINECONE_NAMESPACE,
+       },
+     },
+   });
+   ```
+
+   Built-in embedding providers:
+
+   - `provider: 'venice'` – defaults to `text-embedding-bge-m3` against `https://api.venice.ai/api/v1/embeddings`
+   - `provider: 'openai'` – defaults to `text-embedding-3-small` against `https://api.openai.com/v1/embeddings`
+
+   Both accept a `baseUrl` override for custom OpenAI-compatible hosts (e.g., local proxy or managed Venice instance).
+   Venice’s BGE-M3 model emits 1,024‑dimensional vectors well-suited for multilingual RAG, while OpenAI’s `text-embedding-3` family supports up to 3,072 dimensions with configurable down-projection (256/512/1024/etc.) for cost–performance tuning.
+
+   You can supply your own providers by implementing the `EmbeddingProvider` / `VectorStoreProvider` interfaces and passing instances directly instead of the preset objects.
+
+2. **Index agents and run semantic queries**
+
+   ```typescript
+   await sdk.semanticIndexAgent({
+     chainId: 11155111,
+     agentId: '11155111:123',
+     name: 'Portfolio Navigator',
+     description: 'DeFi yield strategist',
+     capabilities: ['defi', 'risk-assessment'],
+     tags: ['finance'],
+   });
+
+   const response = await sdk.semanticSearchAgents({
+     query: 'optimize stablecoin yield with low risk',
+     topK: 5,
+     filters: { capabilities: ['defi'] },
+   });
+
+   // Batch indexing
+   await sdk.semanticIndexAgentsBatch([
+     {
+       chainId: 11155111,
+       agentId: '11155111:alpha',
+       name: 'Alpha Assistant',
+       description: 'Research analyst specialising in AI news summaries.',
+       capabilities: ['research', 'summarisation'],
+     },
+     {
+       chainId: 11155111,
+       agentId: '11155111:beta',
+       name: 'Beta Builder',
+       description: 'Turns product requirements into engineering specs.',
+       capabilities: ['product', 'spec-writing'],
+     },
+   ]);
+   ```
+
+3. **Keep the index fresh with the sync runner**
+
+   ```bash
+   # Stores progress in .cache/semantic-sync-state.json (configurable via SEMANTIC_SYNC_STATE)
+   npx tsx examples/semantic-sync.ts
+   ```
+
+   The runner pages the subgraph (defaults to Sepolia), upserts new or updated agents, deletes orphans, and persists a `lastUpdatedAt` marker so repeated runs only process the delta. To embed it in your own service, instantiate `SemanticSyncRunner` with your `SDK` instance and optional `SemanticSyncStateStore`, then call `runner.run()` on whatever schedule you prefer. Use the appropriate API key env vars (e.g., `VENICE_API_KEY` or `OPENAI_API_KEY`) depending on the embedding provider you’ve configured.
+
+   ```typescript
+   import {
+     FileSemanticSyncStateStore,
+     SemanticSyncRunner,
+   } from 'agent0-sdk'; // or '../src/semantic-search'
+
+   const runner = new SemanticSyncRunner(sdk, {
+     batchSize: 100,
+     stateStore: new FileSemanticSyncStateStore({ filepath: '.cache/semantic-sync-state.json' }),
+     logger: (event, extra) => console.log(`[semantic-sync] ${event}`, extra),
+   });
+
+   // Run now (e.g., cron job) and it will resume from the last saved marker.
+   await runner.run();
+   ```
+
 ### 5. Give and Retrieve Feedback
 
 ```typescript
@@ -222,6 +321,8 @@ Complete working examples are available in the `examples/` directory:
 - `feedback-usage.ts` - Complete feedback flow with IPFS storage
 - `search-agents.ts` - Agent search and discovery
 - `transfer-agent.ts` - Agent ownership transfer
+- `semantic-search.ts` - Index demo agents and run semantic queries
+- `semantic-sync.ts` - Crash-safe subgraph sync for vector indexing
 
 ## Documentation
 

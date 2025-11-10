@@ -64,11 +64,13 @@ export class SemanticSyncRunner {
     const state = (await this.stateStore.load()) ?? this.createEmptyState();
     let lastUpdatedAt = state.lastUpdatedAt;
     let processedAny = false;
+    let hasMore = true;
 
-    while (true) {
+    while (hasMore) {
       const agents = await this.fetchAgents(lastUpdatedAt, this.batchSize);
 
       if (agents.length === 0) {
+        hasMore = false;
         break;
       }
 
