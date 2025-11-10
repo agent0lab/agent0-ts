@@ -263,7 +263,10 @@ export class FeedbackManager {
         const sortedJson = JSON.stringify(feedbackFile, Object.keys(feedbackFile).sort());
         feedbackHash = this.web3Client.keccak256(sortedJson);
       } catch (error) {
-        // Failed to store on IPFS - continue without IPFS storage
+        // Failed to store on IPFS - log error but continue without IPFS storage
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Feedback] Failed to store feedback file on IPFS: ${errorMessage}`);
+        // Continue without IPFS storage - feedback will be stored on-chain only
       }
     } else if (feedbackFile.context || feedbackFile.capability || feedbackFile.name) {
       // If we have rich data but no IPFS, we need to store it somewhere

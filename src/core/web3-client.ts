@@ -6,6 +6,7 @@ import {
   ethers,
   type Contract,
   type Wallet,
+  type Signer,
   type JsonRpcProvider,
   type InterfaceAbi,
 } from 'ethers';
@@ -22,19 +23,43 @@ export interface TransactionOptions {
  */
 export class Web3Client {
   public readonly provider: JsonRpcProvider;
-  public readonly signer?: Wallet;
+  public readonly signer?: Wallet | Signer;
   public chainId: bigint;
 
   /**
    * Initialize Web3 client
    * @param rpcUrl - RPC endpoint URL
-   * @param privateKey - Optional private key for signing transactions
+   * @param signerOrKey - Optional private key string OR ethers Wallet/Signer for signing transactions
    */
-  constructor(rpcUrl: string, privateKey?: string) {
+  constructor(rpcUrl: string, signerOrKey?: string | Wallet | Signer) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     
-    if (privateKey) {
-      this.signer = new ethers.Wallet(privateKey, this.provider);
+    if (signerOrKey) {
+      if (typeof signerOrKey === 'string') {
+        // Private key string - create a new Wallet
+        // Validate that it's not an empty string
+        if (signerOrKey.trim() === '') {
+          throw new Error('Private key cannot be empty');
+        }
+        this.signer = new ethers.Wallet(signerOrKey, this.provider);
+      } else {
+        // Already a Wallet or Signer - connect to provider if needed
+        const currentProvider = (signerOrKey as any).provider;
+        if (currentProvider && currentProvider === this.provider) {
+          // Already connected to the same provider
+          this.signer = signerOrKey;
+        } else if (typeof signerOrKey.connect === 'function') {
+          // Connect to provider
+          try {
+            this.signer = signerOrKey.connect(this.provider);
+          } catch (error) {
+            throw new Error(`Failed to connect signer to provider: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        } else {
+          // Signer without connect method - use as-is
+          this.signer = signerOrKey;
+        }
+      }
     }
 
     // Get chain ID asynchronously (will be set in async initialization)
@@ -274,7 +299,23 @@ export class Web3Client {
    * Get the account address (if signer is available)
    */
   get address(): string | undefined {
-    return this.signer?.address;
+    if (!this.signer) return undefined;
+    // Wallet has address property, Signer might need getAddress()
+    if ('address' in this.signer) {
+      return this.signer.address as string;
+    }
+    // For generic Signer, we can't get address synchronously
+    // This is a limitation of the Signer interface
+    return undefined;
+  }
+  
+  /**
+   * Get the account address asynchronously (if signer is available)
+   * Use this method when you need the address from a generic Signer
+   */
+  async getAddress(): Promise<string | undefined> {
+    if (!this.signer) return undefined;
+    return await this.signer.getAddress();
   }
 }
 

@@ -40,7 +40,7 @@ import {
 export interface SDKConfig {
   chainId: ChainId;
   rpcUrl: string;
-  signer?: string; // Private key for signing transactions (optional for read-only operations)
+  signer?: string | ethers.Wallet | ethers.Signer; // Private key string OR ethers Wallet/Signer (optional for read-only operations)
   registryOverrides?: Record<ChainId, Record<string, Address>>;
   // IPFS configuration
   ipfs?: 'node' | 'filecoinPin' | 'pinata';

@@ -102,6 +102,55 @@ export class IPFSClient {
         throw new Error(`No CID returned from Pinata. Response: ${JSON.stringify(result)}`);
       }
 
+      // Verify CID is accessible on Pinata gateway (with short timeout since we just uploaded)
+      // This catches cases where Pinata returns a CID but the upload actually failed
+      // Note: We treat HTTP 429 (rate limit) and timeouts as non-fatal since content may propagate with delay
+      try {
+        const verifyUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const verifyResponse = await fetch(verifyUrl, {
+          signal: AbortSignal.timeout(5000), // 5 second timeout for verification
+        });
+        if (!verifyResponse.ok) {
+          // HTTP 429 (rate limit) is not a failure - gateway is just rate limiting
+          if (verifyResponse.status === 429) {
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but gateway is rate-limited (HTTP 429). ` +
+              `Content is likely available but verification skipped due to rate limiting.`
+            );
+          } else {
+            // Other HTTP errors might indicate a real problem
+            throw new Error(
+              `Pinata returned CID ${cid} but content is not accessible on gateway (HTTP ${verifyResponse.status}). ` +
+              `This may indicate the upload failed. Full Pinata response: ${JSON.stringify(result)}`
+            );
+          }
+        }
+      } catch (verifyError) {
+        // If verification fails, check if it's a timeout or rate limit (non-fatal)
+        if (verifyError instanceof Error) {
+          // Timeout or network errors are non-fatal - content may propagate with delay
+          if (verifyError.message.includes('timeout') || verifyError.message.includes('aborted')) {
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but verification timed out. ` +
+              `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
+            );
+          } else if (verifyError.message.includes('429')) {
+            // Rate limit is non-fatal
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but gateway is rate-limited. ` +
+              `Content is likely available but verification skipped.`
+            );
+          } else {
+            // Other errors might indicate a real problem, but we'll still continue
+            // since Pinata API returned success - content might just need time to propagate
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but verification failed: ${verifyError.message}. ` +
+              `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
+            );
+          }
+        }
+      }
+
       return cid;
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
