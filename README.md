@@ -131,6 +131,10 @@ const agentSummary = await sdk.getAgent('11155111:123');
 ### 5. Give and Retrieve Feedback
 
 ```typescript
+// NOTE: Feedback automatically uses Arweave storage when SDK configured with arweave: true
+// Storage priority: Arweave (permanent) → IPFS (if configured) → On-chain only
+// The fileURI will be ar://... (Arweave), ipfs://... (IPFS), or undefined (on-chain only)
+
 // Prepare feedback (only score is mandatory)
 const feedbackFile = sdk.prepareFeedback(
   '11155111:123',
@@ -144,6 +148,7 @@ const feedbackFile = sdk.prepareFeedback(
 
 // Give feedback
 const feedback = await sdk.giveFeedback('11155111:123', feedbackFile);
+console.log(feedback.fileURI); // ar://... (Arweave), ipfs://... (IPFS), or undefined
 
 // Search feedback
 const feedbackResults = await sdk.searchFeedback(
