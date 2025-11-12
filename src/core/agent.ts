@@ -13,6 +13,7 @@ import type { SDK } from './sdk.js';
 import { EndpointCrawler } from './endpoint-crawler.js';
 import { parseAgentId } from '../utils/id-format.js';
 import { TIMEOUTS } from '../utils/constants.js';
+import { validateSkill, validateDomain } from './oasf-validator.js';
 
 /**
  * Agent class for managing individual agents
@@ -173,6 +174,150 @@ export class Agent {
     };
     this.registrationFile.endpoints.push(ensEndpoint);
     this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+
+    return this;
+  }
+
+  // OASF endpoint management
+  private _getOrCreateOasfEndpoint(): Endpoint {
+    // Find existing OASF endpoint
+    const existing = this.registrationFile.endpoints.find(
+      (ep) => ep.type === EndpointType.OASF
+    );
+    if (existing) {
+      return existing;
+    }
+
+    // Create new OASF endpoint with default values
+    const oasfEndpoint: Endpoint = {
+      type: EndpointType.OASF,
+      value: 'https://github.com/agntcy/oasf/',
+      meta: { version: 'v0.8.0', skills: [], domains: [] },
+    };
+    this.registrationFile.endpoints.push(oasfEndpoint);
+    return oasfEndpoint;
+  }
+
+  addSkill(slug: string, validateOASF: boolean = false): this {
+    /**
+     * Add a skill to the OASF endpoint.
+     * @param slug The skill slug to add (e.g., "natural_language_processing/summarization")
+     * @param validateOASF If true, validate the slug against the OASF taxonomy (default: false)
+     * @returns this for method chaining
+     * @throws Error if validateOASF=true and the slug is not valid
+     */
+    if (validateOASF) {
+      if (!validateSkill(slug)) {
+        throw new Error(
+          `Invalid OASF skill slug: ${slug}. ` +
+            'Use validateOASF=false to skip validation.'
+        );
+      }
+    }
+
+    const oasfEndpoint = this._getOrCreateOasfEndpoint();
+
+    // Initialize skills array if missing
+    if (!oasfEndpoint.meta) {
+      oasfEndpoint.meta = {};
+    }
+    if (!Array.isArray(oasfEndpoint.meta.skills)) {
+      oasfEndpoint.meta.skills = [];
+    }
+
+    // Add slug if not already present (avoid duplicates)
+    const skills = oasfEndpoint.meta.skills as string[];
+    if (!skills.includes(slug)) {
+      skills.push(slug);
+    }
+
+    this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+    return this;
+  }
+
+  removeSkill(slug: string): this {
+    /**
+     * Remove a skill from the OASF endpoint.
+     * @param slug The skill slug to remove
+     * @returns this for method chaining
+     */
+    // Find OASF endpoint
+    const oasfEndpoint = this.registrationFile.endpoints.find(
+      (ep) => ep.type === EndpointType.OASF
+    );
+
+    if (oasfEndpoint && oasfEndpoint.meta) {
+      const skills = oasfEndpoint.meta.skills;
+      if (Array.isArray(skills)) {
+        const index = skills.indexOf(slug);
+        if (index !== -1) {
+          skills.splice(index, 1);
+        }
+      }
+      this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+    }
+
+    return this;
+  }
+
+  addDomain(slug: string, validateOASF: boolean = false): this {
+    /**
+     * Add a domain to the OASF endpoint.
+     * @param slug The domain slug to add (e.g., "finance_and_business/investment_services")
+     * @param validateOASF If true, validate the slug against the OASF taxonomy (default: false)
+     * @returns this for method chaining
+     * @throws Error if validateOASF=true and the slug is not valid
+     */
+    if (validateOASF) {
+      if (!validateDomain(slug)) {
+        throw new Error(
+          `Invalid OASF domain slug: ${slug}. ` +
+            'Use validateOASF=false to skip validation.'
+        );
+      }
+    }
+
+    const oasfEndpoint = this._getOrCreateOasfEndpoint();
+
+    // Initialize domains array if missing
+    if (!oasfEndpoint.meta) {
+      oasfEndpoint.meta = {};
+    }
+    if (!Array.isArray(oasfEndpoint.meta.domains)) {
+      oasfEndpoint.meta.domains = [];
+    }
+
+    // Add slug if not already present (avoid duplicates)
+    const domains = oasfEndpoint.meta.domains as string[];
+    if (!domains.includes(slug)) {
+      domains.push(slug);
+    }
+
+    this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+    return this;
+  }
+
+  removeDomain(slug: string): this {
+    /**
+     * Remove a domain from the OASF endpoint.
+     * @param slug The domain slug to remove
+     * @returns this for method chaining
+     */
+    // Find OASF endpoint
+    const oasfEndpoint = this.registrationFile.endpoints.find(
+      (ep) => ep.type === EndpointType.OASF
+    );
+
+    if (oasfEndpoint && oasfEndpoint.meta) {
+      const domains = oasfEndpoint.meta.domains;
+      if (Array.isArray(domains)) {
+        const index = domains.indexOf(slug);
+        if (index !== -1) {
+          domains.splice(index, 1);
+        }
+      }
+      this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+    }
 
     return this;
   }

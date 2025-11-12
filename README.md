@@ -4,10 +4,11 @@ Agent0 is the TypeScript SDK for agentic economies. It enables agents to registe
 
 ## What Does Agent0 SDK Do?
 
-Agent0 SDK v0.21 enables you to:
+Agent0 SDK v0.31 enables you to:
 
 - **Create and manage agent identities** - Register your AI agent on-chain with a unique identity, configure presentation fields (name, description, image), set wallet addresses, and manage trust models with x402 support
 - **Advertise agent capabilities** - Publish MCP and A2A endpoints, with automated extraction of MCP tools and A2A skills from endpoints
+- **OASF taxonomies** - Advertise standardized skills and domains using the Open Agentic Schema Framework (OASF) taxonomies for better discovery and interoperability
 - **Enable permissionless discovery** - Make your agent discoverable by other agents and platforms using rich search by attributes, capabilities, skills, tools, tasks, and x402 support
 - **Build reputation** - Give and receive feedback, retrieve feedback history, and search agents by reputation with cryptographic authentication
 - **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
@@ -15,7 +16,7 @@ Agent0 SDK v0.21 enables you to:
 
 ## ⚠️ Alpha Release
 
-Agent0 SDK v0.21 is in **alpha** with bugs and is not production ready. We're actively testing and improving it.
+Agent0 SDK v0.31 is in **alpha** with bugs and is not production ready. We're actively testing and improving it.
 
 **Bug reports & feedback:** GitHub: [Report issues](https://github.com/agent0lab/agent0-ts/issues) | Telegram: [@marcoderossi](https://t.me/marcoderossi) | Email: marco.derossi@consensys.net
 
@@ -84,6 +85,12 @@ const agent = sdk.createAgent(
 await agent.setMCP('https://mcp.example.com/'); // Extracts tools, prompts, resources
 await agent.setA2A('https://a2a.example.com/agent-card.json'); // Extracts skills
 agent.setENS('myagent.eth');
+
+// Add OASF skills and domains (standardized taxonomies)
+agent.addSkill('data_engineering/data_transformation_pipeline', true);
+agent.addSkill('natural_language_processing/summarization', true);
+agent.addDomain('finance_and_business/investment_services', true);
+agent.addDomain('technology/data_science', true);
 
 // Configure wallet and trust
 agent.setAgentWallet('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb', 11155111);
@@ -351,6 +358,58 @@ const agent = await sdk.getAgent('1234');  // Equivalent to "11155111:1234"
 // Explicitly specify different chain
 const agent = await sdk.getAgent('84532:1234');  // Base Sepolia
 ```
+
+## OASF Taxonomies
+
+The SDK includes support for the **Open Agentic Schema Framework (OASF)** taxonomies, enabling agents to advertise standardized skills and domains. This improves discoverability and interoperability across agent platforms.
+
+### Adding Skills and Domains
+
+```typescript
+// Add OASF skills (with optional validation)
+agent.addSkill('advanced_reasoning_planning/strategic_planning', true);
+agent.addSkill('data_engineering/data_transformation_pipeline', true);
+
+// Add OASF domains (with optional validation)
+agent.addDomain('finance_and_business/investment_services', true);
+agent.addDomain('technology/data_science/data_visualization', true);
+
+// Remove skills/domains
+agent.removeSkill('old_skill');
+agent.removeDomain('old_domain');
+```
+
+### OASF in Registration Files
+
+OASF skills and domains appear in your agent's registration file:
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "OASF",
+      "endpoint": "https://github.com/agntcy/oasf/",
+      "version": "v0.8.0",
+      "skills": [
+        "advanced_reasoning_planning/strategic_planning",
+        "data_engineering/data_transformation_pipeline"
+      ],
+      "domains": [
+        "finance_and_business/investment_services",
+        "technology/data_science"
+      ]
+    }
+  ]
+}
+```
+
+### Taxonomy Files
+
+The SDK includes complete OASF v0.8.0 taxonomy files:
+- **Skills**: `src/taxonomies/all_skills.json` (136 skills)
+- **Domains**: `src/taxonomies/all_domains.json` (204 domains)
+
+Browse these files to find appropriate skill and domain slugs. For more information, see the [OASF specification](https://github.com/agntcy/oasf) and [Release Notes v0.31](RELEASE_NOTES_0.31.md).
 
 ## 🚀 Coming Soon
 

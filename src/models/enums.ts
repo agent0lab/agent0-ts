@@ -11,6 +11,7 @@ export enum EndpointType {
   ENS = 'ENS',
   DID = 'DID',
   WALLET = 'wallet',
+  OASF = 'OASF',
 }
 
 /**
