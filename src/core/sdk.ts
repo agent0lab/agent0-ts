@@ -115,6 +115,7 @@ export class SDK {
     this._feedbackManager = new FeedbackManager(
       this._web3Client,
       this._ipfsClient,
+      this._arweaveClient,
       undefined, // reputationRegistry - will be set lazily
       undefined, // identityRegistry - will be set lazily
       this._subgraphClient

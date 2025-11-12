@@ -7,7 +7,7 @@
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import type { RegistrationFile } from '../models/interfaces';
 import { formatRegistrationFileForStorage } from '../utils/registration-format';
-import { generateArweaveRegistrationTags } from '../utils/arweave-tags';
+import { generateArweaveRegistrationTags, generateArweaveFeedbackTags } from '../utils/arweave-tags';
 import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
 
 export interface ArweaveClientConfig {
@@ -118,6 +118,63 @@ export class ArweaveClient {
     const tags = chainId ? generateArweaveRegistrationTags(registrationFile, chainId) : undefined;
 
     return this.addJson(data, tags);
+  }
+
+  /**
+   * Upload feedback file to Arweave with comprehensive metadata tags.
+   * Automatically generates Arweave tags for searchability including score, tags,
+   * capability, skill, agent ID, and reviewer address when provided.
+   *
+   * Tags include: Content-Type, App-Name, Protocol, Data-Type (agent-feedback),
+   * Chain-Id, Agent-Id, Reviewer, Score, Tag1, Tag2, Capability, Skill, and timestamp.
+   * All tags are cryptographically signed via Turbo's EthereumSigner.
+   *
+   * This enables Arweave-native search for feedback by:
+   * - Agent ID (which agent received the feedback)
+   * - Reviewer address (who gave the feedback)
+   * - Score (numerical rating)
+   * - Tags (user-defined feedback tags)
+   * - Capability (MCP capability: tools, prompts, resources, completions)
+   * - Skill (A2A skill)
+   *
+   * @param feedbackFile - Feedback data to upload
+   * @param chainId - Optional blockchain network ID (enables tag generation)
+   * @param agentId - Optional agent identifier (e.g., "11155111:123")
+   * @param clientAddress - Optional reviewer's Ethereum address
+   * @returns Arweave transaction ID (permanent, immutable)
+   *
+   * @example
+   * ```typescript
+   * const feedbackFile = {
+   *   score: 85,
+   *   tag1: 'helpful',
+   *   tag2: 'accurate',
+   *   text: 'Great experience!',
+   *   capability: 'tools',
+   *   skill: 'code_generation'
+   * };
+   * const txId = await arweaveClient.addFeedbackFile(
+   *   feedbackFile,
+   *   11155111,
+   *   '11155111:123',
+   *   '0xabc...'
+   * );
+   * // Returns: 'arweave-tx-id-here'
+   * // Data accessible at: ar://{txId}
+   * ```
+   */
+  async addFeedbackFile(
+    feedbackFile: Record<string, unknown>,
+    chainId?: number,
+    agentId?: string,
+    clientAddress?: string
+  ): Promise<string> {
+    // Generate tags if chainId is provided
+    const tags = chainId
+      ? generateArweaveFeedbackTags(feedbackFile, chainId, agentId, clientAddress)
+      : undefined;
+
+    return this.addJson(feedbackFile, tags);
   }
 
   /**

@@ -235,3 +235,125 @@ describe('Agent Feedback Flow with IPFS Pin', () => {
   });
 });
 
+/**
+ * Integration test for Agent Feedback with Arweave Storage
+ * Tests automatic storage selection based on SDK configuration
+ */
+describe('Agent Feedback Flow with Arweave Storage', () => {
+  let clientSdkArweave: SDK;
+  let agentSdkWithSignerArweave: SDK;
+  let clientAddressArweave: string;
+  const agentId = AGENT_ID;
+
+  beforeAll(() => {
+    console.log('\n=== Arweave Feedback Tests ===');
+    printConfig();
+  });
+
+  it('should initialize SDK with Arweave configuration', async () => {
+    // SDK Configuration with Arweave enabled
+    const sdkConfig = {
+      chainId: CHAIN_ID,
+      rpcUrl: RPC_URL,
+      arweave: true, // Enable Arweave storage
+    };
+
+    // Client SDK with Arweave
+    clientSdkArweave = new SDK({ ...sdkConfig, signer: CLIENT_PRIVATE_KEY });
+    if (!clientSdkArweave.web3Client.signer) {
+      throw new Error('Signer required for Arweave feedback test');
+    }
+    clientAddressArweave = clientSdkArweave.web3Client.address!;
+
+    // Agent SDK with signer for feedback authorization
+    agentSdkWithSignerArweave = new SDK({ ...sdkConfig, signer: AGENT_PRIVATE_KEY });
+
+    expect(clientSdkArweave.arweaveClient).toBeTruthy();
+    expect(agentSdkWithSignerArweave.arweaveClient).toBeTruthy();
+  });
+
+  it('should submit feedback with Arweave storage', async () => {
+    const feedbackData = generateFeedbackData(1);
+
+    // Prepare feedback file
+    const feedbackFile = clientSdkArweave.prepareFeedback(
+      agentId,
+      feedbackData.score,
+      feedbackData.tags,
+      'Great agent with excellent Arweave integration!',
+      feedbackData.capability,
+      undefined,
+      feedbackData.skill,
+      undefined,
+      { context: feedbackData.context, storage: 'arweave' }
+    );
+
+    // Sign feedback authorization
+    const feedbackAuth = await agentSdkWithSignerArweave.signFeedbackAuth(
+      agentId,
+      clientAddressArweave,
+      undefined,
+      24
+    );
+
+    // Submit feedback - should automatically use Arweave
+    const feedback = await clientSdkArweave.giveFeedback(agentId, feedbackFile, feedbackAuth);
+
+    // Verify feedback structure
+    expect(feedback.score).toBe(feedbackData.score);
+    expect(feedback.tags).toEqual(feedbackData.tags);
+    expect(feedback.capability).toBe(feedbackData.capability);
+    expect(feedback.skill).toBe(feedbackData.skill);
+
+    // CRITICAL: Verify Arweave URI format (ar://)
+    expect(feedback.fileURI).toBeTruthy();
+    expect(feedback.fileURI).toMatch(/^ar:\/\//);
+
+    console.log(`✅ Feedback stored to Arweave: ${feedback.fileURI}`);
+  });
+
+  it('should verify Arweave-first priority when both clients configured', async () => {
+    // SDK with BOTH Arweave and IPFS configured
+    const sdkConfig = {
+      chainId: CHAIN_ID,
+      rpcUrl: RPC_URL,
+      arweave: true,
+      ipfs: 'pinata' as const,
+      pinataJwt: PINATA_JWT,
+      signer: CLIENT_PRIVATE_KEY,
+    };
+
+    const mixedSdk = new SDK(sdkConfig);
+
+    expect(mixedSdk.arweaveClient).toBeTruthy();
+    expect(mixedSdk.ipfsClient).toBeTruthy();
+
+    // Prepare simple feedback
+    const feedbackFile = mixedSdk.prepareFeedback(
+      agentId,
+      85,
+      ['test', 'priority'],
+      'Testing storage priority',
+      'test_capability'
+    );
+
+    // Sign auth
+    const feedbackAuth = await agentSdkWithSignerArweave.signFeedbackAuth(
+      agentId,
+      mixedSdk.web3Client.address!,
+      undefined,
+      24
+    );
+
+    // Submit feedback
+    const feedback = await mixedSdk.giveFeedback(agentId, feedbackFile, feedbackAuth);
+
+    // Should use Arweave (checked first), not IPFS
+    expect(feedback.fileURI).toBeTruthy();
+    expect(feedback.fileURI).toMatch(/^ar:\/\//);
+    expect(feedback.fileURI).not.toMatch(/^ipfs:\/\//);
+
+    console.log(`✅ Mixed SDK correctly prioritizes Arweave: ${feedback.fileURI}`);
+  });
+});
+
