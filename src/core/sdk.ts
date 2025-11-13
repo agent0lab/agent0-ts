@@ -12,12 +12,11 @@ import type {
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces.js';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types.js';
 import type { AgentId, ChainId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
-import { formatAgentId, parseAgentId } from '../utils/id-format.js';
+import { parseAgentId } from '../utils/id-format.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
-import { Web3Client, type TransactionOptions } from './web3-client.js';
+import { Web3Client } from './web3-client.js';
 import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
 import { SubgraphClient } from './subgraph-client.js';
 import { FeedbackManager } from './feedback-manager.js';
@@ -30,6 +29,14 @@ import {
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
 } from './contracts.js';
+import {
+  SemanticSearchManager,
+  resolveSemanticSearchProviders,
+  type SemanticAgentRecord,
+  type SemanticSearchConfig as SDKSemanticSearchConfig,
+  type SemanticQueryRequest,
+  type SemanticSearchResponse,
+} from '../semantic-search/index.js';
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -44,6 +51,8 @@ export interface SDKConfig {
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
+  // Semantic search configuration
+  semanticSearch?: SDKSemanticSearchConfig;
 }
 
 /**
@@ -61,6 +70,7 @@ export class SDK {
   private readonly _registries: Record<string, Address>;
   private readonly _chainId: ChainId;
   private readonly _subgraphUrls: Record<ChainId, string> = {};
+  private _semanticSearchManager?: SemanticSearchManager;
 
   constructor(config: SDKConfig) {
     this._chainId = config.chainId;
@@ -110,6 +120,10 @@ export class SDK {
       this._subgraphClient
     );
 
+    if (config.semanticSearch) {
+      const providers = resolveSemanticSearchProviders(config.semanticSearch);
+      this._semanticSearchManager = new SemanticSearchManager(providers.embedding, providers.vectorStore);
+    }
     // Set subgraph client getter for multi-chain support
     this._feedbackManager.setSubgraphClientGetter(
       (chainId) => this.getSubgraphClient(chainId),
@@ -169,7 +183,70 @@ export class SDK {
   }
 
   /**
-   * Get subgraph client for a specific chain
+   * Access semantic search manager (throws if not configured)
+   */
+  get semanticSearch(): SemanticSearchManager {
+    if (!this._semanticSearchManager) {
+      throw new Error('Semantic search is not configured for this SDK instance');
+    }
+    return this._semanticSearchManager;
+  }
+
+  /**
+   * Index an agent for semantic search
+   */
+  async semanticIndexAgent(agent: SemanticAgentRecord): Promise<void> {
+    this._ensureSemanticSearchConfigured();
+    await this._semanticSearchManager!.indexAgent(agent);
+  }
+
+  /**
+   * Batch index agents for semantic search
+   */
+  async semanticIndexAgentsBatch(agents: SemanticAgentRecord[]): Promise<void> {
+    this._ensureSemanticSearchConfigured();
+    await this._semanticSearchManager!.indexAgentsBatch(agents);
+  }
+
+  /**
+   * Update an agent record in the semantic index
+   */
+  async semanticUpdateAgent(agent: SemanticAgentRecord): Promise<void> {
+    this._ensureSemanticSearchConfigured();
+    await this._semanticSearchManager!.updateAgent(agent);
+  }
+
+  /**
+   * Remove an agent from the semantic index
+   */
+  async semanticDeleteAgent(chainId: ChainId, agentId: AgentId): Promise<void> {
+    this._ensureSemanticSearchConfigured();
+    await this._semanticSearchManager!.deleteAgent(chainId, agentId);
+  }
+
+  /**
+   * Remove multiple agents from the semantic index
+   */
+  async semanticDeleteAgentsBatch(pairs: Array<{ chainId: ChainId; agentId: AgentId }>): Promise<void> {
+    this._ensureSemanticSearchConfigured();
+    await this._semanticSearchManager!.deleteAgentsBatch(pairs);
+  }
+
+  /**
+   * Perform a semantic search query
+   */
+  async semanticSearchAgents(request: SemanticQueryRequest): Promise<SemanticSearchResponse> {
+    this._ensureSemanticSearchConfigured();
+    return this._semanticSearchManager!.searchAgents(request);
+  }
+
+  private _ensureSemanticSearchConfigured(): void {
+    if (!this._semanticSearchManager) {
+      throw new Error('Semantic search is not configured for this SDK instance');
+    }
+  }
+  /**
+   * Get subgraph client for a specific chain.
    */
   getSubgraphClient(chainId?: ChainId): SubgraphClient | undefined {
     const targetChain = chainId !== undefined ? chainId : this._chainId;
@@ -321,7 +398,7 @@ export class SDK {
     } else {
       // No colon - use default chain
       parsedChainId = this._chainId;
-      formattedAgentId = formatAgentId(this._chainId, parseInt(agentId, 10));
+      formattedAgentId = `${this._chainId}:${parseInt(agentId, 10)}`;
     }
     
     // Determine which chain to query
