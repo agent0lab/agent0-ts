@@ -11,7 +11,6 @@ import type {
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types';
 import type { AgentId, ChainId, Address, URI } from '../models/types';
 import { EndpointType, TrustModel } from '../models/enums';
 import { formatAgentId, parseAgentId } from '../utils/id-format';
@@ -612,17 +611,37 @@ export class SDK {
           // Use Arweave client if available (parallel gateway fallback)
           rawData = await this._arweaveClient.getJson(txId);
         } else {
-          // Fallback: Direct gateway access without client
-          const response = await fetch(`https://arweave.net/${txId}`, {
-            redirect: 'follow',
-            signal: AbortSignal.timeout(TIMEOUTS.ARWEAVE_GATEWAY)
+          // Fallback: Parallel gateway access without client (matches IPFS pattern)
+          const gateways = ARWEAVE_GATEWAYS.map(gateway => `${gateway}/${txId}`);
+
+          const promises = gateways.map(async (gateway) => {
+            try {
+              const response = await fetch(gateway, {
+                redirect: 'follow',
+                signal: AbortSignal.timeout(TIMEOUTS.ARWEAVE_GATEWAY)
+              });
+              if (response.ok) {
+                return await response.json();
+              }
+              throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+              throw error;
+            }
           });
 
-          if (!response.ok) {
-            throw new Error(`Failed to fetch from Arweave: HTTP ${response.status}`);
+          const results = await Promise.allSettled(promises);
+          let fetched = false;
+          for (const result of results) {
+            if (result.status === 'fulfilled') {
+              rawData = result.value;
+              fetched = true;
+              break;
+            }
           }
 
-          rawData = await response.json();
+          if (!fetched) {
+            throw new Error('Failed to retrieve data from all Arweave gateways');
+          }
         }
       } else if (tokenUri.startsWith('http://') || tokenUri.startsWith('https://')) {
         const response = await fetch(tokenUri);

@@ -23,6 +23,7 @@ export class Agent {
   private _dirtyMetadata = new Set<string>();
   private _lastRegisteredWallet?: Address;
   private _lastRegisteredEns?: string;
+  private _registrationInProgress = false;
 
   constructor(private sdk: SDK, registrationFile: RegistrationFile) {
     this.registrationFile = registrationFile;
@@ -267,10 +268,17 @@ export class Agent {
    * Register agent on-chain with IPFS flow
    */
   async registerIPFS(): Promise<RegistrationFile> {
-    // Validate basic info
-    if (!this.registrationFile.name || !this.registrationFile.description) {
-      throw new Error('Agent must have name and description before registration');
+    // Prevent concurrent registrations
+    if (this._registrationInProgress) {
+      throw new Error('Registration already in progress. Wait for the current registration to complete.');
     }
+    this._registrationInProgress = true;
+
+    try {
+      // Validate basic info
+      if (!this.registrationFile.name || !this.registrationFile.description) {
+        throw new Error('Agent must have name and description before registration');
+      }
 
     if (this.registrationFile.agentId) {
       // Agent already registered - update registration file and redeploy
@@ -355,6 +363,9 @@ export class Agent {
       this.registrationFile.agentURI = `ipfs://${ipfsCid}`;
       return this.registrationFile;
     }
+    } finally {
+      this._registrationInProgress = false;
+    }
   }
 
   /**
@@ -400,17 +411,24 @@ export class Agent {
    * ```
    */
   async registerArweave(): Promise<RegistrationFile> {
-    // Validate basic requirements
-    if (!this.registrationFile.name || !this.registrationFile.description) {
-      throw new Error('Agent must have name and description before registration');
+    // Prevent concurrent registrations
+    if (this._registrationInProgress) {
+      throw new Error('Registration already in progress. Wait for the current registration to complete.');
     }
+    this._registrationInProgress = true;
 
-    if (!this.sdk.arweaveClient) {
-      throw new Error(
-        'Arweave client not configured. ' +
-        'Set arweave: true in SDK config.'
-      );
-    }
+    try {
+      // Validate basic requirements
+      if (!this.registrationFile.name || !this.registrationFile.description) {
+        throw new Error('Agent must have name and description before registration');
+      }
+
+      if (!this.sdk.arweaveClient) {
+        throw new Error(
+          'Arweave client not configured. ' +
+          'Set arweave: true in SDK config.'
+        );
+      }
 
     if (this.registrationFile.agentId) {
       // Update existing agent
@@ -481,7 +499,7 @@ export class Agent {
         `ar://${txId}`
       );
 
-      await this.sdk.web3Client.waitForTransaction(txHash);
+      await this.sdk.web3Client.waitForTransaction(txHash, TIMEOUTS.TRANSACTION_WAIT);
 
       // Clear dirty flags
       this._lastRegisteredWallet = this.walletAddress;
@@ -490,6 +508,9 @@ export class Agent {
 
       this.registrationFile.agentURI = `ar://${txId}`;
       return this.registrationFile;
+    }
+    } finally {
+      this._registrationInProgress = false;
     }
   }
 

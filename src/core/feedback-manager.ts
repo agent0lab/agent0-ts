@@ -198,7 +198,30 @@ export class FeedbackManager {
   }
 
   /**
-   * Give feedback (maps 8004 endpoint)
+   * Give feedback to an agent with optional off-chain storage.
+   *
+   * **Storage Priority (when both clients are configured):**
+   * 1. **Arweave** (preferred) - Permanent, immutable storage with cryptographic tags
+   * 2. **IPFS** (fallback) - Decentralized storage if Arweave fails
+   * 3. **On-chain only** - If no storage clients configured or both fail
+   *
+   * **Rationale for Arweave-first:**
+   * - Permanent storage: Data never disappears (no re-pinning required)
+   * - Immutability: Feedback cannot be altered after submission
+   * - Searchability: Rich tagging enables queries by agent, reviewer, score, etc.
+   * - Free tier: Feedback files are typically <1KB (well under 100KB limit)
+   *
+   * **Configuration:**
+   * - To use Arweave: Set `arweave: true` in SDK config
+   * - To use IPFS: Configure `ipfs` in SDK config
+   * - Both can be enabled simultaneously (Arweave takes priority)
+   *
+   * @param agentId - Target agent identifier (format: "chainId:tokenId")
+   * @param clientAddress - Ethereum address of feedback provider
+   * @param feedbackFile - Feedback data (score, tags, text, context, etc.)
+   * @param feedbackIndex - Optional feedback index (auto-calculated if not provided)
+   * @param feedbackAuth - Optional pre-signed authorization (required for non-agent owners)
+   * @returns Feedback object with on-chain data and storage URI
    */
   async giveFeedback(
     agentId: AgentId,
@@ -252,11 +275,11 @@ export class FeedbackManager {
     const tag1 = this._stringToBytes32(tag1Str);
     const tag2 = this._stringToBytes32(tag2Str);
 
-    // Handle off-chain file storage
+    // Handle off-chain file storage with priority: Arweave > IPFS > on-chain only
     let feedbackUri = '';
     let feedbackHash = '0x' + '00'.repeat(32); // Default empty hash
 
-    // Try Arweave first (permanent storage), then IPFS fallback
+    // Storage Priority: Try Arweave first (permanent storage), then IPFS fallback
     if (this.arweaveClient) {
       try {
         const chainId = this.web3Client.chainId;
