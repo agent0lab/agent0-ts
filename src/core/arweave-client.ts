@@ -7,7 +7,7 @@
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import type { RegistrationFile } from '../models/interfaces';
 import { formatRegistrationFileForStorage } from '../utils/registration-format';
-import { generateArweaveRegistrationTags, generateArweaveFeedbackTags } from '../utils/arweave-tags';
+import { generateArweaveRegistrationTags, generateArweaveFeedbackTags, generateEssentialTags } from '../utils/arweave-tags';
 import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
 
 export interface ArweaveClientConfig {
@@ -114,8 +114,8 @@ export class ArweaveClient {
       identityRegistryAddress
     );
 
-    // Generate tags if chainId is provided
-    const tags = chainId ? generateArweaveRegistrationTags(registrationFile, chainId) : undefined;
+    // Generate full tags if chainId is valid, otherwise use essential tags fallback
+    const tags = chainId && chainId > 0 ? generateArweaveRegistrationTags(registrationFile, chainId) : generateEssentialTags();
 
     return this.addJson(data, tags);
   }
@@ -169,10 +169,10 @@ export class ArweaveClient {
     agentId?: string,
     clientAddress?: string
   ): Promise<string> {
-    // Generate tags if chainId is provided
-    const tags = chainId
+    // Generate full tags if chainId is valid, otherwise use essential tags fallback
+    const tags = chainId && chainId > 0
       ? generateArweaveFeedbackTags(feedbackFile, chainId, agentId, clientAddress)
-      : undefined;
+      : generateEssentialTags();
 
     return this.addJson(feedbackFile, tags);
   }

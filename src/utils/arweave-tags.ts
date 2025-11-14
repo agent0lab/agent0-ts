@@ -180,3 +180,25 @@ export function generateArweaveFeedbackTags(
 
   return tags;
 }
+
+/**
+ * Generate essential tags that should ALWAYS be present on Arweave uploads.
+ * This is a fallback for cases where chainId might not be available yet.
+ *
+ * Essential tags include:
+ * - Content-Type: application/json (critical for proper content handling)
+ * - App-Name: Agent0 version
+ * - Protocol: ERC-8004
+ *
+ * These tags ensure that uploaded data is at least identifiable and properly
+ * typed, even if full metadata cannot be generated.
+ *
+ * @returns Array of essential tag objects formatted for Turbo SDK upload
+ */
+export function generateEssentialTags(): Array<{ name: string; value: string }> {
+  return [
+    { name: 'Content-Type', value: 'application/json' },
+    { name: 'App-Name', value: `Agent0-v${SDK_VERSION}` },
+    { name: 'Protocol', value: 'ERC-8004' },
+  ];
+}

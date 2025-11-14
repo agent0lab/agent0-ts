@@ -305,6 +305,10 @@ export class FeedbackManager {
     // Storage Priority: Try Arweave first (permanent storage), then IPFS fallback
     if (this.arweaveClient) {
       try {
+        // Ensure chainId is initialized before Arweave upload (required for tags)
+        if (this.web3Client.chainId === 0n) {
+          await this.web3Client.initialize();
+        }
         const chainId = this.web3Client.chainId;
         const txId = await this.arweaveClient.addFeedbackFile(
           feedbackFile,
