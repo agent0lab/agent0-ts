@@ -8,41 +8,40 @@ import type {
   Feedback,
   SearchParams,
   SearchFeedbackParams,
+  SearchResultMeta,
   RegistrationFile,
   Endpoint,
-} from '../models/interfaces';
-import type { AgentId, ChainId, Address, URI } from '../models/types';
-import { EndpointType, TrustModel } from '../models/enums';
-import { formatAgentId, parseAgentId } from '../utils/id-format';
-import { IPFS_GATEWAYS, ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
-import { Web3Client, type TransactionOptions } from './web3-client';
-import { IPFSClient, type IPFSClientConfig } from './ipfs-client';
-import { ArweaveClient, type ArweaveClientConfig } from './arweave-client';
-import { SubgraphClient } from './subgraph-client';
-import { FeedbackManager } from './feedback-manager';
-import { AgentIndexer } from './indexer';
-import { Agent } from './agent';
+} from '../models/interfaces.js';
+import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types.js';
+import type { AgentId, ChainId, Address, URI } from '../models/types.js';
+import { EndpointType, TrustModel } from '../models/enums.js';
+import { formatAgentId, parseAgentId } from '../utils/id-format.js';
+import { IPFS_GATEWAYS, ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { Web3Client, type TransactionOptions } from './web3-client.js';
+import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
+import { SubgraphClient } from './subgraph-client.js';
+import { ArweaveClient, type ArweaveClientConfig } from './arweave-client.js';
+import { FeedbackManager } from './feedback-manager.js';
+import { AgentIndexer } from './indexer.js';
+import { Agent } from './agent.js';
 import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
   VALIDATION_REGISTRY_ABI,
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
-} from './contracts';
+} from './contracts.js';
 
 export interface SDKConfig {
   chainId: ChainId;
   rpcUrl: string;
-  signer?: string; // Private key for signing transactions (optional for read-only operations)
+  signer?: string | ethers.Wallet | ethers.Signer; // Private key string OR ethers Wallet/Signer (optional for read-only operations)
   registryOverrides?: Record<ChainId, Record<string, Address>>;
   // IPFS configuration
   ipfs?: 'node' | 'filecoinPin' | 'pinata';
   ipfsNodeUrl?: string;
   filecoinPrivateKey?: string;
   pinataJwt?: string;
-  // Arweave configuration
-  arweave?: boolean;              // Enable Arweave storage
-  arweavePrivateKey?: string;     // Optional separate EVM key (defaults to signer)
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
@@ -54,7 +53,6 @@ export interface SDKConfig {
 export class SDK {
   private readonly _web3Client: Web3Client;
   private _ipfsClient?: IPFSClient;
-  private _arweaveClient?: ArweaveClient;
   private _subgraphClient?: SubgraphClient;
   private readonly _feedbackManager: FeedbackManager;
   private readonly _indexer: AgentIndexer;
@@ -97,26 +95,26 @@ export class SDK {
     }
 
     // Initialize indexer
-    this._indexer = new AgentIndexer(this._web3Client, this._subgraphClient);
+    this._indexer = new AgentIndexer(this._web3Client, this._subgraphClient, this._subgraphUrls);
 
     // Initialize IPFS client
     if (config.ipfs) {
       this._ipfsClient = this._initializeIpfsClient(config);
     }
 
-    // Initialize Arweave client
-    if (config.arweave) {
-      this._arweaveClient = this._initializeArweaveClient(config);
-    }
-
     // Initialize feedback manager (will set registries after they're created)
     this._feedbackManager = new FeedbackManager(
       this._web3Client,
       this._ipfsClient,
-      this._arweaveClient,
       undefined, // reputationRegistry - will be set lazily
       undefined, // identityRegistry - will be set lazily
       this._subgraphClient
+    );
+
+    // Set subgraph client getter for multi-chain support
+    this._feedbackManager.setSubgraphClientGetter(
+      (chainId) => this.getSubgraphClient(chainId),
+      this._chainId
     );
   }
 
@@ -155,38 +153,6 @@ export class SDK {
   }
 
   /**
-   * Initialize Arweave client with EVM signer for permanent storage.
-   * Uses Turbo SDK with EthereumSigner for cryptographically authenticated uploads.
-   *
-   * **Private Key Priority:**
-   * 1. Uses config.arweavePrivateKey if provided (allows separate key for Arweave)
-   * 2. Falls back to config.signer if arweavePrivateKey not specified
-   *
-   * **Why EVM Keys:**
-   * - Arweave Turbo SDK supports EVM signing (no Arweave JWK needed)
-   * - Maintains consistency with SDK's Ethereum-focused design
-   * - Allows reusing existing signer or using separate key for Arweave operations
-   *
-   * @param config - SDK configuration object
-   * @returns Initialized ArweaveClient instance
-   * @throws Error if neither arweavePrivateKey nor signer provided
-   */
-  private _initializeArweaveClient(config: SDKConfig): ArweaveClient {
-    const privateKey = config.arweavePrivateKey || config.signer;
-
-    if (!privateKey) {
-      throw new Error(
-        'Arweave storage requires an EVM private key. ' +
-        'Provide signer or arweavePrivateKey in SDK config.'
-      );
-    }
-
-    return new ArweaveClient({
-      privateKey,
-    });
-  }
-
-  /**
    * Get current chain ID
    */
   async chainId(): Promise<ChainId> {
@@ -201,6 +167,31 @@ export class SDK {
    */
   registries(): Record<string, Address> {
     return { ...this._registries };
+  }
+
+  /**
+   * Get subgraph client for a specific chain
+   */
+  getSubgraphClient(chainId?: ChainId): SubgraphClient | undefined {
+    const targetChain = chainId !== undefined ? chainId : this._chainId;
+
+    // Check if we already have a client for this chain
+    if (targetChain === this._chainId && this._subgraphClient) {
+      return this._subgraphClient;
+    }
+
+    // Resolve URL for target chain
+    let url: string | undefined;
+    if (targetChain in this._subgraphUrls) {
+      url = this._subgraphUrls[targetChain];
+    } else if (targetChain in DEFAULT_SUBGRAPH_URLS) {
+      url = DEFAULT_SUBGRAPH_URLS[targetChain];
+    }
+
+    if (url) {
+      return new SubgraphClient(url);
+    }
+    return undefined;
   }
 
   /**
@@ -316,29 +307,56 @@ export class SDK {
 
   /**
    * Get agent summary from subgraph (read-only)
+   * Supports both default chain and explicit chain specification via chainId:tokenId format
    */
   async getAgent(agentId: AgentId): Promise<AgentSummary | null> {
-    if (!this._subgraphClient) {
-      throw new Error('Subgraph client required for getAgent');
+    // Parse agentId to extract chainId if present
+    // If no colon, assume it's just tokenId on default chain
+    let parsedChainId: number;
+    let formattedAgentId: string;
+    
+    if (agentId.includes(':')) {
+      const parsed = parseAgentId(agentId);
+      parsedChainId = parsed.chainId;
+      formattedAgentId = agentId; // Already in correct format
+    } else {
+      // No colon - use default chain
+      parsedChainId = this._chainId;
+      formattedAgentId = formatAgentId(this._chainId, parseInt(agentId, 10));
     }
-    return this._subgraphClient.getAgentById(agentId);
+    
+    // Determine which chain to query
+    const targetChainId = parsedChainId !== this._chainId ? parsedChainId : undefined;
+    
+    // Get subgraph client for the target chain (or use default)
+    const subgraphClient = targetChainId
+      ? this.getSubgraphClient(targetChainId)
+      : this._subgraphClient;
+    
+    if (!subgraphClient) {
+      throw new Error(`Subgraph client required for getAgent on chain ${targetChainId || this._chainId}`);
+    }
+    
+    return subgraphClient.getAgentById(formattedAgentId);
   }
 
   /**
    * Search agents with filters
+   * Supports multi-chain search when chains parameter is provided
    */
   async searchAgents(
     params?: SearchParams,
     sort?: string[],
     pageSize: number = 50,
     cursor?: string
-  ): Promise<{ items: AgentSummary[]; nextCursor?: string }> {
+  ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
     const searchParams: SearchParams = params || {};
-    return this._indexer.searchAgents(searchParams, pageSize, cursor);
+    return this._indexer.searchAgents(searchParams, pageSize, cursor, sort || []);
   }
 
   /**
    * Search agents by reputation
+   * Supports multi-chain search when chains parameter is provided
    */
   async searchAgentsByReputation(
     agents?: AgentId[],
@@ -352,8 +370,9 @@ export class SDK {
     includeRevoked: boolean = false,
     pageSize: number = 50,
     cursor?: string,
-    sort?: string[]
-  ): Promise<{ items: AgentSummary[]; nextCursor?: string }> {
+    sort?: string[],
+    chains?: ChainId[] | 'all'
+  ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
     // Parse cursor to skip value
     let skip = 0;
     if (cursor) {
@@ -381,7 +400,8 @@ export class SDK {
       includeRevoked,
       pageSize,
       skip,
-      sort
+      sort,
+      chains
     );
   }
 
@@ -572,7 +592,7 @@ export class SDK {
    */
   private async _loadRegistrationFile(tokenUri: string): Promise<RegistrationFile> {
     try {
-      // Fetch from IPFS, Arweave, or HTTP
+      // Fetch from IPFS or HTTP
       let rawData: unknown;
       if (tokenUri.startsWith('ipfs://')) {
         const cid = tokenUri.slice(7);
@@ -603,46 +623,6 @@ export class SDK {
             throw new Error('Failed to retrieve data from all IPFS gateways');
           }
         }
-      } else if (tokenUri.startsWith('ar://')) {
-        // Handle Arweave URIs
-        const txId = tokenUri.slice(5);
-
-        if (this._arweaveClient) {
-          // Use Arweave client if available (parallel gateway fallback)
-          rawData = await this._arweaveClient.getJson(txId);
-        } else {
-          // Fallback: Parallel gateway access without client (matches IPFS pattern)
-          const gateways = ARWEAVE_GATEWAYS.map(gateway => `${gateway}/${txId}`);
-
-          const promises = gateways.map(async (gateway) => {
-            try {
-              const response = await fetch(gateway, {
-                redirect: 'follow',
-                signal: AbortSignal.timeout(TIMEOUTS.ARWEAVE_GATEWAY)
-              });
-              if (response.ok) {
-                return await response.json();
-              }
-              throw new Error(`HTTP ${response.status}`);
-            } catch (error) {
-              throw error;
-            }
-          });
-
-          const results = await Promise.allSettled(promises);
-          let fetched = false;
-          for (const result of results) {
-            if (result.status === 'fulfilled') {
-              rawData = result.value;
-              fetched = true;
-              break;
-            }
-          }
-
-          if (!fetched) {
-            throw new Error('Failed to retrieve data from all Arweave gateways');
-          }
-        }
       } else if (tokenUri.startsWith('http://') || tokenUri.startsWith('https://')) {
         const response = await fetch(tokenUri);
         if (!response.ok) {
@@ -651,7 +631,7 @@ export class SDK {
         rawData = await response.json();
       } else if (tokenUri.startsWith('data:')) {
         // Data URIs are not supported
-        throw new Error(`Data URIs are not supported. Expected HTTP(S), IPFS, or Arweave URI, got: ${tokenUri}`);
+        throw new Error(`Data URIs are not supported. Expected HTTP(S) or IPFS URI, got: ${tokenUri}`);
       } else if (!tokenUri || tokenUri.trim() === '') {
         // Empty URI - return empty registration file (agent registered without URI)
         return this._createEmptyRegistrationFile();
@@ -664,7 +644,7 @@ export class SDK {
         throw new Error('Invalid registration file format: expected an object');
       }
 
-      // Transform IPFS/Arweave/HTTP file format to RegistrationFile format
+      // Transform IPFS/HTTP file format to RegistrationFile format
       return this._transformRegistrationFile(rawData as Record<string, unknown>);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -807,13 +787,6 @@ export class SDK {
 
   get ipfsClient(): IPFSClient | undefined {
     return this._ipfsClient;
-  }
-
-  /**
-   * Get Arweave client (if configured)
-   */
-  get arweaveClient(): ArweaveClient | undefined {
-    return this._arweaveClient;
   }
 
   get subgraphClient(): SubgraphClient | undefined {

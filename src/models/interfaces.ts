@@ -2,8 +2,8 @@
  * Core interfaces for Agent0 SDK
  */
 
-import type { AgentId, Address, URI, Timestamp } from './types';
-import type { EndpointType, TrustModel } from './enums';
+import type { AgentId, Address, URI, Timestamp } from './types.js';
+import type { EndpointType, TrustModel } from './enums.js';
 
 /**
  * Represents an agent endpoint
@@ -99,7 +99,7 @@ export type FeedbackId = string;
  * Parameters for agent search
  */
 export interface SearchParams {
-  chains?: number[]; // ChainId[]
+  chains?: number[] | 'all'; // ChainId[] or 'all' to search all configured chains
   name?: string; // case-insensitive substring
   description?: string; // semantic; vector distance < threshold
   owners?: Address[];
@@ -132,5 +132,19 @@ export interface SearchFeedbackParams {
   minScore?: number; // 0-100
   maxScore?: number; // 0-100
   includeRevoked?: boolean;
+}
+
+/**
+ * Metadata for multi-chain search results
+ */
+export interface SearchResultMeta {
+  chains: number[]; // ChainId[]
+  successfulChains: number[]; // ChainId[]
+  failedChains: number[]; // ChainId[]
+  totalResults: number;
+  timing: {
+    totalMs: number;
+    averagePerChainMs?: number;
+  };
 }
 

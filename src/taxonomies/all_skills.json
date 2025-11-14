@@ -1,0 +1,1030 @@
+{
+  "metadata": {
+    "version": "0.8.0",
+    "description": "Comprehensive collection of all OASF skills",
+    "identifier_format": "Slash-separated path matching file structure (e.g., 'natural_language_processing/summarization')",
+    "total_skills": 136
+  },
+  "categories": {
+    "caption": "Skills",
+    "description": "A structured view of distinct abilities, defining the capabilities within the Open Agentic Schema Framework.",
+    "name": "skill_categories",
+    "attributes": {
+      "natural_language_processing": {
+        "caption": "Natural Language Processing",
+        "description": "Natural Language Processing (NLP) tasks are the application of computational techniques to the analysis and synthesis of natural language and speech."
+      },
+      "images_computer_vision": {
+        "caption": "Images / Computer Vision",
+        "description": "Images / Computer Vision tasks are the application of computational techniques to the analysis and synthesis of images."
+      },
+      "audio": {
+        "caption": "Audio",
+        "description": "Audio tasks are the application of computational techniques to the analysis and synthesis of audio data."
+      },
+      "tabular_text": {
+        "caption": "Tabular / Text",
+        "description": "Tabular / Text tasks are the application of computational techniques to the analysis and synthesis of tabular data and text."
+      },
+      "analytical_skills": {
+        "caption": "Analytical skills",
+        "description": "Analytical skills encompass a range of capabilities that involve logical reasoning, problem-solving, and the ability to process and interpret complex data."
+      },
+      "retrieval_augmented_generation": {
+        "caption": "Retrieval Augmented Generation",
+        "description": "Retrieval Augmented Generation tasks are the application of computational techniques to the analysis and synthesis of data from multiple modalities."
+      },
+      "multi_modal": {
+        "caption": "Multi-modal",
+        "description": "Multi-modal tasks are the application of computational techniques to the analysis and synthesis of data from multiple modalities."
+      },
+      "security_privacy": {
+        "caption": "Security & Privacy",
+        "description": "Skills focused on identifying, assessing, and mitigating security vulnerabilities, threats, sensitive data exposure, and privacy risks."
+      },
+      "data_engineering": {
+        "caption": "Data Engineering",
+        "description": "Skills for preparing, transforming, validating, and structuring data assets including cleaning, schema inference, and feature engineering."
+      },
+      "agent_orchestration": {
+        "caption": "Agent Orchestration",
+        "description": "Skills enabling coordination across multiple agents: planning, task decomposition, delegation, and collaboration protocols."
+      },
+      "evaluation_monitoring": {
+        "caption": "Evaluation & Monitoring",
+        "description": "Skills for assessing performance, generating tests, executing benchmarks, detecting anomalies, and tracking output quality over time."
+      },
+      "devops_mlops": {
+        "caption": "DevOps / MLOps",
+        "description": "Skills for provisioning infrastructure, managing deployments, CI/CD workflows, model/version lifecycle, and operational observability."
+      },
+      "governance_compliance": {
+        "caption": "Governance & Compliance",
+        "description": "Skills addressing regulatory alignment, policy mapping, auditing, risk classification, and ensuring responsible operations."
+      },
+      "tool_interaction": {
+        "caption": "Tool Interaction",
+        "description": "Skills for understanding APIs, integrating tools, orchestrating workflows, and using external systems effectively."
+      },
+      "advanced_reasoning_planning": {
+        "caption": "Advanced Reasoning & Planning",
+        "description": "Skills for multi-step strategic reasoning, long-horizon planning, hypothesis formation, and structured thought processes."
+      }
+    }
+  },
+  "skills": {
+    "advanced_reasoning_planning/advanced_reasoning_planning": {
+      "caption": "Advanced Reasoning & Planning",
+      "category": "advanced_reasoning_planning",
+      "extends": "base_skill",
+      "name": "advanced_reasoning_planning",
+      "attributes": {}
+    },
+    "advanced_reasoning_planning/chain_of_thought_structuring": {
+      "caption": "Chain-of-Thought Structuring",
+      "description": "Organizing intermediate reasoning steps into clear, justifiable sequences.",
+      "extends": "advanced_reasoning_planning",
+      "name": "chain_of_thought_structuring",
+      "attributes": {}
+    },
+    "advanced_reasoning_planning/hypothesis_generation": {
+      "caption": "Hypothesis Generation",
+      "description": "Proposing plausible explanations or solution pathways for incomplete or uncertain scenarios.",
+      "extends": "advanced_reasoning_planning",
+      "name": "hypothesis_generation",
+      "attributes": {}
+    },
+    "advanced_reasoning_planning/long_horizon_reasoning": {
+      "caption": "Long-Horizon Reasoning",
+      "description": "Maintaining coherent reasoning chains over extended sequences of steps or time.",
+      "extends": "advanced_reasoning_planning",
+      "name": "long_horizon_reasoning",
+      "attributes": {}
+    },
+    "advanced_reasoning_planning/strategic_planning": {
+      "caption": "Strategic Planning",
+      "description": "Formulating high-level multi-phase strategies aligned with long-term objectives.",
+      "extends": "advanced_reasoning_planning",
+      "name": "strategic_planning",
+      "attributes": {}
+    },
+    "agent_orchestration/agent_coordination": {
+      "caption": "Agent Coordination",
+      "description": "Managing real-time collaboration and state synchronization among agents.",
+      "extends": "agent_orchestration",
+      "name": "agent_coordination",
+      "attributes": {}
+    },
+    "agent_orchestration/agent_orchestration": {
+      "caption": "Agent Orchestration",
+      "category": "agent_orchestration",
+      "extends": "base_skill",
+      "name": "agent_orchestration",
+      "attributes": {}
+    },
+    "agent_orchestration/multi_agent_planning": {
+      "caption": "Multi-Agent Planning",
+      "description": "Coordinating plans across multiple agents, resolving dependencies and optimizing sequencing.",
+      "extends": "agent_orchestration",
+      "name": "multi_agent_planning",
+      "attributes": {}
+    },
+    "agent_orchestration/negotiation_resolution": {
+      "caption": "Negotiation & Resolution",
+      "description": "Facilitating negotiation, conflict handling, and consensus-building between agents.",
+      "extends": "agent_orchestration",
+      "name": "negotiation_resolution",
+      "attributes": {}
+    },
+    "agent_orchestration/role_assignment": {
+      "caption": "Role Assignment",
+      "description": "Allocating responsibilities to agents based on capabilities and task requirements.",
+      "extends": "agent_orchestration",
+      "name": "role_assignment",
+      "attributes": {}
+    },
+    "agent_orchestration/task_decomposition": {
+      "caption": "Task Decomposition",
+      "description": "Breaking complex objectives into structured, atomic subtasks.",
+      "extends": "agent_orchestration",
+      "name": "task_decomposition",
+      "attributes": {}
+    },
+    "analytical_skills/analytical_skills": {
+      "caption": "Analytical Skills",
+      "category": "analytical_skills",
+      "extends": "base_skill",
+      "name": "analytical_skills",
+      "attributes": {}
+    },
+    "analytical_skills/coding_skills/code_optimization": {
+      "caption": "Code Refactoring and Optimization",
+      "description": "Rewriting and optimizing existing code through refactoring techniques.",
+      "extends": "coding_skills",
+      "name": "code_optimization",
+      "attributes": {}
+    },
+    "analytical_skills/coding_skills/code_templates": {
+      "caption": "Code Template Filling",
+      "description": "Automatically filling in code templates with appropriate content.",
+      "extends": "coding_skills",
+      "name": "code_templates",
+      "attributes": {}
+    },
+    "analytical_skills/coding_skills/code_to_docstrings": {
+      "caption": "Code to Docstrings",
+      "description": "Generating natural language documentation for code segments.",
+      "extends": "coding_skills",
+      "name": "code_to_docstrings",
+      "attributes": {}
+    },
+    "analytical_skills/coding_skills/coding_skills": {
+      "caption": "Coding Skills",
+      "description": "Capabilities for code generation, documentation, and optimization.",
+      "extends": "analytical_skills",
+      "name": "coding_skills",
+      "attributes": {}
+    },
+    "analytical_skills/coding_skills/text_to_code": {
+      "caption": "Text to Code",
+      "description": "Translating natural language instructions into executable code.",
+      "extends": "coding_skills",
+      "name": "text_to_code",
+      "attributes": {}
+    },
+    "analytical_skills/mathematical_reasoning/geometry": {
+      "caption": "Geometry",
+      "description": "Solving geometric problems and spatial reasoning tasks.",
+      "extends": "mathematical_reasoning",
+      "name": "geometry",
+      "attributes": {}
+    },
+    "analytical_skills/mathematical_reasoning/math_word_problems": {
+      "caption": "Math Word Problems",
+      "description": "Solving mathematical exercises presented in natural language format.",
+      "extends": "mathematical_reasoning",
+      "name": "math_word_problems",
+      "attributes": {}
+    },
+    "analytical_skills/mathematical_reasoning/mathematical_reasoning": {
+      "caption": "Mathematical Reasoning",
+      "description": "Capabilities for solving mathematical problems and proving theorems.",
+      "extends": "analytical_skills",
+      "name": "mathematical_reasoning",
+      "attributes": {}
+    },
+    "analytical_skills/mathematical_reasoning/pure_math_operations": {
+      "caption": "Pure Mathematical Operations",
+      "description": "Executing pure mathematical operations, such as arithmetic calculations.",
+      "extends": "mathematical_reasoning",
+      "name": "pure_math_operations",
+      "attributes": {}
+    },
+    "analytical_skills/mathematical_reasoning/theorem_proving": {
+      "caption": "Automated Theorem Proving",
+      "description": "Proving mathematical theorems using computational methods.",
+      "extends": "mathematical_reasoning",
+      "name": "theorem_proving",
+      "attributes": {}
+    },
+    "audio/audio": {
+      "caption": "Audio Processing",
+      "category": "audio",
+      "extends": "base_skill",
+      "name": "audio",
+      "attributes": {}
+    },
+    "audio/audio_classification": {
+      "caption": "Audio Classification",
+      "description": "Assigning labels or classes to audio content based on its characteristics.",
+      "extends": "audio",
+      "name": "audio_classification",
+      "attributes": {}
+    },
+    "audio/audio_to_audio": {
+      "caption": "Audio to Audio",
+      "description": "Transforming audio through various manipulations including cutting, filtering, and mixing.",
+      "extends": "audio",
+      "name": "audio_to_audio",
+      "attributes": {}
+    },
+    "data_engineering/data_cleaning": {
+      "caption": "Data Cleaning",
+      "description": "Detecting and correcting errors, inconsistencies, and missing values to improve dataset quality.",
+      "extends": "data_engineering",
+      "name": "data_cleaning",
+      "attributes": {}
+    },
+    "data_engineering/data_engineering": {
+      "caption": "Data Engineering",
+      "category": "data_engineering",
+      "extends": "base_skill",
+      "name": "data_engineering",
+      "attributes": {}
+    },
+    "data_engineering/data_quality_assessment": {
+      "caption": "Data Quality Assessment",
+      "description": "Evaluating datasets for completeness, validity, consistency, and timeliness.",
+      "extends": "data_engineering",
+      "name": "data_quality_assessment",
+      "attributes": {}
+    },
+    "data_engineering/data_transformation_pipeline": {
+      "caption": "Data Transformation Pipeline",
+      "description": "Designing or explaining multi-step sequences that extract, transform, and load datasets.",
+      "extends": "data_engineering",
+      "name": "data_transformation_pipeline",
+      "attributes": {}
+    },
+    "data_engineering/feature_engineering": {
+      "caption": "Feature Engineering",
+      "description": "Constructing informative transformed variables to improve downstream model performance.",
+      "extends": "data_engineering",
+      "name": "feature_engineering",
+      "attributes": {}
+    },
+    "data_engineering/schema_inference": {
+      "caption": "Schema Inference",
+      "description": "Deriving structural metadata (fields, types, relationships) from raw or semi-structured data.",
+      "extends": "data_engineering",
+      "name": "schema_inference",
+      "attributes": {}
+    },
+    "devops_mlops/ci_cd_configuration": {
+      "caption": "CI/CD Configuration",
+      "description": "Designing or modifying continuous integration and delivery workflows and pipelines.",
+      "extends": "devops_mlops",
+      "name": "ci_cd_configuration",
+      "attributes": {}
+    },
+    "devops_mlops/deployment_orchestration": {
+      "caption": "Deployment Orchestration",
+      "description": "Coordinating multi-stage application or model deployments, rollbacks, and version transitions.",
+      "extends": "devops_mlops",
+      "name": "deployment_orchestration",
+      "attributes": {}
+    },
+    "devops_mlops/devops_mlops": {
+      "caption": "DevOps / MLOps",
+      "category": "devops_mlops",
+      "extends": "base_skill",
+      "name": "devops_mlops",
+      "attributes": {}
+    },
+    "devops_mlops/infrastructure_provisioning": {
+      "caption": "Infrastructure Provisioning",
+      "description": "Defining or explaining steps to allocate and configure compute, storage, and networking resources.",
+      "extends": "devops_mlops",
+      "name": "infrastructure_provisioning",
+      "attributes": {}
+    },
+    "devops_mlops/model_versioning": {
+      "caption": "Model Versioning",
+      "description": "Tracking, promoting, and documenting different iterations of models and their artifacts.",
+      "extends": "devops_mlops",
+      "name": "model_versioning",
+      "attributes": {}
+    },
+    "devops_mlops/monitoring_alerting": {
+      "caption": "Monitoring & Alerting",
+      "description": "Configuring and interpreting telemetry signals, thresholds, and alerts for operational health.",
+      "extends": "devops_mlops",
+      "name": "monitoring_alerting",
+      "attributes": {}
+    },
+    "evaluation_monitoring/anomaly_detection": {
+      "caption": "Anomaly Detection",
+      "description": "Identifying unusual patterns, drifts, or deviations in data or model outputs.",
+      "extends": "evaluation_monitoring",
+      "name": "anomaly_detection",
+      "attributes": {}
+    },
+    "evaluation_monitoring/benchmark_execution": {
+      "caption": "Benchmark Execution",
+      "description": "Running standardized benchmarks or evaluation suites and summarizing results.",
+      "extends": "evaluation_monitoring",
+      "name": "benchmark_execution",
+      "attributes": {}
+    },
+    "evaluation_monitoring/evaluation_monitoring": {
+      "caption": "Evaluation & Monitoring",
+      "category": "evaluation_monitoring",
+      "extends": "base_skill",
+      "name": "evaluation_monitoring",
+      "attributes": {}
+    },
+    "evaluation_monitoring/performance_monitoring": {
+      "caption": "Performance Monitoring",
+      "description": "Tracking latency, throughput, resource utilization, and service reliability over time.",
+      "extends": "evaluation_monitoring",
+      "name": "performance_monitoring",
+      "attributes": {}
+    },
+    "evaluation_monitoring/quality_evaluation": {
+      "caption": "Quality Evaluation",
+      "description": "Assessing outputs for accuracy, relevance, coherence, safety, and style adherence.",
+      "extends": "evaluation_monitoring",
+      "name": "quality_evaluation",
+      "attributes": {}
+    },
+    "evaluation_monitoring/test_case_generation": {
+      "caption": "Test Case Generation",
+      "description": "Creating targeted test inputs or scenarios to probe system behavior and edge cases.",
+      "extends": "evaluation_monitoring",
+      "name": "test_case_generation",
+      "attributes": {}
+    },
+    "governance_compliance/audit_trail_summarization": {
+      "caption": "Audit Trail Summarization",
+      "description": "Condensing system event or transaction logs into human-readable compliance or oversight summaries.",
+      "extends": "governance_compliance",
+      "name": "audit_trail_summarization",
+      "attributes": {}
+    },
+    "governance_compliance/compliance_assessment": {
+      "caption": "Compliance Assessment",
+      "description": "Evaluating processes or outputs against defined standards (e.g., GDPR, HIPAA) and identifying gaps.",
+      "extends": "governance_compliance",
+      "name": "compliance_assessment",
+      "attributes": {}
+    },
+    "governance_compliance/governance_compliance": {
+      "caption": "Governance & Compliance",
+      "category": "governance_compliance",
+      "extends": "base_skill",
+      "name": "governance_compliance",
+      "attributes": {}
+    },
+    "governance_compliance/policy_mapping": {
+      "caption": "Policy Mapping",
+      "description": "Translating organizational or regulatory policies into structured, enforceable rules or checklists.",
+      "extends": "governance_compliance",
+      "name": "policy_mapping",
+      "attributes": {}
+    },
+    "governance_compliance/risk_classification": {
+      "caption": "Risk Classification",
+      "description": "Categorizing potential operational or data-related risks by impact and likelihood for prioritization.",
+      "extends": "governance_compliance",
+      "name": "risk_classification",
+      "attributes": {}
+    },
+    "images_computer_vision/depth_estimation": {
+      "caption": "Depth Estimation",
+      "description": "Predicting the distance or depth of objects within a scene from a single image or multiple images.",
+      "extends": "images_computer_vision",
+      "name": "depth_estimation",
+      "attributes": {}
+    },
+    "images_computer_vision/image_classification": {
+      "caption": "Image Classification",
+      "description": "Assigning labels or categories to images based on their visual content.",
+      "extends": "images_computer_vision",
+      "name": "image_classification",
+      "attributes": {}
+    },
+    "images_computer_vision/image_feature_extraction": {
+      "caption": "Image Module Extraction",
+      "description": "Identifying and isolating key characteristics or patterns from an image to aid in tasks like classification or recognition.",
+      "extends": "images_computer_vision",
+      "name": "image_feature_extraction",
+      "attributes": {}
+    },
+    "images_computer_vision/image_generation": {
+      "caption": "Image Generation",
+      "description": "Creating new images from learned patterns or data using machine learning models.",
+      "extends": "images_computer_vision",
+      "name": "image_generation",
+      "attributes": {}
+    },
+    "images_computer_vision/image_segmentation": {
+      "caption": "Image Segmentation",
+      "description": "Assigning labels or categories to images based on their visual content.",
+      "extends": "images_computer_vision",
+      "name": "image_segmentation",
+      "attributes": {}
+    },
+    "images_computer_vision/image_to_3d": {
+      "caption": "Image-to-3D",
+      "description": "The process of converting a 2D image into a 3D representation or model, often by inferring depth and spatial relationships.",
+      "extends": "images_computer_vision",
+      "name": "image_to_3d",
+      "attributes": {}
+    },
+    "images_computer_vision/image_to_image": {
+      "caption": "Image-to-Image",
+      "description": "Transforming one image into another using a learned mapping, often for tasks like style transfer, colorization, or image enhancement.",
+      "extends": "images_computer_vision",
+      "name": "image_to_image",
+      "attributes": {}
+    },
+    "images_computer_vision/images_computer_vision": {
+      "caption": "Images / Computer Vision",
+      "category": "images_computer_vision",
+      "extends": "base_skill",
+      "name": "images_computer_vision",
+      "attributes": {}
+    },
+    "images_computer_vision/keypoint_detection": {
+      "caption": "Keypoint Detection",
+      "description": "Identifying and locating specific points of interest within an image or object.",
+      "extends": "images_computer_vision",
+      "name": "keypoint_detection",
+      "attributes": {}
+    },
+    "images_computer_vision/mask_generation": {
+      "caption": "Mask Generation",
+      "description": "Producing segmented regions in an image to highlight specific areas or objects, typically represented as separate layers or overlays.",
+      "extends": "images_computer_vision",
+      "name": "mask_generation",
+      "attributes": {}
+    },
+    "images_computer_vision/object_detection": {
+      "caption": "Object Detection",
+      "description": "Identifying and locating specific objects within an image or video, often by drawing bounding boxes around them.",
+      "extends": "images_computer_vision",
+      "name": "object_detection",
+      "attributes": {}
+    },
+    "images_computer_vision/video_classification": {
+      "caption": "Video Classification",
+      "description": "Assigning labels or categories to entire videos or segments based on their visual and audio content.",
+      "extends": "images_computer_vision",
+      "name": "video_classification",
+      "attributes": {}
+    },
+    "multi_modal/any_to_any": {
+      "caption": "Any to Any Transformation",
+      "description": "Converting between any supported modalities (text, image, audio, video, or 3D).",
+      "extends": "multi_modal",
+      "name": "any_to_any",
+      "attributes": {}
+    },
+    "multi_modal/audio_processing/audio_processing": {
+      "caption": "Audio Processing",
+      "description": "Capabilities for processing audio, including speech synthesis and recognition.",
+      "extends": "multi_modal",
+      "name": "audio_processing",
+      "attributes": {}
+    },
+    "multi_modal/audio_processing/speech_recognition": {
+      "caption": "Automatic Speech Recognition",
+      "description": "Converting spoken language into written text.",
+      "extends": "audio_processing",
+      "name": "speech_recognition",
+      "attributes": {}
+    },
+    "multi_modal/audio_processing/text_to_speech": {
+      "caption": "Text to Speech",
+      "description": "Converting text into natural-sounding speech audio.",
+      "extends": "audio_processing",
+      "name": "text_to_speech",
+      "attributes": {}
+    },
+    "multi_modal/image_processing/image_processing": {
+      "caption": "Image Processing",
+      "description": "Capabilities for processing and generating images from various inputs and generating textual descriptions of visual content.",
+      "extends": "multi_modal",
+      "name": "image_processing",
+      "attributes": {}
+    },
+    "multi_modal/image_processing/image_to_text": {
+      "caption": "Image to Text",
+      "description": "Generating textual descriptions or captions for images.",
+      "extends": "image_processing",
+      "name": "image_to_text",
+      "attributes": {}
+    },
+    "multi_modal/image_processing/text_to_3d": {
+      "caption": "Text to 3D",
+      "description": "Generating 3D objects or scenes based on textual descriptions.",
+      "extends": "image_processing",
+      "name": "text_to_3d",
+      "attributes": {}
+    },
+    "multi_modal/image_processing/text_to_image": {
+      "caption": "Text to Image",
+      "description": "Generating images based on textual descriptions or instructions.",
+      "extends": "image_processing",
+      "name": "text_to_image",
+      "attributes": {}
+    },
+    "multi_modal/image_processing/text_to_video": {
+      "caption": "Text to Video",
+      "description": "Generating video content based on textual descriptions or instructions.",
+      "extends": "image_processing",
+      "name": "text_to_video",
+      "attributes": {}
+    },
+    "multi_modal/image_processing/visual_qa": {
+      "caption": "Visual Question Answering",
+      "description": "Answering questions about images using natural language.",
+      "extends": "image_processing",
+      "name": "visual_qa",
+      "attributes": {}
+    },
+    "multi_modal/multi_modal": {
+      "caption": "Multi Modal",
+      "category": "multi_modal",
+      "description": "Capabilities for transforming content between different modalities (text, image, audio, video, or 3D).",
+      "extends": "base_skill",
+      "name": "multi_modal",
+      "attributes": {}
+    },
+    "natural_language_processing/analytical_reasoning/analytical_reasoning": {
+      "caption": "Analytical and Logical Reasoning",
+      "description": "Capabilities for performing logical analysis, inference, and problem-solving tasks.",
+      "extends": "natural_language_processing",
+      "name": "analytical_reasoning",
+      "attributes": {}
+    },
+    "natural_language_processing/analytical_reasoning/fact_verification": {
+      "caption": "Fact and Claim Verification",
+      "description": "Verifying facts and claims given a reference text.",
+      "extends": "analytical_reasoning",
+      "name": "fact_verification",
+      "attributes": {}
+    },
+    "natural_language_processing/analytical_reasoning/inference_deduction": {
+      "caption": "Inference and Deduction",
+      "description": "Making logical inferences based on provided information.",
+      "extends": "analytical_reasoning",
+      "name": "inference_deduction",
+      "attributes": {}
+    },
+    "natural_language_processing/analytical_reasoning/problem_solving": {
+      "caption": "Problem Solving",
+      "description": "Assisting with solving problems by generating potential solutions or strategies.",
+      "extends": "analytical_reasoning",
+      "name": "problem_solving",
+      "attributes": {}
+    },
+    "natural_language_processing/creative_content/creative_content": {
+      "caption": "Creative Content Generation",
+      "description": "Capabilities for generating various forms of creative content, including narratives, poetry, and other creative writing forms.",
+      "extends": "natural_language_processing",
+      "name": "creative_content",
+      "attributes": {}
+    },
+    "natural_language_processing/creative_content/poetry_writing": {
+      "caption": "Poetry and Creative Writing",
+      "description": "Composing poems, prose, or other forms of creative literature.",
+      "extends": "creative_content",
+      "name": "poetry_writing",
+      "attributes": {}
+    },
+    "natural_language_processing/creative_content/storytelling": {
+      "caption": "Storytelling",
+      "description": "Creating narratives, stories, or fictional content with creativity and coherence.",
+      "extends": "creative_content",
+      "name": "storytelling",
+      "attributes": {}
+    },
+    "natural_language_processing/ethical_interaction/bias_mitigation": {
+      "caption": "Bias Mitigation",
+      "description": "Reducing or eliminating biased language and ensuring fair and unbiased output.",
+      "extends": "ethical_interaction",
+      "name": "bias_mitigation",
+      "attributes": {}
+    },
+    "natural_language_processing/ethical_interaction/content_moderation": {
+      "caption": "Content Moderation",
+      "description": "Avoiding the generation of harmful, inappropriate, or sensitive content.",
+      "extends": "ethical_interaction",
+      "name": "content_moderation",
+      "attributes": {}
+    },
+    "natural_language_processing/ethical_interaction/ethical_interaction": {
+      "caption": "Ethical and Safe Interaction",
+      "description": "Capabilities for ensuring ethical, unbiased, and safe content generation and interaction.",
+      "extends": "natural_language_processing",
+      "name": "ethical_interaction",
+      "attributes": {}
+    },
+    "natural_language_processing/feature_extraction/feature_extraction": {
+      "caption": "Module Extraction",
+      "description": "Capabilities for extracting and representing textual features as vectors for downstream tasks.",
+      "extends": "natural_language_processing",
+      "name": "feature_extraction",
+      "attributes": {}
+    },
+    "natural_language_processing/feature_extraction/model_feature_extraction": {
+      "caption": "Model Module Extraction",
+      "description": "Representing parts of text with vectors to be used as input to other tasks.",
+      "extends": "feature_extraction",
+      "name": "model_feature_extraction",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval": {
+      "caption": "Document and Passage Retrieval",
+      "description": "Capability to identify and retrieve relevant documents or text passages based on specific criteria or queries from a larger collection of texts.",
+      "extends": "information_retrieval_synthesis",
+      "name": "document_passage_retrieval",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/fact_extraction": {
+      "caption": "Fact Extraction",
+      "description": "Capability to identify and extract factual information from text documents or knowledge bases, including entities, relationships, and key data points.",
+      "extends": "information_retrieval_synthesis",
+      "name": "fact_extraction",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/information_retrieval_synthesis": {
+      "caption": "Information Retrieval and Synthesis",
+      "description": "Capabilities for retrieving relevant information from various sources and synthesizing it into coherent, contextually appropriate responses. This includes searching, extracting, combining, and presenting information in a meaningful way.",
+      "extends": "natural_language_processing",
+      "name": "information_retrieval_synthesis",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/knowledge_synthesis": {
+      "caption": "Knowledge Synthesis",
+      "description": "Capability to aggregate and combine information from multiple sources, creating comprehensive and coherent responses while maintaining context and relevance.",
+      "extends": "information_retrieval_synthesis",
+      "name": "knowledge_synthesis",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/question_answering": {
+      "caption": "Question Answering",
+      "description": "System capability to understand questions and provide accurate, relevant answers by analyzing available information sources.",
+      "extends": "information_retrieval_synthesis",
+      "name": "question_answering",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/search": {
+      "caption": "Search",
+      "description": "Capability to perform efficient and accurate searches within large textual databases based on various criteria, including keywords, semantic meaning, or complex queries.",
+      "extends": "information_retrieval_synthesis",
+      "name": "information_retrieval_synthesis_search",
+      "attributes": {}
+    },
+    "natural_language_processing/information_retrieval_synthesis/sentence_similarity": {
+      "caption": "Sentence Similarity",
+      "description": "Capability to analyze and determine the semantic similarity between sentences, supporting tasks like search, matching, and content comparison.",
+      "extends": "information_retrieval_synthesis",
+      "name": "sentence_similarity",
+      "attributes": {}
+    },
+    "natural_language_processing/language_translation/language_translation": {
+      "caption": "Language Translation and Multilingual Support",
+      "description": "Capabilities for handling multiple languages, including translation and multilingual text processing.",
+      "extends": "natural_language_processing",
+      "name": "language_translation",
+      "attributes": {}
+    },
+    "natural_language_processing/language_translation/multilingual_understanding": {
+      "caption": "Multilingual Understanding",
+      "description": "Recognizing and processing text in multiple languages.",
+      "extends": "language_translation",
+      "name": "multilingual_understanding",
+      "attributes": {}
+    },
+    "natural_language_processing/language_translation/translation": {
+      "caption": "Translation",
+      "description": "Converting text from one language to another while maintaining meaning and context.",
+      "extends": "language_translation",
+      "name": "translation",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/dialogue_generation": {
+      "caption": "Dialogue Generation",
+      "description": "Producing conversational responses that are contextually relevant and engaging within a dialogue context.",
+      "extends": "natural_language_generation",
+      "name": "dialogue_generation",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/natural_language_generation": {
+      "caption": "Natural Language Generation",
+      "description": "Natural Language Generation (NLG) describes the ability to generate human-like text from structured data or other inputs.",
+      "extends": "natural_language_processing",
+      "name": "natural_language_generation",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/paraphrasing": {
+      "caption": "Text Paraphrasing",
+      "description": "Rewriting text to express the same ideas using different words and structures while maintaining the original meaning.",
+      "extends": "natural_language_generation",
+      "name": "paraphrasing",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/question_generation": {
+      "caption": "Question Generation",
+      "description": "Automatically generating relevant and meaningful questions from a given text or context.",
+      "extends": "natural_language_generation",
+      "name": "question_generation",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/story_generation": {
+      "caption": "Story Generation",
+      "description": "Generating a piece of text given a description or a first sentence to complete.",
+      "extends": "natural_language_generation",
+      "name": "story_generation",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/style_transfer": {
+      "caption": "Text Style Transfer",
+      "description": "Rewriting text to match the style of a given reference text while preserving the original content.",
+      "extends": "natural_language_generation",
+      "name": "text_style_transfer",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/summarization": {
+      "caption": "Text Summarization",
+      "description": "Condensing longer texts into concise summaries while preserving essential information and maintaining coherence.",
+      "extends": "natural_language_generation",
+      "name": "summarization",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_generation/text_completion": {
+      "caption": "Text Completion",
+      "description": "Continuing a given text prompt in a coherent and contextually appropriate manner to generate fluent and contextually relevant content.",
+      "extends": "natural_language_generation",
+      "name": "text_completion",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_processing": {
+      "caption": "Natural Language Processing",
+      "category": "natural_language_processing",
+      "extends": "base_skill",
+      "name": "natural_language_processing",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_understanding/contextual_comprehension": {
+      "caption": "Contextual Comprehension",
+      "description": "Understanding the context and nuances of text input to provide relevant responses.",
+      "extends": "natural_language_understanding",
+      "name": "contextual_comprehension",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_understanding/entity_recognition": {
+      "caption": "Entity Recognition",
+      "description": "Identifying and categorizing key entities within the text, such as names, dates, or locations.",
+      "extends": "natural_language_understanding",
+      "name": "entity_recognition",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_understanding/natural_language_understanding": {
+      "caption": "Natural Language Understanding",
+      "description": "Natural Language Understanding (NLU) focuses on the ability to interpret and comprehend human language, including understanding context, semantics, and identifying key entities within text.",
+      "extends": "natural_language_processing",
+      "name": "natural_language_understanding",
+      "attributes": {}
+    },
+    "natural_language_processing/natural_language_understanding/semantic_understanding": {
+      "caption": "Semantic Understanding",
+      "description": "Grasping the meaning and intent behind words and phrases.",
+      "extends": "natural_language_understanding",
+      "name": "semantic_understanding",
+      "attributes": {}
+    },
+    "natural_language_processing/personalization/personalization": {
+      "caption": "Personalisation and Adaptation",
+      "description": "Capabilities for adapting and personalizing content based on user context and preferences.",
+      "extends": "natural_language_processing",
+      "name": "personalization",
+      "attributes": {}
+    },
+    "natural_language_processing/personalization/style_adjustment": {
+      "caption": "Tone and Style Adjustment",
+      "description": "Modifying the tone or style of generated text to suit specific audiences or purposes.",
+      "extends": "personalization",
+      "name": "style_adjustment",
+      "attributes": {}
+    },
+    "natural_language_processing/personalization/user_adaptation": {
+      "caption": "User Adaptation",
+      "description": "Tailoring responses based on user preferences, history, or context.",
+      "extends": "personalization",
+      "name": "user_adaptation",
+      "attributes": {}
+    },
+    "natural_language_processing/text_classification/natural_language_inference": {
+      "caption": "Natural Language Inference",
+      "description": "Classifying the relation between two texts, like a contradiction, entailment, and others.",
+      "extends": "text_classification",
+      "name": "natural_language_inference",
+      "attributes": {}
+    },
+    "natural_language_processing/text_classification/sentiment_analysis": {
+      "caption": "Sentiment Analysis",
+      "description": "Classify the sentiment of a text, that is, a positive movie review.",
+      "extends": "text_classification",
+      "name": "sentiment_analysis",
+      "attributes": {}
+    },
+    "natural_language_processing/text_classification/text_classification": {
+      "caption": "Text Classification",
+      "description": "Capabilities for classifying and categorizing text into predefined categories or labels.",
+      "extends": "natural_language_processing",
+      "name": "text_classification",
+      "attributes": {}
+    },
+    "natural_language_processing/text_classification/topic_labeling": {
+      "caption": "Topic Labelling and Tagging",
+      "description": "Classifying a text as belong to one of several topics, which can be used to tag a text.",
+      "extends": "text_classification",
+      "name": "topic_labeling",
+      "attributes": {}
+    },
+    "natural_language_processing/token_classification/named_entity_recognition": {
+      "caption": "Named Entity Recognition",
+      "description": "Task to recognize names as entity, for example, people, locations, buildings, and so on.",
+      "extends": "token_classification",
+      "name": "named_entity_recognition",
+      "attributes": {}
+    },
+    "natural_language_processing/token_classification/pos_tagging": {
+      "caption": "Part-of-Speech Tagging",
+      "description": "Tagging each part of a sentence as nouns, adjectives, verbs, and so on.",
+      "extends": "token_classification",
+      "name": "pos_tagging",
+      "attributes": {}
+    },
+    "natural_language_processing/token_classification/token_classification": {
+      "caption": "Token Classification",
+      "description": "Capabilities for classifying individual tokens or words within text.",
+      "extends": "natural_language_processing",
+      "name": "token_classification",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/document_or_database_question_answering": {
+      "caption": "Document or Database Question Answering",
+      "description": "Document or database question answering is the process of retrieving and using information from a document or database to answer a specific question.",
+      "extends": "retrieval_augmented_generation",
+      "name": "document_or_database_question_answering",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/generation_of_any": {
+      "caption": "Generation of Any",
+      "description": "Generation of any is augmenting the creation of text, images, audio, or other media by incorporating retrieved information to improve or guide the generation process.",
+      "extends": "retrieval_augmented_generation",
+      "name": "generation_of_any",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/retrieval_augmented_generation": {
+      "caption": "Retrieval Augmented Generation",
+      "category": "retrieval_augmented_generation",
+      "extends": "base_skill",
+      "name": "retrieval_augmented_generation",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/retrieval_of_information/document_retrieval": {
+      "caption": "Document Retrieval",
+      "description": "Document retrieval is the process of retrieving relevant documents from a collection based on a specific query, typically through indexing and search techniques.",
+      "extends": "retrieval_of_information",
+      "name": "document_retrieval",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/retrieval_of_information/indexing": {
+      "caption": "Indexing",
+      "description": "Depth estimations the task of predicting the distance or depth of objects within a scene from a single image or multiple images.",
+      "extends": "retrieval_of_information",
+      "name": "indexing",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/retrieval_of_information/retrieval_of_information": {
+      "caption": "Retrieval of Information",
+      "description": "Retrieval of information is the process of fetching relevant data or documents from a large dataset or database based on a specific query or input.",
+      "extends": "retrieval_augmented_generation",
+      "name": "retrieval_of_information",
+      "attributes": {}
+    },
+    "retrieval_augmented_generation/retrieval_of_information/search": {
+      "caption": "Search",
+      "description": "Search is the process of exploring a dataset or index to find relevant information or results based on a given query.",
+      "extends": "retrieval_of_information",
+      "name": "retrieval_of_information_search",
+      "attributes": {}
+    },
+    "security_privacy/privacy_risk_assessment": {
+      "caption": "Privacy Risk Assessment",
+      "description": "Evaluating data handling or user flows to surface potential privacy risks and recommend mitigations.",
+      "extends": "security_privacy",
+      "name": "privacy_risk_assessment",
+      "attributes": {}
+    },
+    "security_privacy/secret_leak_detection": {
+      "caption": "Secret Leak Detection",
+      "description": "Scanning artifacts (code, logs, documents) to identify exposed credentials, tokens, or other sensitive secrets.",
+      "extends": "security_privacy",
+      "name": "secret_leak_detection",
+      "attributes": {}
+    },
+    "security_privacy/security_privacy": {
+      "caption": "Security & Privacy",
+      "category": "security_privacy",
+      "extends": "base_skill",
+      "name": "security_privacy",
+      "attributes": {}
+    },
+    "security_privacy/threat_detection": {
+      "caption": "Threat Detection",
+      "description": "Identifying indicators of malicious activity, suspicious patterns, or emerging threats across logs and data sources.",
+      "extends": "security_privacy",
+      "name": "threat_detection",
+      "attributes": {}
+    },
+    "security_privacy/vulnerability_analysis": {
+      "caption": "Vulnerability Analysis",
+      "description": "Reviewing code, configurations, or dependency manifests to surface potential security weaknesses and misconfigurations.",
+      "extends": "security_privacy",
+      "name": "vulnerability_analysis",
+      "attributes": {}
+    },
+    "tabular_text/tabular_classification": {
+      "caption": "Tabular Classification",
+      "description": "Classifying data based on attributes using classical machine learning approaches.",
+      "extends": "tabular_text",
+      "name": "tabular_classification",
+      "attributes": {}
+    },
+    "tabular_text/tabular_regression": {
+      "caption": "Tabular Regression",
+      "description": "Predicting numerical values based on tabular attributes and features.",
+      "extends": "tabular_text",
+      "name": "tabular_regression",
+      "attributes": {}
+    },
+    "tabular_text/tabular_text": {
+      "caption": "Tabular / Text",
+      "category": "tabular_text",
+      "extends": "base_skill",
+      "name": "tabular_text",
+      "attributes": {}
+    },
+    "tool_interaction/api_schema_understanding": {
+      "caption": "API Schema Understanding",
+      "description": "Interpreting and explaining API specifications, endpoints, parameters, and expected payloads.",
+      "extends": "tool_interaction",
+      "name": "api_schema_understanding",
+      "attributes": {}
+    },
+    "tool_interaction/script_integration": {
+      "caption": "Script Integration",
+      "description": "Linking custom scripts or functions with external tools to extend capabilities.",
+      "extends": "tool_interaction",
+      "name": "script_integration",
+      "attributes": {}
+    },
+    "tool_interaction/tool_interaction": {
+      "caption": "Tool Interaction",
+      "category": "tool_interaction",
+      "extends": "base_skill",
+      "name": "tool_interaction",
+      "attributes": {}
+    },
+    "tool_interaction/tool_use_planning": {
+      "caption": "Tool Use Planning",
+      "description": "Selecting and ordering tool invocations to accomplish a specified goal efficiently.",
+      "extends": "tool_interaction",
+      "name": "tool_use_planning",
+      "attributes": {}
+    },
+    "tool_interaction/workflow_automation": {
+      "caption": "Workflow Automation",
+      "description": "Designing or describing automated sequences integrating multiple tools or services.",
+      "extends": "tool_interaction",
+      "name": "workflow_automation",
+      "attributes": {}
+    }
+  }
+}

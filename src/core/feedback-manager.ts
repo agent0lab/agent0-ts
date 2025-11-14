@@ -7,14 +7,14 @@ import type {
   Feedback,
   SearchFeedbackParams,
   FeedbackIdTuple,
-} from '../models/interfaces';
-import type { AgentId, Address, URI, Timestamp, IdemKey } from '../models/types';
-import type { Web3Client } from './web3-client';
-import type { IPFSClient } from './ipfs-client';
-import type { ArweaveClient } from './arweave-client';
-import type { SubgraphClient } from './subgraph-client';
-import { parseAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format';
-import { DEFAULTS } from '../utils/constants';
+} from '../models/interfaces.js';
+import type { AgentId, Address, URI, Timestamp, IdemKey } from '../models/types.js';
+import type { Web3Client } from './web3-client.js';
+import type { IPFSClient } from './ipfs-client.js';
+import type { SubgraphClient } from './subgraph-client.js';
+import type { ArweaveClient } from './arweave-client.js';
+import { parseAgentId, formatAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format.js';
+import { DEFAULTS } from '../utils/constants.js';
 
 export interface FeedbackAuth {
   agentId: bigint;
@@ -30,14 +30,27 @@ export interface FeedbackAuth {
  * Manages feedback operations for the Agent0 SDK
  */
 export class FeedbackManager {
+  private getSubgraphClientForChain?: (chainId?: number) => SubgraphClient | undefined;
+  private defaultChainId?: number;
+
   constructor(
     private web3Client: Web3Client,
     private ipfsClient?: IPFSClient,
-    private arweaveClient?: ArweaveClient,
     private reputationRegistry?: ethers.Contract,
     private identityRegistry?: ethers.Contract,
     private subgraphClient?: SubgraphClient
   ) {}
+
+  /**
+   * Set function to get subgraph client for a specific chain (for multi-chain support)
+   */
+  setSubgraphClientGetter(
+    getter: (chainId?: number) => SubgraphClient | undefined,
+    defaultChainId: number
+  ): void {
+    this.getSubgraphClientForChain = getter;
+    this.defaultChainId = defaultChainId;
+  }
 
   /**
    * Set reputation registry contract (for lazy initialization)
@@ -198,30 +211,7 @@ export class FeedbackManager {
   }
 
   /**
-   * Give feedback to an agent with optional off-chain storage.
-   *
-   * **Storage Priority (when both clients are configured):**
-   * 1. **Arweave** (preferred) - Permanent, immutable storage with cryptographic tags
-   * 2. **IPFS** (fallback) - Decentralized storage if Arweave fails
-   * 3. **On-chain only** - If no storage clients configured or both fail
-   *
-   * **Rationale for Arweave-first:**
-   * - Permanent storage: Data never disappears (no re-pinning required)
-   * - Immutability: Feedback cannot be altered after submission
-   * - Searchability: Rich tagging enables queries by agent, reviewer, score, etc.
-   * - Free tier: Feedback files are typically <1KB (well under 100KB limit)
-   *
-   * **Configuration:**
-   * - To use Arweave: Set `arweave: true` in SDK config
-   * - To use IPFS: Configure `ipfs` in SDK config
-   * - Both can be enabled simultaneously (Arweave takes priority)
-   *
-   * @param agentId - Target agent identifier (format: "chainId:tokenId")
-   * @param clientAddress - Ethereum address of feedback provider
-   * @param feedbackFile - Feedback data (score, tags, text, context, etc.)
-   * @param feedbackIndex - Optional feedback index (auto-calculated if not provided)
-   * @param feedbackAuth - Optional pre-signed authorization (required for non-agent owners)
-   * @returns Feedback object with on-chain data and storage URI
+   * Give feedback (maps 8004 endpoint)
    */
   async giveFeedback(
     agentId: AgentId,
@@ -275,55 +265,11 @@ export class FeedbackManager {
     const tag1 = this._stringToBytes32(tag1Str);
     const tag2 = this._stringToBytes32(tag2Str);
 
-
-    // PRE-VALIDATION: Validate transaction will succeed BEFORE uploading to Arweave
-    // This prevents orphaned uploads when on-chain validation fails
-    // (e.g., "Self-feedback not allowed", inactive agent, etc.)
-    if (!this.reputationRegistry) {
-      throw new Error('Reputation registry not available');
-    }
-
-    try {
-      // Estimate gas to trigger on-chain validation without spending credits
-      await this.reputationRegistry.giveFeedback.estimateGas(
-        BigInt(tokenId),
-        score,
-        tag1,
-        tag2,
-        '', // Empty URI for validation (we haven't uploaded yet)
-        '0x' + '00'.repeat(32), // Empty hash for validation
-        ethers.getBytes(authBytes.startsWith('0x') ? authBytes : '0x' + authBytes)
-      );
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Feedback validation failed: ${errorMessage}`);
-    }
-    // Handle off-chain file storage with priority: Arweave > IPFS > on-chain only
+    // Handle off-chain file storage
     let feedbackUri = '';
     let feedbackHash = '0x' + '00'.repeat(32); // Default empty hash
 
-    // Storage Priority: Try Arweave first (permanent storage), then IPFS fallback
-    if (this.arweaveClient) {
-      try {
-        // Ensure chainId is initialized before Arweave upload (required for tags)
-        if (this.web3Client.chainId === 0n) {
-          await this.web3Client.initialize();
-        }
-        const chainId = this.web3Client.chainId;
-        const txId = await this.arweaveClient.addFeedbackFile(
-          feedbackFile,
-          Number(chainId),
-          agentId,
-          clientAddress
-        );
-        feedbackUri = `ar://${txId}`;
-        // Calculate hash of sorted JSON
-        const sortedJson = JSON.stringify(feedbackFile, Object.keys(feedbackFile).sort());
-        feedbackHash = this.web3Client.keccak256(sortedJson);
-      } catch (error) {
-        // Failed to store on Arweave - continue without Arweave storage
-      }
-    } else if (this.ipfsClient) {
+    if (this.ipfsClient) {
       // Store feedback file on IPFS
       try {
         const cid = await this.ipfsClient.addJson(feedbackFile);
@@ -332,11 +278,14 @@ export class FeedbackManager {
         const sortedJson = JSON.stringify(feedbackFile, Object.keys(feedbackFile).sort());
         feedbackHash = this.web3Client.keccak256(sortedJson);
       } catch (error) {
-        // Failed to store on IPFS - continue without IPFS storage
+        // Failed to store on IPFS - log error but continue without IPFS storage
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Feedback] Failed to store feedback file on IPFS: ${errorMessage}`);
+        // Continue without IPFS storage - feedback will be stored on-chain only
       }
     } else if (feedbackFile.context || feedbackFile.capability || feedbackFile.name) {
-      // If we have rich data but no storage client, we need to store it somewhere
-      throw new Error('Rich feedback data requires Arweave or IPFS client for storage');
+      // If we have rich data but no IPFS, we need to store it somewhere
+      throw new Error('Rich feedback data requires IPFS client for storage');
     }
 
     // Submit to blockchain
@@ -456,18 +405,65 @@ export class FeedbackManager {
   /**
    * Search feedback with filters
    * Uses subgraph if available, otherwise returns empty array
+   * Supports chainId:agentId format in params.agents
    */
   async searchFeedback(params: SearchFeedbackParams): Promise<Feedback[]> {
-    if (!this.subgraphClient) {
+    // Determine which subgraph client to use based on agentId chainId
+    let subgraphClientToUse = this.subgraphClient;
+    let formattedAgents: string[] | undefined;
+    
+    // If agents are specified, check if they have chainId prefixes
+    if (params.agents && params.agents.length > 0 && this.getSubgraphClientForChain) {
+      // Parse first agentId to determine chain
+      const firstAgentId = params.agents[0];
+      let chainId: number | undefined;
+      let fullAgentId: string;
+      
+      if (firstAgentId.includes(':')) {
+        const parsed = parseAgentId(firstAgentId);
+        chainId = parsed.chainId;
+        fullAgentId = firstAgentId;
+        // Get subgraph client for the specified chain
+        subgraphClientToUse = this.getSubgraphClientForChain(chainId);
+        // Format all agentIds to ensure they have chainId prefix
+        formattedAgents = params.agents.map(agentId => {
+          if (agentId.includes(':')) {
+            return agentId;
+          } else {
+            // Format with the same chainId as the first agent
+            return formatAgentId(chainId!, parseInt(agentId, 10));
+          }
+        });
+      } else {
+        // Use default chain - format agentIds with default chainId
+        chainId = this.defaultChainId;
+        if (this.defaultChainId !== undefined) {
+          formattedAgents = params.agents.map(agentId => {
+            if (agentId.includes(':')) {
+              return agentId;
+            } else {
+              return formatAgentId(this.defaultChainId!, parseInt(agentId, 10));
+            }
+          });
+        } else {
+          formattedAgents = params.agents;
+        }
+        // Don't change subgraphClientToUse - use the default one
+      }
+    } else {
+      formattedAgents = params.agents;
+    }
+
+    if (!subgraphClientToUse) {
       // Fallback not implemented (would require blockchain queries)
       // For now, return empty if subgraph unavailable
       return [];
     }
 
     // Query subgraph
-    const feedbacksData = await this.subgraphClient.searchFeedback(
+    const feedbacksData = await subgraphClientToUse.searchFeedback(
       {
-        agents: params.agents,
+        agents: formattedAgents || params.agents,
         reviewers: params.reviewers,
         tags: params.tags,
         capabilities: params.capabilities,
@@ -759,17 +755,113 @@ export class FeedbackManager {
 
   /**
    * Get reputation summary
+   * Supports chainId:agentId format
    */
   async getReputationSummary(
     agentId: AgentId,
     tag1?: string,
     tag2?: string
   ): Promise<{ count: number; averageScore: number }> {
+    // Parse chainId from agentId
+    let chainId: number | undefined;
+    let fullAgentId: string;
+    let tokenId: number;
+    
+    let subgraphClient: SubgraphClient | undefined;
+    
+    if (agentId.includes(':')) {
+      const parsed = parseAgentId(agentId);
+      chainId = parsed.chainId;
+      tokenId = parsed.tokenId;
+      fullAgentId = agentId;
+      // Get subgraph client for the specified chain
+      if (this.getSubgraphClientForChain) {
+        subgraphClient = this.getSubgraphClientForChain(chainId);
+      }
+    } else {
+      // Use default chain
+      chainId = this.defaultChainId;
+      tokenId = parseInt(agentId, 10);
+      if (this.defaultChainId !== undefined) {
+        fullAgentId = formatAgentId(this.defaultChainId, tokenId);
+      } else {
+        // Fallback: use agentId as-is if no default chain
+        fullAgentId = agentId;
+      }
+      // Use default subgraph client
+      subgraphClient = this.subgraphClient;
+    }
+
+    // Try subgraph first if available
+    if (subgraphClient) {
+      try {
+        // Use subgraph to calculate reputation
+        // Query feedback for this agent
+        const feedbacksData = await subgraphClient.searchFeedback(
+            {
+              agents: [fullAgentId],
+            },
+            1000, // first
+            0, // skip
+            'createdAt',
+            'desc'
+          );
+
+          // Filter by tags if provided
+          let filteredFeedbacks = feedbacksData;
+          if (tag1 || tag2) {
+            filteredFeedbacks = feedbacksData.filter((fb: any) => {
+              const fbTag1 = fb.tag1 || '';
+              const fbTag2 = fb.tag2 || '';
+              if (tag1 && tag2) {
+                return (fbTag1 === tag1 && fbTag2 === tag2) || (fbTag1 === tag2 && fbTag2 === tag1);
+              } else if (tag1) {
+                return fbTag1 === tag1 || fbTag2 === tag1;
+              } else if (tag2) {
+                return fbTag1 === tag2 || fbTag2 === tag2;
+              }
+              return true;
+            });
+          }
+
+          // Filter out revoked feedback
+          const validFeedbacks = filteredFeedbacks.filter((fb: any) => !fb.isRevoked);
+
+          if (validFeedbacks.length > 0) {
+            const scores = validFeedbacks
+              .map((fb: any) => fb.score)
+              .filter((score: any) => score !== null && score !== undefined && score > 0);
+            
+            if (scores.length > 0) {
+              const sum = scores.reduce((a: number, b: number) => a + b, 0);
+              const averageScore = sum / scores.length;
+              return {
+                count: validFeedbacks.length,
+                averageScore: Math.round(averageScore * 100) / 100, // Round to 2 decimals
+              };
+            }
+          }
+
+        return { count: 0, averageScore: 0 };
+      } catch (error) {
+        // Fall through to blockchain query if subgraph fails
+      }
+    }
+
+    // Fallback to blockchain query (requires matching chain)
     if (!this.reputationRegistry) {
       throw new Error('Reputation registry not available');
     }
 
-    const { tokenId } = parseAgentId(agentId);
+    // For blockchain query, we need the chain to match the SDK's default chain
+    // If chainId is specified and different, we can't use blockchain query
+    if (chainId !== undefined && this.defaultChainId !== undefined && chainId !== this.defaultChainId) {
+      throw new Error(
+        `Blockchain reputation summary not supported for chain ${chainId}. ` +
+        `SDK is configured for chain ${this.defaultChainId}. ` +
+        `Use subgraph-based summary instead.`
+      );
+    }
 
     try {
       const tag1Bytes = tag1 ? this._stringToBytes32(tag1) : '0x' + '00'.repeat(32);

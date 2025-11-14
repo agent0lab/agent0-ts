@@ -2,7 +2,7 @@
  * Utility functions for parsing and formatting Agent IDs and Feedback IDs
  */
 
-import { normalizeAddress } from './validation';
+import { normalizeAddress } from './validation.js';
 
 /**
  * Parse an AgentId string into chainId and tokenId

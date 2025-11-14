@@ -1,6 +1,7 @@
-module.exports = {
+export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  extensionsToTreatAsEsm: ['.ts'],
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
   transform: {
@@ -8,6 +9,7 @@ module.exports = {
       tsconfig: {
         types: ['jest', 'node'],
       },
+      useESM: true,
     }],
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],

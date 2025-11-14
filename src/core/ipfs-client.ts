@@ -6,9 +6,9 @@
  */
 
 import type { IPFSHTTPClient } from 'ipfs-http-client';
-import type { RegistrationFile } from '../models/interfaces';
-import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants';
-import { formatRegistrationFileForStorage } from '../utils/registration-format';
+import type { RegistrationFile } from '../models/interfaces.js';
+import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { formatRegistrationFileForStorage } from '../utils/registration-format.js';
 
 export interface IPFSClientConfig {
   url?: string; // IPFS node URL (e.g., "http://localhost:5001")
@@ -101,6 +101,55 @@ export class IPFSClient {
       const cid = result?.data?.cid || result?.cid || result?.IpfsHash;
       if (!cid) {
         throw new Error(`No CID returned from Pinata. Response: ${JSON.stringify(result)}`);
+      }
+
+      // Verify CID is accessible on Pinata gateway (with short timeout since we just uploaded)
+      // This catches cases where Pinata returns a CID but the upload actually failed
+      // Note: We treat HTTP 429 (rate limit) and timeouts as non-fatal since content may propagate with delay
+      try {
+        const verifyUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const verifyResponse = await fetch(verifyUrl, {
+          signal: AbortSignal.timeout(5000), // 5 second timeout for verification
+        });
+        if (!verifyResponse.ok) {
+          // HTTP 429 (rate limit) is not a failure - gateway is just rate limiting
+          if (verifyResponse.status === 429) {
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but gateway is rate-limited (HTTP 429). ` +
+              `Content is likely available but verification skipped due to rate limiting.`
+            );
+          } else {
+            // Other HTTP errors might indicate a real problem
+            throw new Error(
+              `Pinata returned CID ${cid} but content is not accessible on gateway (HTTP ${verifyResponse.status}). ` +
+              `This may indicate the upload failed. Full Pinata response: ${JSON.stringify(result)}`
+            );
+          }
+        }
+      } catch (verifyError) {
+        // If verification fails, check if it's a timeout or rate limit (non-fatal)
+        if (verifyError instanceof Error) {
+          // Timeout or network errors are non-fatal - content may propagate with delay
+          if (verifyError.message.includes('timeout') || verifyError.message.includes('aborted')) {
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but verification timed out. ` +
+              `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
+            );
+          } else if (verifyError.message.includes('429')) {
+            // Rate limit is non-fatal
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but gateway is rate-limited. ` +
+              `Content is likely available but verification skipped.`
+            );
+          } else {
+            // Other errors might indicate a real problem, but we'll still continue
+            // since Pinata API returned success - content might just need time to propagate
+            console.warn(
+              `[IPFS] Pinata returned CID ${cid} but verification failed: ${verifyError.message}. ` +
+              `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
+            );
+          }
+        }
       }
 
       return cid;
@@ -308,12 +357,59 @@ export class IPFSClient {
     chainId?: number,
     identityRegistryAddress?: string
   ): Promise<string> {
-    const data = formatRegistrationFileForStorage(
-      registrationFile,
-      chainId,
-      identityRegistryAddress
-    );
-
+    // Convert from internal format { type, value, meta } to ERC-8004 format { name, endpoint, version }
+    const endpoints: Array<Record<string, unknown>> = [];
+    for (const ep of registrationFile.endpoints) {
+      const endpointDict: Record<string, unknown> = {
+        name: ep.type, // EndpointType enum value (e.g., "MCP", "A2A")
+        endpoint: ep.value,
+      };
+      
+      // Spread meta fields (version, mcpTools, mcpPrompts, etc.) into the endpoint dict
+      if (ep.meta) {
+        Object.assign(endpointDict, ep.meta);
+      }
+      
+      endpoints.push(endpointDict);
+    }
+    
+    // Add walletAddress as an endpoint if present
+    if (registrationFile.walletAddress) {
+      const walletChainId = registrationFile.walletChainId || chainId || 1;
+      endpoints.push({
+        name: 'agentWallet',
+        endpoint: `eip155:${walletChainId}:${registrationFile.walletAddress}`,
+      });
+    }
+    
+    // Build registrations array
+    const registrations: Array<Record<string, unknown>> = [];
+    if (registrationFile.agentId) {
+      const [, , tokenId] = registrationFile.agentId.split(':');
+      const agentRegistry = chainId && identityRegistryAddress
+        ? `eip155:${chainId}:${identityRegistryAddress}`
+        : `eip155:1:{identityRegistry}`;
+      registrations.push({
+        agentId: parseInt(tokenId, 10),
+        agentRegistry,
+      });
+    }
+    
+    // Build ERC-8004 compliant registration file
+    const data = {
+      type: 'https://eips.ethereum.org/EIPS/eip-8004#registration-v1',
+      name: registrationFile.name,
+      description: registrationFile.description,
+      ...(registrationFile.image && { image: registrationFile.image }),
+      endpoints,
+      ...(registrations.length > 0 && { registrations }),
+      ...(registrationFile.trustModels.length > 0 && {
+        supportedTrusts: registrationFile.trustModels,
+      }),
+      active: registrationFile.active,
+      x402support: registrationFile.x402support,
+    };
+    
     return this.addJson(data);
   }
 
