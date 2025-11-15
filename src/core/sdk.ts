@@ -42,6 +42,8 @@ export interface SDKConfig {
   ipfsNodeUrl?: string;
   filecoinPrivateKey?: string;
   pinataJwt?: string;
+  // Arweave configuration
+  arweave?: boolean;
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
@@ -53,6 +55,7 @@ export interface SDKConfig {
 export class SDK {
   private readonly _web3Client: Web3Client;
   private _ipfsClient?: IPFSClient;
+  private _arweaveClient?: ArweaveClient;
   private _subgraphClient?: SubgraphClient;
   private readonly _feedbackManager: FeedbackManager;
   private readonly _indexer: AgentIndexer;
@@ -101,11 +104,19 @@ export class SDK {
     if (config.ipfs) {
       this._ipfsClient = this._initializeIpfsClient(config);
     }
+    // Initialize Arweave client
+    if (config.arweave && config.signer) {
+      const privateKey = typeof config.signer === 'string' ? config.signer : undefined;
+      if (privateKey) {
+        this._arweaveClient = new ArweaveClient({ privateKey });
+      }
+    }
 
     // Initialize feedback manager (will set registries after they're created)
     this._feedbackManager = new FeedbackManager(
       this._web3Client,
       this._ipfsClient,
+      this._arweaveClient,
       undefined, // reputationRegistry - will be set lazily
       undefined, // identityRegistry - will be set lazily
       this._subgraphClient
@@ -787,6 +798,9 @@ export class SDK {
 
   get ipfsClient(): IPFSClient | undefined {
     return this._ipfsClient;
+  }
+  get arweaveClient(): ArweaveClient | undefined {
+    return this._arweaveClient;
   }
 
   get subgraphClient(): SubgraphClient | undefined {

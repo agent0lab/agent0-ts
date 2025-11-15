@@ -5,10 +5,10 @@
  */
 
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
-import type { RegistrationFile } from '../models/interfaces';
-import { formatRegistrationFileForStorage } from '../utils/registration-format';
-import { generateArweaveRegistrationTags, generateArweaveFeedbackTags, generateEssentialTags } from '../utils/arweave-tags';
-import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
+import type { RegistrationFile } from '../models/interfaces.js';
+import { formatRegistrationFileForStorage } from '../utils/registration-format.js';
+import { generateArweaveRegistrationTags, generateArweaveFeedbackTags, generateEssentialTags } from '../utils/arweave-tags.js';
+import { ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
 
 export interface ArweaveClientConfig {
   privateKey: string; // EVM private key (NOT Arweave JWK)

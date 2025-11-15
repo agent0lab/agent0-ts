@@ -36,6 +36,7 @@ export class FeedbackManager {
   constructor(
     private web3Client: Web3Client,
     private ipfsClient?: IPFSClient,
+    private arweaveClient?: ArweaveClient,
     private reputationRegistry?: ethers.Contract,
     private identityRegistry?: ethers.Contract,
     private subgraphClient?: SubgraphClient

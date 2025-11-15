@@ -3,7 +3,7 @@
  * Used by both IPFSClient and ArweaveClient to ensure consistency
  */
 
-import type { RegistrationFile } from '../models/interfaces';
+import type { RegistrationFile } from '../models/interfaces.js';
 
 /**
  * Format RegistrationFile to ERC-8004 compliant storage format.
