@@ -11,8 +11,8 @@ Agent0 SDK v0.31 enables you to:
 - **OASF taxonomies** - Advertise standardized skills and domains using the Open Agentic Schema Framework (OASF) taxonomies for better discovery and interoperability
 - **Enable permissionless discovery** - Make your agent discoverable by other agents and platforms using rich search by attributes, capabilities, skills, tools, tasks, and x402 support
 - **Build reputation** - Give and receive feedback, retrieve feedback history, and search agents by reputation with cryptographic authentication
-- **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
-- **Public indexing** - Subgraph indexing both on-chain and IPFS data for fast search and retrieval
+- **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, Arweave, or HTTP URIs
+- **Public indexing** - Subgraph indexing both on-chain and off-chain data for fast search and retrieval
 
 ## ⚠️ Alpha Release
 
@@ -29,6 +29,7 @@ Agent0 SDK v0.31 is in **alpha** with bugs and is not production ready. We're ac
 - Private key for signing transactions (or run in read-only mode)
 - Access to an Ethereum RPC endpoint (e.g., Alchemy, Infura)
 - (Optional) IPFS provider account (Pinata, Filecoin, or local IPFS node)
+- (Optional) Arweave support is automatically enabled with your EVM private key (free for files <100KB)
 
 ### Install from npm
 
@@ -60,13 +61,14 @@ npm run build
 ```typescript
 import { SDK } from 'agent0-sdk';
 
-// Initialize SDK with IPFS and subgraph
+// Initialize SDK with storage providers and subgraph
 const sdk = new SDK({
   chainId: 11155111, // Ethereum Sepolia testnet
   rpcUrl: process.env.RPC_URL!,
   signer: process.env.PRIVATE_KEY, // Optional: for write operations
   ipfs: 'pinata', // Options: 'pinata', 'filecoinPin', 'node'
-  pinataJwt: process.env.PINATA_JWT // For Pinata
+  pinataJwt: process.env.PINATA_JWT, // For Pinata
+  arweave: true // Optional: Enable Arweave permanent storage (free <100KB)
   // Subgraph URL auto-defaults from DEFAULT_SUBGRAPH_URLS
 });
 ```
@@ -104,6 +106,10 @@ agent.setActive(true);
 const registrationFile = await agent.registerIPFS();
 console.log(`Agent registered: ${registrationFile.agentId}`); // e.g., "11155111:123"
 console.log(`Agent URI: ${registrationFile.agentURI}`); // e.g., "ipfs://Qm..."
+
+// Or register with Arweave for permanent storage
+// const registrationFile = await agent.registerArweave();
+// console.log(`Agent URI: ${registrationFile.agentURI}`); // e.g., "ar://abc123..."
 ```
 
 ### 3. Load and Edit Agent
@@ -116,8 +122,9 @@ const agent = await sdk.loadAgent('11155111:123'); // Format: "chainId:agentId"
 agent.updateInfo(undefined, 'Updated description with new capabilities', undefined);
 await agent.setMCP('https://new-mcp.example.com/');
 
-// Re-register to update on-chain
+// Re-register to update on-chain (use same storage as original registration)
 await agent.registerIPFS();
+// Or: await agent.registerArweave();
 console.log(`Updated: ${agent.agentURI}`);
 ```
 
@@ -231,28 +238,14 @@ const summary = await sdk.getReputationSummary('11155111:123');
 console.log(`Average score: ${summary.averageScore}`);
 ```
 
-## IPFS Configuration Options
+## Storage Configuration Options
+
+Agent0 SDK supports multiple storage providers for agent registration files. Choose the option that best fits your needs.
+
+### IPFS Storage Options
 
 ```typescript
-// Option 1: Filecoin Pin (free for ERC-8004 agents)
-const sdk = new SDK({
-  chainId: 11155111,
-  rpcUrl: '...',
-  signer: privateKey,
-  ipfs: 'filecoinPin',
-  filecoinPrivateKey: 'your-filecoin-private-key'
-});
-
-// Option 2: IPFS Node
-const sdk = new SDK({
-  chainId: 11155111,
-  rpcUrl: '...',
-  signer: privateKey,
-  ipfs: 'node',
-  ipfsNodeUrl: 'https://ipfs.infura.io:5001'
-});
-
-// Option 3: Pinata (free for ERC-8004 agents)
+// Option 1: Pinata (recommended, free for ERC-8004 agents)
 const sdk = new SDK({
   chainId: 11155111,
   rpcUrl: '...',
@@ -261,9 +254,64 @@ const sdk = new SDK({
   pinataJwt: 'your-pinata-jwt-token'
 });
 
-// Option 4: HTTP registration (no IPFS)
+// Option 2: Filecoin Pin (free for ERC-8004 agents)
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: '...',
+  signer: privateKey,
+  ipfs: 'filecoinPin',
+  filecoinPrivateKey: 'your-filecoin-private-key'
+});
+
+// Option 3: IPFS Node
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: '...',
+  signer: privateKey,
+  ipfs: 'node',
+  ipfsNodeUrl: 'https://ipfs.infura.io:5001'
+});
+
+// After SDK initialization, create and register your agent:
+// const agent = sdk.createAgent('name', 'description', 'image');
+// await agent.registerIPFS();
+```
+
+### Arweave Storage (Permanent)
+
+Arweave provides permanent, immutable storage with no re-pinning required. Files under 100KB are free via ArDrive Turbo.
+
+```typescript
+// Enable Arweave storage (uses your EVM private key automatically)
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: '...',
+  signer: privateKey, // Your EVM private key
+  arweave: true // Enable Arweave
+});
+
+// After SDK initialization, create and register your agent:
+// const agent = sdk.createAgent('name', 'description', 'image');
+// const registrationFile = await agent.registerArweave();
+// console.log(`Permanent Arweave URI: ${registrationFile.agentURI}`); // "ar://..."
+```
+
+**Arweave Benefits:**
+- **Permanent storage** - Data never expires, no re-pinning needed
+- **Immutable** - Registration data cannot be altered after upload
+- **Free tier** - Files under 100KB are free (registration files are typically 1-10KB)
+- **Cryptographic tags** - Rich metadata for discovery and verification
+- **No additional accounts** - Uses your existing EVM private key
+
+### HTTP/Custom Storage
+
+```typescript
+// Option: HTTP registration (custom hosting, no IPFS or Arweave)
 const sdk = new SDK({ chainId: 11155111, rpcUrl: '...', signer: privateKey });
-await agent.registerHTTP('https://example.com/agent-registration.json');
+
+// After SDK initialization, create and register your agent:
+// const agent = sdk.createAgent('name', 'description', 'image');
+// await agent.registerHTTP('https://example.com/agent-registration.json');
 ```
 
 ## Multi-Chain Support
