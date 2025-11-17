@@ -30,6 +30,7 @@ npm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+tests/agent_registration_*.json
 
 # Temporary files
 *.tmp

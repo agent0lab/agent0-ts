@@ -168,7 +168,7 @@ export class SDK {
    *
    * **Private Key Priority:**
    * 1. Uses config.arweavePrivateKey if provided (allows separate key for Arweave)
-   * 2. Falls back to config.signer if arweavePrivateKey not specified
+   * 2. Extracts private key from config.signer (string or ethers.Wallet)
    *
    * **Why EVM Keys:**
    * - Arweave Turbo SDK supports EVM signing (no Arweave JWK needed)
@@ -177,12 +177,32 @@ export class SDK {
    *
    * @param config - SDK configuration object
    * @returns Initialized ArweaveClient instance
-   * @throws Error if neither arweavePrivateKey nor signer provided
+   * @throws Error if private key cannot be extracted
    */
   private _initializeArweaveClient(config: SDKConfig): ArweaveClient {
-    const privateKey = config.arweavePrivateKey || config.signer;
+    let privateKey: string;
 
-    if (!privateKey) {
+    // Priority 1: Use explicit arweavePrivateKey if provided
+    if (config.arweavePrivateKey) {
+      privateKey = config.arweavePrivateKey;
+    }
+    // Priority 2: Extract from signer
+    else if (config.signer) {
+      if (typeof config.signer === 'string') {
+        // String private key - use directly
+        privateKey = config.signer;
+      } else if ('privateKey' in config.signer) {
+        // ethers.Wallet has a privateKey property
+        privateKey = (config.signer as ethers.Wallet).privateKey;
+      } else {
+        // Generic Signer without privateKey access
+        throw new Error(
+          'Arweave requires private key access. ' +
+          'Signer does not expose privateKey. ' +
+          'Provide arweavePrivateKey in SDK config.'
+        );
+      }
+    } else {
       throw new Error(
         'Arweave storage requires an EVM private key. ' +
         'Provide signer or arweavePrivateKey in SDK config.'
