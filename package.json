@@ -24,7 +24,8 @@
     "blockchain",
     "ethereum",
     "ipfs",
-    "reputation"
+    "reputation",
+    "arweave"
   ],
   "author": "Marco De Rossi <marco.derossi@consensys.net>",
   "license": "MIT",
