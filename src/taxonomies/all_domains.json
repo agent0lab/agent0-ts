@@ -1,0 +1,1565 @@
+{
+  "metadata": {
+    "version": "0.8.0",
+    "description": "Comprehensive collection of all OASF domains",
+    "identifier_format": "Slash-separated path matching file structure (e.g., 'technology/software_engineering/devops')",
+    "total_domains": 204
+  },
+  "categories": {
+    "caption": "Domains",
+    "description": "A comprehensive table outlining distinct fields of application and knowledge areas within the framework.",
+    "name": "domain_categories",
+    "attributes": {
+      "technology": {
+        "caption": "Technology",
+        "description": "Development, management, and use of systems, devices, and software to solve problems and enhance human capabilities."
+      },
+      "finance_and_business": {
+        "caption": "Finance and Business",
+        "description": "Managing money, investments, and financial risks within businesses or for individuals. Subdomains: Corporate Finance, Personal Finance, Risk Management, Accounting, and Financial Analysis."
+      },
+      "life_science": {
+        "caption": "Life Science",
+        "description": "Scientific research and innovations in biology, genetics, biotechnology, and other related fields, with the goal of understanding life processes and advancing medical and environmental solutions. Subdomains: Biotechnology, Pharmaceutical Research, Genomics, Bioinformatics, and Molecular Biology."
+      },
+      "trust_and_safety": {
+        "caption": "Trust and Safety",
+        "description": "Maintaining a secure and reliable environment, primarily online, by managing risks, preventing harm, and ensuring safety and privacy. Subdomains: Online Safety, Content Moderation, Fraud Prevention, Data Privacy, and Risk Management."
+      },
+      "human_resources": {
+        "caption": "Human Resources",
+        "description": "Managing and optimizing the workforce of an organization, focusing on recruitment, employee development, and workplace culture. Subdomains: Recruitment, Employee Relations, Training and Development, Compensation and Benefits, and HR Analytics."
+      },
+      "education": {
+        "caption": "Education",
+        "description": "Systems, methods, and technologies used to teach, learn, and foster knowledge development in individuals and communities. Subdomains: E-Learning, Curriculum Design, Learning Management Systems, Educational Technology, and Pedagogy."
+      },
+      "industrial_manufacturing": {
+        "caption": "Industrial Manufacturing",
+        "description": "Production of goods, use of automation and technology in manufacturing, and industrial processes to create products on a large scale. Subdomains: Automation, Robotics, Supply Chain Management, Lean Manufacturing, and Process Engineering."
+      },
+      "transportation": {
+        "caption": "Transportation",
+        "description": "Systems and processes involved in the movement of goods and people, as well as the physical infrastructure supporting them. Subdomains: Logistics, Automotive, Public Transit, Supply Chain, Freight, and Autonomous Vehicles."
+      },
+      "healthcare": {
+        "caption": "Healthcare",
+        "description": "Management, delivery, and innovation of medical services, treatments, and technologies aimed at improving the health and well-being of individuals and populations."
+      },
+      "legal": {
+        "caption": "Legal",
+        "description": "Legal systems, compliance, regulatory frameworks, contract management, and judicial processes. Subdomains: Contract Law, Intellectual Property, Regulatory Compliance, Litigation, Legal Research, and Corporate Governance."
+      },
+      "agriculture": {
+        "caption": "Agriculture",
+        "description": "Cultivation of plants and livestock, farm management, agtech innovations, and sustainable food production systems. Subdomains: Precision Agriculture, Crop Management, Livestock Management, Agricultural Technology, and Sustainable Farming."
+      },
+      "energy": {
+        "caption": "Energy",
+        "description": "Production, distribution, and management of energy resources including renewable energy, power grids, and energy efficiency. Subdomains: Renewable Energy, Oil and Gas, Power Generation, Energy Storage, Smart Grids, and Energy Management."
+      },
+      "media_and_entertainment": {
+        "caption": "Media and Entertainment",
+        "description": "Creation, distribution, and consumption of content across various media platforms including broadcasting, streaming, gaming, and publishing. Subdomains: Content Creation, Broadcasting, Streaming Services, Gaming, Publishing, and Digital Media."
+      },
+      "real_estate": {
+        "caption": "Real Estate",
+        "description": "Property management, real estate transactions, construction, urban planning, and property technology. Subdomains: Property Management, Real Estate Investment, Construction, Urban Planning, PropTech, and Facilities Management."
+      },
+      "hospitality_and_tourism": {
+        "caption": "Hospitality and Tourism",
+        "description": "Services related to travel, accommodation, food service, event management, and tourism operations. Subdomains: Hotel Management, Travel Services, Event Planning, Food and Beverage, Tourism Operations, and Guest Experience."
+      },
+      "telecommunications": {
+        "caption": "Telecommunications",
+        "description": "Communication networks, mobile services, internet infrastructure, and connectivity solutions. Subdomains: Mobile Networks, Broadband, Satellite Communications, Network Infrastructure, VoIP, and 5G/6G Technologies."
+      },
+      "environmental_science": {
+        "caption": "Environmental Science",
+        "description": "Study and management of environmental systems, climate change, conservation, and sustainability practices. Subdomains: Climate Science, Conservation, Environmental Monitoring, Sustainability, Waste Management, and Pollution Control."
+      },
+      "government_and_public_sector": {
+        "caption": "Government and Public Sector",
+        "description": "Public administration, civic services, policy making, and governance systems. Subdomains: Public Administration, Policy Development, Civic Technology, Emergency Services, Urban Services, and Regulatory Agencies."
+      },
+      "research_and_development": {
+        "caption": "Research and Development",
+        "description": "Scientific research, innovation, experimental development, and knowledge creation across disciplines. Subdomains: Scientific Research, Innovation Management, Laboratory Operations, Patent Development, Experimental Design, and Research Analytics."
+      },
+      "retail_and_ecommerce": {
+        "caption": "Retail and E-commerce",
+        "description": "Sales operations, customer experience, inventory management, and online marketplace platforms. Subdomains: E-commerce Platforms, Retail Operations, Inventory Management, Customer Experience, Payment Systems, and Supply Chain."
+      },
+      "social_services": {
+        "caption": "Social Services",
+        "description": "Welfare programs, community support, non-profit operations, and social welfare systems. Subdomains: Community Services, Non-profit Management, Social Welfare, Child Services, Elder Care, and Disability Services."
+      },
+      "sports_and_fitness": {
+        "caption": "Sports and Fitness",
+        "description": "Athletic performance, fitness management, sports analytics, and recreational activities. Subdomains: Sports Analytics, Fitness Training, Sports Medicine, Event Management, Recreational Programs, and Performance Tracking."
+      },
+      "insurance": {
+        "caption": "Insurance",
+        "description": "Risk assessment, policy management, claims processing, and insurance product development. Subdomains: Underwriting, Claims Management, Risk Assessment, Policy Administration, Actuarial Science, and InsurTech."
+      },
+      "marketing_and_advertising": {
+        "caption": "Marketing and Advertising",
+        "description": "Brand management, customer engagement, digital marketing, advertising campaigns, and market research. Subdomains: Digital Marketing, Brand Management, Market Research, Advertising Technology, Content Marketing, and Customer Analytics."
+      }
+    }
+  },
+  "domains": {
+    "agriculture/agricultural_technology": {
+      "caption": "Agricultural Technology",
+      "description": "Innovation and technology applications in farming including drones, IoT, and automation.",
+      "extends": "agriculture",
+      "name": "agricultural_technology",
+      "attributes": {}
+    },
+    "agriculture/agriculture": {
+      "caption": "Agriculture",
+      "description": "Cultivation of plants and livestock, farm management, agtech innovations, and sustainable food production systems.",
+      "extends": "base_domain",
+      "name": "agriculture",
+      "category": "agriculture",
+      "attributes": {}
+    },
+    "agriculture/crop_management": {
+      "caption": "Crop Management",
+      "description": "Planning, monitoring, and optimizing crop production and yield.",
+      "extends": "agriculture",
+      "name": "crop_management",
+      "attributes": {}
+    },
+    "agriculture/livestock_management": {
+      "caption": "Livestock Management",
+      "description": "Care, breeding, and management of farm animals and livestock operations.",
+      "extends": "agriculture",
+      "name": "livestock_management",
+      "attributes": {}
+    },
+    "agriculture/precision_agriculture": {
+      "caption": "Precision Agriculture",
+      "description": "Data-driven farming using sensors, GPS, and analytics for optimized crop management.",
+      "extends": "agriculture",
+      "name": "precision_agriculture",
+      "attributes": {}
+    },
+    "agriculture/sustainable_farming": {
+      "caption": "Sustainable Farming",
+      "description": "Environmentally responsible agricultural practices and organic farming methods.",
+      "extends": "agriculture",
+      "name": "sustainable_farming",
+      "attributes": {}
+    },
+    "education/curriculum_design": {
+      "caption": "Curriculum Design",
+      "description": "Creating structured educational content and learning experiences for students. Subdomains: Instructional Design, Learning Objectives, Assessment Strategies, and Content Development.",
+      "extends": "education",
+      "name": "curriculum_design",
+      "attributes": {}
+    },
+    "education/e_learning": {
+      "caption": "E-Learning",
+      "description": "Delivering educational content and instruction through digital platforms and online courses. Subdomains: Online Course Development, Virtual Classrooms, Interactive Learning Tools, and Mobile Learning.",
+      "extends": "education",
+      "name": "e_learning",
+      "attributes": {}
+    },
+    "education/education": {
+      "caption": "Education",
+      "description": "Systems, methods, and technologies used to teach, learn, and foster knowledge development in individuals and communities. Subdomains: E-Learning, Curriculum Design, Learning Management Systems, Educational Technology, Pedagogy",
+      "extends": "base_domain",
+      "category": "education",
+      "name": "education",
+      "attributes": {}
+    },
+    "education/educational_technology": {
+      "caption": "Educational Technology",
+      "description": "Integrating digital tools and resources to enhance teaching and learning experiences. Subdomains: EdTech Innovations, Classroom Technology, Digital Content, and Gamification in Education.",
+      "extends": "education",
+      "name": "educational_technology",
+      "attributes": {}
+    },
+    "education/learning_management_systems": {
+      "caption": "Learning Management Systems",
+      "description": "Software platforms for delivering, tracking, and managing educational courses and training programs. Subdomains: User Experience Design, Content Management, Reporting and Analytics, and System Integration.",
+      "extends": "education",
+      "name": "learning_management_systems",
+      "attributes": {}
+    },
+    "education/pedagogy": {
+      "caption": "Pedagogy",
+      "description": "The methods and practices of teaching, focusing on how best to convey knowledge and skills to learners. Subdomains: Teaching Strategies, Student-Centered Learning, Instructional Theory, and Learning Styles.",
+      "extends": "education",
+      "name": "pedagogy",
+      "attributes": {}
+    },
+    "energy/energy": {
+      "caption": "Energy",
+      "description": "Production, distribution, and management of energy resources including renewable energy, power grids, and energy efficiency.",
+      "extends": "base_domain",
+      "name": "energy",
+      "category": "energy",
+      "attributes": {}
+    },
+    "energy/energy_management": {
+      "caption": "Energy Management",
+      "description": "Optimization of energy consumption, efficiency programs, and demand response.",
+      "extends": "energy",
+      "name": "energy_management",
+      "attributes": {}
+    },
+    "energy/energy_storage": {
+      "caption": "Energy Storage",
+      "description": "Battery systems, pumped hydro, and other energy storage technologies.",
+      "extends": "energy",
+      "name": "energy_storage",
+      "attributes": {}
+    },
+    "energy/oil_and_gas": {
+      "caption": "Oil and Gas",
+      "description": "Exploration, extraction, refining, and distribution of petroleum products.",
+      "extends": "energy",
+      "name": "oil_and_gas",
+      "attributes": {}
+    },
+    "energy/power_generation": {
+      "caption": "Power Generation",
+      "description": "Electricity generation from various sources including nuclear, thermal, and renewable.",
+      "extends": "energy",
+      "name": "power_generation",
+      "attributes": {}
+    },
+    "energy/renewable_energy": {
+      "caption": "Renewable Energy",
+      "description": "Solar, wind, hydro, and other sustainable energy sources and technologies.",
+      "extends": "energy",
+      "name": "renewable_energy",
+      "attributes": {}
+    },
+    "energy/smart_grids": {
+      "caption": "Smart Grids",
+      "description": "Intelligent power distribution networks with automated monitoring and control.",
+      "extends": "energy",
+      "name": "smart_grids",
+      "attributes": {}
+    },
+    "environmental_science/climate_science": {
+      "caption": "Climate Science",
+      "description": "Climate modeling, climate change research, atmospheric science, and weather prediction",
+      "extends": "environmental_science",
+      "name": "climate_science",
+      "attributes": {}
+    },
+    "environmental_science/conservation_biology": {
+      "caption": "Conservation Biology",
+      "description": "Species conservation, habitat protection, biodiversity, and wildlife management",
+      "extends": "environmental_science",
+      "name": "conservation_biology",
+      "attributes": {}
+    },
+    "environmental_science/ecology": {
+      "caption": "Ecology",
+      "description": "Ecosystem science, ecological modeling, population dynamics, and environmental interactions",
+      "extends": "environmental_science",
+      "name": "ecology",
+      "attributes": {}
+    },
+    "environmental_science/environmental_monitoring": {
+      "caption": "Environmental Monitoring",
+      "description": "Air quality monitoring, water quality testing, pollution tracking, and environmental sensors",
+      "extends": "environmental_science",
+      "name": "environmental_monitoring",
+      "attributes": {}
+    },
+    "environmental_science/environmental_policy": {
+      "caption": "Environmental Policy",
+      "description": "Environmental regulations, policy development, compliance, and environmental law",
+      "extends": "environmental_science",
+      "name": "environmental_policy",
+      "attributes": {}
+    },
+    "environmental_science/environmental_science": {
+      "caption": "Environmental Science",
+      "description": "Domain covering climate science, environmental monitoring, sustainability, conservation, and ecological research",
+      "extends": "base_domain",
+      "name": "environmental_science",
+      "category": "environmental_science",
+      "attributes": {}
+    },
+    "environmental_science/sustainability": {
+      "caption": "Sustainability",
+      "description": "Sustainable practices, carbon footprint reduction, circular economy, and green technology",
+      "extends": "environmental_science",
+      "name": "sustainability",
+      "attributes": {}
+    },
+    "finance_and_business/banking": {
+      "caption": "Banking",
+      "description": "Operations of financial institutions involved in accepting deposits, lending money, and other financial services. Subdomains: Retail Banking, Investment Banking, Corporate Banking, and Digital Banking.",
+      "extends": "finance_and_business",
+      "name": "banking",
+      "attributes": {}
+    },
+    "finance_and_business/consumer_goods": {
+      "caption": "Consumer Goods",
+      "description": "Creation, marketing, and distribution of products intended for personal use. Subdomains: Product Development, Consumer Behavior, Marketing, Retail, and Supply Chain Management.",
+      "extends": "finance_and_business",
+      "name": "consumer_goods",
+      "attributes": {}
+    },
+    "finance_and_business/finance": {
+      "caption": "Finance",
+      "description": "Managing money, investments, and financial risks within businesses or for individuals. Subdomains: Corporate Finance, Personal Finance, Risk Management, Accounting, and Financial Analysis.",
+      "extends": "finance_and_business",
+      "name": "finance",
+      "attributes": {}
+    },
+    "finance_and_business/finance_and_business": {
+      "caption": "Finance and Business",
+      "description": "Management of money, investments, and business operations, alongside the development and delivery of products and services in various industries.",
+      "extends": "base_domain",
+      "name": "finance_and_business",
+      "category": "finance_and_business",
+      "attributes": {}
+    },
+    "finance_and_business/investment_services": {
+      "caption": "Investment Services",
+      "description": "Managing financial assets, investment portfolios, and providing advisory services to clients. Subdomains: Asset Management, Hedge Funds, Private Equity, Mutual Funds, and Financial Planning.",
+      "extends": "finance_and_business",
+      "name": "investment_services",
+      "attributes": {}
+    },
+    "finance_and_business/retail": {
+      "caption": "Retail",
+      "description": "Sale of goods and services directly to consumers through various channels. Subdomains: E-commerce, In-store Retail, Inventory Management, Customer Experience, and Omnichannel Retail.",
+      "extends": "finance_and_business",
+      "name": "retail",
+      "attributes": {}
+    },
+    "government_and_public_sector/civic_engagement": {
+      "caption": "Civic Engagement",
+      "description": "Citizen participation, community outreach, public consultation, and participatory governance",
+      "extends": "government_and_public_sector",
+      "name": "civic_engagement",
+      "attributes": {}
+    },
+    "government_and_public_sector/e_government": {
+      "caption": "E-Government",
+      "description": "Digital government services, online portals, citizen engagement platforms, and digital identity",
+      "extends": "government_and_public_sector",
+      "name": "e_government",
+      "attributes": {}
+    },
+    "government_and_public_sector/emergency_management": {
+      "caption": "Emergency Management",
+      "description": "Disaster response, emergency planning, crisis management, and public safety coordination",
+      "extends": "government_and_public_sector",
+      "name": "emergency_management",
+      "attributes": {}
+    },
+    "government_and_public_sector/government_and_public_sector": {
+      "caption": "Government and Public Sector",
+      "description": "Domain covering public administration, civic services, e-government, policy making, and public infrastructure",
+      "extends": "base_domain",
+      "name": "government_and_public_sector",
+      "category": "government_and_public_sector",
+      "attributes": {}
+    },
+    "government_and_public_sector/public_administration": {
+      "caption": "Public Administration",
+      "description": "Government operations, administrative processes, civil service, and bureaucratic systems",
+      "extends": "government_and_public_sector",
+      "name": "public_administration",
+      "attributes": {}
+    },
+    "government_and_public_sector/public_infrastructure": {
+      "caption": "Public Infrastructure",
+      "description": "Infrastructure planning, public works, utilities management, and infrastructure maintenance",
+      "extends": "government_and_public_sector",
+      "name": "public_infrastructure",
+      "attributes": {}
+    },
+    "government_and_public_sector/public_policy": {
+      "caption": "Public Policy",
+      "description": "Policy development, legislative processes, policy analysis, and public affairs",
+      "extends": "government_and_public_sector",
+      "name": "public_policy",
+      "attributes": {}
+    },
+    "healthcare/health_information_systems": {
+      "caption": "Health Information Systems",
+      "description": "Systems for managing healthcare data to support clinical and administrative decision-making. Subdomains: Hospital Information Systems, Clinical Decision Support, Health Data Security, and Interoperability Solutions.",
+      "extends": "healthcare",
+      "name": "health_information_systems",
+      "attributes": {}
+    },
+    "healthcare/healthcare": {
+      "caption": "Healthcare",
+      "description": "Management, delivery, and innovation of medical services, treatments, and technologies aimed at improving the health and well-being of individuals and populations.",
+      "extends": "base_domain",
+      "name": "healthcare",
+      "category": "healthcare",
+      "attributes": {}
+    },
+    "healthcare/healthcare_informatics": {
+      "caption": "Healthcare Informatics",
+      "description": "The management and analysis of healthcare data to improve patient care and operational efficiency. Subdomains: Electronic Health Records, Health Data Analytics, Clinical Informatics, and Health IT Systems.",
+      "extends": "healthcare",
+      "name": "healthcare_informatics",
+      "attributes": {}
+    },
+    "healthcare/medical_technology": {
+      "caption": "Medical Technology",
+      "description": "Innovations and devices used to improve the diagnosis, treatment, and management of health conditions. Subdomains: Medical Devices, Diagnostic Equipment, Wearable Health Tech, and Biotech Innovations.",
+      "extends": "healthcare",
+      "name": "medical_technology",
+      "attributes": {}
+    },
+    "healthcare/patient_management_systems": {
+      "caption": "Patient Management Systems",
+      "description": "Software solutions that help healthcare providers manage patient information and clinical processes. Subdomains: Appointment Scheduling, Patient Portals, Billing and Coding, and Health Record Management.",
+      "extends": "healthcare",
+      "name": "patient_management_systems",
+      "attributes": {}
+    },
+    "healthcare/telemedicine": {
+      "caption": "Telemedicine",
+      "description": "The delivery of healthcare services through telecommunications technology. Subdomains: Remote Consultation, Telehealth Platforms, Mobile Health, and Virtual Care.",
+      "extends": "healthcare",
+      "name": "telemedicine",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/event_planning": {
+      "caption": "Event Planning",
+      "description": "Conference management, event coordination, venue management, and event services",
+      "extends": "hospitality_and_tourism",
+      "name": "event_planning",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/food_and_beverage": {
+      "caption": "Food and Beverage",
+      "description": "Restaurant management, catering services, menu planning, and culinary operations",
+      "extends": "hospitality_and_tourism",
+      "name": "food_and_beverage",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/hospitality_and_tourism": {
+      "caption": "Hospitality and Tourism",
+      "description": "Domain covering hotel management, travel services, tourism, event planning, and hospitality technology",
+      "extends": "base_domain",
+      "name": "hospitality_and_tourism",
+      "category": "hospitality_and_tourism",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/hospitality_technology": {
+      "caption": "Hospitality Technology",
+      "description": "Property management systems, booking engines, guest experience platforms, and hospitality software",
+      "extends": "hospitality_and_tourism",
+      "name": "hospitality_technology",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/hotel_management": {
+      "caption": "Hotel Management",
+      "description": "Hotel operations, reservations, guest services, and property management systems",
+      "extends": "hospitality_and_tourism",
+      "name": "hotel_management",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/tourism_management": {
+      "caption": "Tourism Management",
+      "description": "Destination management, tourist attractions, tourism marketing, and visitor experiences",
+      "extends": "hospitality_and_tourism",
+      "name": "tourism_management",
+      "attributes": {}
+    },
+    "hospitality_and_tourism/travel_services": {
+      "caption": "Travel Services",
+      "description": "Travel booking, itinerary planning, travel agencies, and booking platforms",
+      "extends": "hospitality_and_tourism",
+      "name": "travel_services",
+      "attributes": {}
+    },
+    "human_resources/compensation_and_benefits": {
+      "caption": "Compensation and Benefits",
+      "description": "Designing and managing salary structures, bonuses, and benefits to attract and retain employees. Subdomains: Salary Benchmarking, Benefits Administration, Incentive Programs, and Retirement Planning.",
+      "extends": "human_resources",
+      "name": "compensation_and_benefits",
+      "attributes": {}
+    },
+    "human_resources/employee_relations": {
+      "caption": "Employee Relations",
+      "description": "Maintaining positive relationships between the employer and employees to foster a productive work environment. Subdomains: Conflict Resolution, Employee Engagement, Workplace Culture, and Labor Relations.",
+      "extends": "human_resources",
+      "name": "employee_relations",
+      "attributes": {}
+    },
+    "human_resources/hr_analytics": {
+      "caption": "HR Analytics",
+      "description": "Using data analysis to improve HR decision-making, workforce planning, and employee performance metrics. Subdomains: People Analytics, Predictive HR, Workforce Metrics, and Data-Driven HR Strategies.",
+      "extends": "human_resources",
+      "name": "hr_analytics",
+      "attributes": {}
+    },
+    "human_resources/human_resources": {
+      "caption": "Human Resources",
+      "description": "Managing and optimizing the workforce of an organization, focusing on recruitment, employee development, and workplace culture. Subdomains: Recruitment, Employee Relations, Training and Development, Compensation and Benefits, and HR Analytics.",
+      "extends": "base_domain",
+      "name": "human_resources",
+      "category": "human_resources",
+      "attributes": {}
+    },
+    "human_resources/recruitment": {
+      "caption": "Recruitment",
+      "description": "Attracting, screening, and selecting qualified candidates for job openings within an organization. Subdomains: Talent Acquisition, Candidate Sourcing, Interviewing Techniques, and Onboarding Processes.",
+      "extends": "human_resources",
+      "name": "recruitment",
+      "attributes": {}
+    },
+    "human_resources/training_and_development": {
+      "caption": "Training and Development",
+      "description": "Providing employees with skills and knowledge to enhance their job performance and career growth. Subdomains: Skills Training, Leadership Development, Career Pathing, and E-Learning Platforms.",
+      "extends": "human_resources",
+      "name": "training_and_development",
+      "attributes": {}
+    },
+    "industrial_manufacturing/automation": {
+      "caption": "Automation",
+      "description": "Using technology to perform processes with minimal human intervention. Subdomains: Automated Manufacturing, Control Systems, Industrial IoT, and Process Automation.",
+      "extends": "industrial_manufacturing",
+      "name": "automation",
+      "attributes": {}
+    },
+    "industrial_manufacturing/industrial_manufacturing": {
+      "caption": "Industrial Manufacturing",
+      "description": "The use of automation and technology in manufacturing, production of goods, and industrial processes to create products on a large scale. Subdomains: Automation, Robotics, Supply Chain Management, Lean Manufacturing, and Process Engineering.",
+      "extends": "base_domain",
+      "name": "industrial_manufacturing",
+      "category": "industrial_manufacturing",
+      "attributes": {}
+    },
+    "industrial_manufacturing/lean_manufacturing": {
+      "caption": "Lean Manufacturing",
+      "description": "Methodology focusing on minimizing waste and maximizing efficiency in the production process. Subdomains: Continuous Improvement, Six Sigma, Value Stream Mapping, and Kaizen.",
+      "extends": "industrial_manufacturing",
+      "name": "lean_manufacturing",
+      "attributes": {}
+    },
+    "industrial_manufacturing/process_engineering": {
+      "caption": "Process Engineering",
+      "description": "Designing, implementing, and optimizing industrial processes to improve efficiency and quality. Subdomains: Process Design, Process Optimization, Quality Control, and Safety Engineering.",
+      "extends": "industrial_manufacturing",
+      "name": "process_engineering",
+      "attributes": {}
+    },
+    "industrial_manufacturing/robotics": {
+      "caption": "Robotics",
+      "description": "Designing and using robots for manufacturing tasks to enhance productivity and precision. Subdomains: Robotic Process Automation, Industrial Robotics, AI and Robotics, and Collaborative Robots.",
+      "extends": "industrial_manufacturing",
+      "name": "robotics",
+      "attributes": {}
+    },
+    "industrial_manufacturing/supply_chain_management": {
+      "caption": "Supply Chain Management",
+      "description": "Coordinating and managing all activities involved in the production and delivery of goods. Subdomains: Inventory Management, Procurement, Logistics Management, and Demand Forecasting.",
+      "extends": "industrial_manufacturing",
+      "name": "supply_chain_management",
+      "attributes": {}
+    },
+    "insurance/actuarial_science": {
+      "caption": "Actuarial Science",
+      "description": "Actuarial analysis, risk modeling, statistical modeling, and pricing strategies",
+      "extends": "insurance",
+      "name": "actuarial_science",
+      "attributes": {}
+    },
+    "insurance/claims_processing": {
+      "caption": "Claims Processing",
+      "description": "Claims management, loss adjustment, claims automation, and settlement processes",
+      "extends": "insurance",
+      "name": "claims_processing",
+      "attributes": {}
+    },
+    "insurance/insurance": {
+      "caption": "Insurance",
+      "description": "Domain covering insurance products, risk assessment, claims processing, underwriting, and insurance technology",
+      "extends": "base_domain",
+      "name": "insurance",
+      "category": "insurance",
+      "attributes": {}
+    },
+    "insurance/insurance_sales": {
+      "caption": "Insurance Sales",
+      "description": "Agent management, distribution channels, customer acquisition, and sales platforms",
+      "extends": "insurance",
+      "name": "insurance_sales",
+      "attributes": {}
+    },
+    "insurance/insurtech": {
+      "caption": "InsurTech",
+      "description": "Insurance technology, digital insurance platforms, telematics, and insurance innovation",
+      "extends": "insurance",
+      "name": "insurtech",
+      "attributes": {}
+    },
+    "insurance/policy_management": {
+      "caption": "Policy Management",
+      "description": "Policy administration, renewals, endorsements, and policy lifecycle management",
+      "extends": "insurance",
+      "name": "policy_management",
+      "attributes": {}
+    },
+    "insurance/underwriting": {
+      "caption": "Underwriting",
+      "description": "Risk assessment, policy pricing, underwriting automation, and risk evaluation",
+      "extends": "insurance",
+      "name": "underwriting",
+      "attributes": {}
+    },
+    "legal/contract_law": {
+      "caption": "Contract Law",
+      "description": "Legal principles governing agreements and contracts between parties.",
+      "extends": "legal",
+      "name": "contract_law",
+      "attributes": {}
+    },
+    "legal/corporate_governance": {
+      "caption": "Corporate Governance",
+      "description": "Systems, principles, and processes for directing and controlling corporations.",
+      "extends": "legal",
+      "name": "corporate_governance",
+      "attributes": {}
+    },
+    "legal/intellectual_property": {
+      "caption": "Intellectual Property",
+      "description": "Protection and management of patents, trademarks, copyrights, and trade secrets.",
+      "extends": "legal",
+      "name": "intellectual_property",
+      "attributes": {}
+    },
+    "legal/legal": {
+      "caption": "Legal",
+      "description": "Legal systems, compliance, regulatory frameworks, contract management, and judicial processes.",
+      "extends": "base_domain",
+      "name": "legal",
+      "category": "legal",
+      "attributes": {}
+    },
+    "legal/legal_research": {
+      "caption": "Legal Research",
+      "description": "Investigation of legal precedents, statutes, and case law.",
+      "extends": "legal",
+      "name": "legal_research",
+      "attributes": {}
+    },
+    "legal/litigation": {
+      "caption": "Litigation",
+      "description": "Legal proceedings and dispute resolution through court systems.",
+      "extends": "legal",
+      "name": "litigation",
+      "attributes": {}
+    },
+    "legal/regulatory_compliance": {
+      "caption": "Regulatory Compliance",
+      "description": "Ensuring adherence to laws, regulations, and industry standards.",
+      "extends": "legal",
+      "name": "regulatory_compliance",
+      "attributes": {}
+    },
+    "life_science/bioinformatics": {
+      "caption": "Bioinformatics",
+      "description": "the application of computational techniques to analyze and interpret biological data. Subdomains: Sequence Analysis, Systems Biology, Data Mining, and Structural Bioinformatics.",
+      "extends": "life_science",
+      "name": "bioinformatics",
+      "attributes": {}
+    },
+    "life_science/biotechnology": {
+      "caption": "Biotechnology",
+      "description": "The application of biological systems and organisms to develop or create products and technologies that improve the quality of human life. Subdomains: Medical Biotechnology, Agricultural Biotechnology, Industrial Biotechnology, and Environmental Biotechnology.",
+      "extends": "life_science",
+      "name": "biotechnology",
+      "attributes": {}
+    },
+    "life_science/genomics": {
+      "caption": "Genomics",
+      "description": "The study of genomes to understand genetic structure, function, and evolution. Subdomains: Comparative Genomics, Functional Genomics, Population Genomics, and Metagenomics.",
+      "extends": "life_science",
+      "name": "genomics",
+      "attributes": {}
+    },
+    "life_science/life_science": {
+      "caption": "Life Science",
+      "description": "Scientific research and innovations in biology, genetics, biotechnology, and other related fields, with the goal of understanding life processes and advancing medical and environmental solutions. Subdomains: Biotechnology, Pharmaceutical Research, Genomics, Bioinformatics, and Molecular Biology.",
+      "extends": "base_domain",
+      "name": "life_science",
+      "category": "life_science",
+      "attributes": {}
+    },
+    "life_science/molecular_biology": {
+      "caption": "Molecular Biology",
+      "description": "Molecular Biology is the branch of biology that focuses on the structure, function, and interactions of biological macromolecules, such as DNA, RNA, and proteins. Subdomains: Genomics, Gene Expression, and Cell Signaling.",
+      "extends": "life_science",
+      "name": "molecular_biology",
+      "attributes": {}
+    },
+    "life_science/pharmaceutical_research": {
+      "caption": "Pharmaceutical Research",
+      "description": "The discovery, development, and testing of new drugs and therapies to treat diseases and improve health outcomes. Subdomains: Drug Discovery, Clinical Trials, Pharmacology, and Regulatory Affairs.",
+      "extends": "life_science",
+      "name": "pharmaceutical_research",
+      "attributes": {}
+    },
+    "marketing_and_advertising/advertising": {
+      "caption": "Advertising",
+      "description": "Ad campaigns, media buying, creative development, and advertising platforms",
+      "extends": "marketing_and_advertising",
+      "name": "advertising",
+      "attributes": {}
+    },
+    "marketing_and_advertising/brand_management": {
+      "caption": "Brand Management",
+      "description": "Brand strategy, brand identity, brand positioning, and reputation management",
+      "extends": "marketing_and_advertising",
+      "name": "brand_management",
+      "attributes": {}
+    },
+    "marketing_and_advertising/digital_marketing": {
+      "caption": "Digital Marketing",
+      "description": "SEO, SEM, content marketing, social media marketing, and online campaigns",
+      "extends": "marketing_and_advertising",
+      "name": "digital_marketing",
+      "attributes": {}
+    },
+    "marketing_and_advertising/market_research": {
+      "caption": "Market Research",
+      "description": "Consumer research, market analysis, competitive intelligence, and research methodologies",
+      "extends": "marketing_and_advertising",
+      "name": "market_research",
+      "attributes": {}
+    },
+    "marketing_and_advertising/marketing_analytics": {
+      "caption": "Marketing Analytics",
+      "description": "Marketing metrics, ROI analysis, attribution modeling, and performance tracking",
+      "extends": "marketing_and_advertising",
+      "name": "marketing_analytics",
+      "attributes": {}
+    },
+    "marketing_and_advertising/marketing_and_advertising": {
+      "caption": "Marketing and Advertising",
+      "description": "Domain covering digital marketing, advertising campaigns, brand management, market research, and marketing automation",
+      "extends": "base_domain",
+      "name": "marketing_and_advertising",
+      "category": "marketing_and_advertising",
+      "attributes": {}
+    },
+    "marketing_and_advertising/marketing_automation": {
+      "caption": "Marketing Automation",
+      "description": "Marketing platforms, campaign automation, lead nurturing, and marketing technology",
+      "extends": "marketing_and_advertising",
+      "name": "marketing_automation",
+      "attributes": {}
+    },
+    "media_and_entertainment/broadcasting": {
+      "caption": "Broadcasting",
+      "description": "Radio and television broadcasting systems and operations.",
+      "extends": "media_and_entertainment",
+      "name": "broadcasting",
+      "attributes": {}
+    },
+    "media_and_entertainment/content_creation": {
+      "caption": "Content Creation",
+      "description": "Production of digital and traditional media content including video, audio, and written material.",
+      "extends": "media_and_entertainment",
+      "name": "content_creation",
+      "attributes": {}
+    },
+    "media_and_entertainment/digital_media": {
+      "caption": "Digital Media",
+      "description": "Social media, blogs, podcasts, and other digital content platforms.",
+      "extends": "media_and_entertainment",
+      "name": "digital_media",
+      "attributes": {}
+    },
+    "media_and_entertainment/gaming": {
+      "caption": "Gaming",
+      "description": "Video game development, esports, and interactive entertainment.",
+      "extends": "media_and_entertainment",
+      "name": "gaming",
+      "attributes": {}
+    },
+    "media_and_entertainment/media_and_entertainment": {
+      "caption": "Media and Entertainment",
+      "description": "Creation, distribution, and consumption of content across various media platforms including broadcasting, streaming, gaming, and publishing.",
+      "extends": "base_domain",
+      "name": "media_and_entertainment",
+      "category": "media_and_entertainment",
+      "attributes": {}
+    },
+    "media_and_entertainment/publishing": {
+      "caption": "Publishing",
+      "description": "Book, magazine, and digital publishing operations and distribution.",
+      "extends": "media_and_entertainment",
+      "name": "publishing",
+      "attributes": {}
+    },
+    "media_and_entertainment/streaming_services": {
+      "caption": "Streaming Services",
+      "description": "On-demand video and audio streaming platforms and content delivery.",
+      "extends": "media_and_entertainment",
+      "name": "streaming_services",
+      "attributes": {}
+    },
+    "real_estate/construction": {
+      "caption": "Construction",
+      "description": "Building construction, project management, and construction technology.",
+      "extends": "real_estate",
+      "name": "construction",
+      "attributes": {}
+    },
+    "real_estate/facilities_management": {
+      "caption": "Facilities Management",
+      "description": "Building operations, maintenance, and facility services.",
+      "extends": "real_estate",
+      "name": "facilities_management",
+      "attributes": {}
+    },
+    "real_estate/property_management": {
+      "caption": "Property Management",
+      "description": "Management of residential and commercial properties including maintenance and tenant relations.",
+      "extends": "real_estate",
+      "name": "property_management",
+      "attributes": {}
+    },
+    "real_estate/proptech": {
+      "caption": "PropTech",
+      "description": "Property technology innovations including smart buildings and real estate platforms.",
+      "extends": "real_estate",
+      "name": "proptech",
+      "attributes": {}
+    },
+    "real_estate/real_estate": {
+      "caption": "Real Estate",
+      "description": "Property management, real estate transactions, construction, urban planning, and property technology.",
+      "extends": "base_domain",
+      "name": "real_estate",
+      "category": "real_estate",
+      "attributes": {}
+    },
+    "real_estate/real_estate_investment": {
+      "caption": "Real Estate Investment",
+      "description": "Property investment strategies, portfolio management, and real estate finance.",
+      "extends": "real_estate",
+      "name": "real_estate_investment",
+      "attributes": {}
+    },
+    "real_estate/urban_planning": {
+      "caption": "Urban Planning",
+      "description": "City planning, zoning, and urban development strategies.",
+      "extends": "real_estate",
+      "name": "urban_planning",
+      "attributes": {}
+    },
+    "research_and_development/grant_management": {
+      "caption": "Grant Management",
+      "description": "Research funding, grant applications, project budgeting, and compliance reporting",
+      "extends": "research_and_development",
+      "name": "grant_management",
+      "attributes": {}
+    },
+    "research_and_development/innovation_management": {
+      "caption": "Innovation Management",
+      "description": "Innovation processes, idea management, technology transfer, and commercialization",
+      "extends": "research_and_development",
+      "name": "innovation_management",
+      "attributes": {}
+    },
+    "research_and_development/laboratory_management": {
+      "caption": "Laboratory Management",
+      "description": "Lab operations, equipment management, safety protocols, and laboratory information systems",
+      "extends": "research_and_development",
+      "name": "laboratory_management",
+      "attributes": {}
+    },
+    "research_and_development/product_development": {
+      "caption": "Product Development",
+      "description": "New product design, prototyping, testing, and product lifecycle management",
+      "extends": "research_and_development",
+      "name": "product_development",
+      "attributes": {}
+    },
+    "research_and_development/research_and_development": {
+      "caption": "Research and Development",
+      "description": "Domain covering scientific research, innovation, R&D management, laboratory operations, and experimental design",
+      "extends": "base_domain",
+      "name": "research_and_development",
+      "category": "research_and_development",
+      "attributes": {}
+    },
+    "research_and_development/research_data_management": {
+      "caption": "Research Data Management",
+      "description": "Data storage, research databases, data sharing, and research informatics",
+      "extends": "research_and_development",
+      "name": "research_data_management",
+      "attributes": {}
+    },
+    "research_and_development/scientific_research": {
+      "caption": "Scientific Research",
+      "description": "Research methodology, experimental design, data collection, and scientific investigation",
+      "extends": "research_and_development",
+      "name": "scientific_research",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/customer_experience": {
+      "caption": "Customer Experience",
+      "description": "Personalization, customer service, loyalty programs, and shopping experience optimization",
+      "extends": "retail_and_ecommerce",
+      "name": "customer_experience",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/inventory_management": {
+      "caption": "Inventory Management",
+      "description": "Stock control, warehouse management, inventory tracking, and supply planning",
+      "extends": "retail_and_ecommerce",
+      "name": "inventory_management",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/online_retail": {
+      "caption": "Online Retail",
+      "description": "E-commerce platforms, online storefronts, digital marketplaces, and web retail",
+      "extends": "retail_and_ecommerce",
+      "name": "online_retail",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/order_fulfillment": {
+      "caption": "Order Fulfillment",
+      "description": "Order processing, shipping, logistics, returns management, and last-mile delivery",
+      "extends": "retail_and_ecommerce",
+      "name": "order_fulfillment",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/point_of_sale": {
+      "caption": "Point of Sale",
+      "description": "POS systems, retail checkout, payment processing, and in-store transactions",
+      "extends": "retail_and_ecommerce",
+      "name": "point_of_sale",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/retail_analytics": {
+      "caption": "Retail Analytics",
+      "description": "Sales analytics, customer insights, merchandising analytics, and retail intelligence",
+      "extends": "retail_and_ecommerce",
+      "name": "retail_analytics",
+      "attributes": {}
+    },
+    "retail_and_ecommerce/retail_and_ecommerce": {
+      "caption": "Retail and E-Commerce",
+      "description": "Domain covering online retail, inventory management, customer experience, fulfillment, and retail operations",
+      "extends": "base_domain",
+      "name": "retail_and_ecommerce",
+      "category": "retail_and_ecommerce",
+      "attributes": {}
+    },
+    "social_services/case_management": {
+      "caption": "Case Management",
+      "description": "Client case tracking, service coordination, needs assessment, and case documentation",
+      "extends": "social_services",
+      "name": "case_management",
+      "attributes": {}
+    },
+    "social_services/child_and_family_services": {
+      "caption": "Child and Family Services",
+      "description": "Child welfare, family support, foster care, adoption services, and family counseling",
+      "extends": "social_services",
+      "name": "child_and_family_services",
+      "attributes": {}
+    },
+    "social_services/community_outreach": {
+      "caption": "Community Outreach",
+      "description": "Community programs, outreach services, community engagement, and local support initiatives",
+      "extends": "social_services",
+      "name": "community_outreach",
+      "attributes": {}
+    },
+    "social_services/disability_services": {
+      "caption": "Disability Services",
+      "description": "Disability support, accessibility services, assistive technology, and disability advocacy",
+      "extends": "social_services",
+      "name": "disability_services",
+      "attributes": {}
+    },
+    "social_services/housing_assistance": {
+      "caption": "Housing Assistance",
+      "description": "Homeless services, housing support, emergency shelter, and housing programs",
+      "extends": "social_services",
+      "name": "housing_assistance",
+      "attributes": {}
+    },
+    "social_services/mental_health_services": {
+      "caption": "Mental Health Services",
+      "description": "Mental health support, counseling, crisis intervention, and psychological services",
+      "extends": "social_services",
+      "name": "mental_health_services",
+      "attributes": {}
+    },
+    "social_services/social_services": {
+      "caption": "Social Services",
+      "description": "Domain covering social work, community services, welfare programs, case management, and social assistance",
+      "extends": "base_domain",
+      "name": "social_services",
+      "category": "social_services",
+      "attributes": {}
+    },
+    "sports_and_fitness/athletic_training": {
+      "caption": "Athletic Training",
+      "description": "Performance training, coaching, workout programs, and athlete development",
+      "extends": "sports_and_fitness",
+      "name": "athletic_training",
+      "attributes": {}
+    },
+    "sports_and_fitness/fitness_and_wellness": {
+      "caption": "Fitness and Wellness",
+      "description": "Fitness programs, wellness coaching, health tracking, and personal training",
+      "extends": "sports_and_fitness",
+      "name": "fitness_and_wellness",
+      "attributes": {}
+    },
+    "sports_and_fitness/sports_analytics": {
+      "caption": "Sports Analytics",
+      "description": "Performance metrics, game analysis, player statistics, and sports data science",
+      "extends": "sports_and_fitness",
+      "name": "sports_analytics",
+      "attributes": {}
+    },
+    "sports_and_fitness/sports_and_fitness": {
+      "caption": "Sports and Fitness",
+      "description": "Domain covering sports management, fitness programs, athletic training, sports analytics, and wellness",
+      "extends": "base_domain",
+      "name": "sports_and_fitness",
+      "category": "sports_and_fitness",
+      "attributes": {}
+    },
+    "sports_and_fitness/sports_management": {
+      "caption": "Sports Management",
+      "description": "Team management, sports facilities, event organization, and sports administration",
+      "extends": "sports_and_fitness",
+      "name": "sports_management",
+      "attributes": {}
+    },
+    "sports_and_fitness/sports_medicine": {
+      "caption": "Sports Medicine",
+      "description": "Injury prevention, sports rehabilitation, athletic healthcare, and performance medicine",
+      "extends": "sports_and_fitness",
+      "name": "sports_medicine",
+      "attributes": {}
+    },
+    "sports_and_fitness/sports_technology": {
+      "caption": "Sports Technology",
+      "description": "Wearable devices, performance tracking systems, sports apps, and fitness technology",
+      "extends": "sports_and_fitness",
+      "name": "sports_technology",
+      "attributes": {}
+    },
+    "technology/automation/automation": {
+      "caption": "Automation",
+      "description": "Use of technology to perform processes or procedures with minimal human intervention.",
+      "extends": "technology",
+      "name": "process_automation",
+      "attributes": {}
+    },
+    "technology/automation/rpa": {
+      "caption": "Robotic Process Automation (RPA)",
+      "description": "Technology that uses software robots to automate repetitive, rule-based tasks typically performed by humans.",
+      "extends": "process_automation",
+      "name": "rpa",
+      "attributes": {}
+    },
+    "technology/automation/workflow_automation": {
+      "caption": "Workflow Automation",
+      "description": "Automation of business processes through the use of software to reduce manual work and improve efficiency.",
+      "extends": "process_automation",
+      "name": "workflow_automation",
+      "attributes": {}
+    },
+    "technology/blockchain/blockchain": {
+      "caption": "Blockchain",
+      "description": "Distributed ledger technology that maintains a continuously growing list of records secured using cryptography.",
+      "extends": "technology",
+      "name": "blockchain",
+      "attributes": {}
+    },
+    "technology/blockchain/cryptocurrency": {
+      "caption": "Cryptocurrency",
+      "description": "Digital or virtual currency secured by cryptography, typically operating on blockchain technology.",
+      "extends": "blockchain",
+      "name": "cryptocurrency",
+      "attributes": {}
+    },
+    "technology/blockchain/defi": {
+      "caption": "Decentralized Finance (DeFi)",
+      "description": "Financial services built on blockchain networks that operate without traditional intermediaries.",
+      "extends": "blockchain",
+      "name": "defi",
+      "attributes": {}
+    },
+    "technology/blockchain/smart_contracts": {
+      "caption": "Smart Contracts",
+      "description": "Self-executing contracts with terms directly written into code, running on blockchain networks.",
+      "extends": "blockchain",
+      "name": "smart_contracts",
+      "attributes": {}
+    },
+    "technology/cloud_computing/aws": {
+      "caption": "Amazon Web Services (AWS)",
+      "description": "Comprehensive cloud computing platform offered by Amazon.",
+      "extends": "cloud_computing",
+      "name": "aws",
+      "attributes": {}
+    },
+    "technology/cloud_computing/azure": {
+      "caption": "Microsoft Azure",
+      "description": "Cloud computing service created by Microsoft for building, testing, deploying, and managing applications.",
+      "extends": "cloud_computing",
+      "name": "azure",
+      "attributes": {}
+    },
+    "technology/cloud_computing/cloud_computing": {
+      "caption": "Cloud Computing",
+      "description": "Delivery of computing services including servers, storage, databases, networking, software, and analytics over the internet.",
+      "extends": "technology",
+      "name": "cloud_computing",
+      "attributes": {}
+    },
+    "technology/cloud_computing/gcp": {
+      "caption": "Google Cloud Platform (GCP)",
+      "description": "Suite of cloud computing services offered by Google.",
+      "extends": "cloud_computing",
+      "name": "gcp",
+      "attributes": {}
+    },
+    "technology/communication_systems/broadcasting_systems": {
+      "caption": "Broadcasting Systems",
+      "description": "Systems for distributing audio and video content to large audiences via radio, television, or internet.",
+      "extends": "communication_systems",
+      "name": "broadcasting_systems",
+      "attributes": {}
+    },
+    "technology/communication_systems/communication_systems": {
+      "caption": "Communication Systems",
+      "description": "Technologies for transmitting and receiving information over various media.",
+      "extends": "technology",
+      "name": "communication_systems",
+      "attributes": {}
+    },
+    "technology/communication_systems/signal_processing": {
+      "caption": "Signal Processing",
+      "description": "Analysis, modification, and synthesis of signals such as sound, images, and sensor data.",
+      "extends": "communication_systems",
+      "name": "signal_processing",
+      "attributes": {}
+    },
+    "technology/communication_systems/telecommunication": {
+      "caption": "Telecommunication",
+      "description": "Transmission of information over long distances using electronic and digital technologies.",
+      "extends": "communication_systems",
+      "name": "telecommunication",
+      "attributes": {}
+    },
+    "technology/communication_systems/wireless_communication": {
+      "caption": "Wireless Communication",
+      "description": "Communication technologies that use electromagnetic waves to transmit data without physical connections.",
+      "extends": "communication_systems",
+      "name": "wireless_communication",
+      "attributes": {}
+    },
+    "technology/data_science/big_data": {
+      "caption": "Big Data",
+      "description": "Large and complex datasets that require advanced tools and techniques for processing and analysis.",
+      "extends": "data_science",
+      "name": "big_data",
+      "attributes": {}
+    },
+    "technology/data_science/data_engineering": {
+      "caption": "Data Engineering",
+      "description": "Design and construction of systems for collecting, storing, and processing data at scale.",
+      "extends": "data_science",
+      "name": "data_engineering",
+      "attributes": {}
+    },
+    "technology/data_science/data_science": {
+      "caption": "Data Science",
+      "description": "Extracting insights and knowledge from structured and unstructured data using scientific methods, processes, and algorithms.",
+      "extends": "technology",
+      "name": "data_science",
+      "attributes": {}
+    },
+    "technology/data_science/data_visualization": {
+      "caption": "Data Visualization",
+      "description": "Graphical representation of information and data using visual elements like charts, graphs, and maps.",
+      "extends": "data_science",
+      "name": "data_visualization",
+      "attributes": {}
+    },
+    "technology/information_technology/database_administration": {
+      "caption": "Database Administration",
+      "description": "Management and maintenance of database systems and data storage.",
+      "extends": "information_technology",
+      "name": "database_administration",
+      "attributes": {}
+    },
+    "technology/information_technology/help_desk_support": {
+      "caption": "Help Desk Support",
+      "description": "Technical support and assistance for end users and IT systems.",
+      "extends": "information_technology",
+      "name": "help_desk_support",
+      "attributes": {}
+    },
+    "technology/information_technology/information_technology": {
+      "caption": "Information Technology",
+      "description": "All aspects of managing and supporting technology systems and infrastructure.",
+      "extends": "technology",
+      "name": "information_technology",
+      "attributes": {}
+    },
+    "technology/information_technology/performance_analysis": {
+      "caption": "Performance Analysis",
+      "description": "Analysis and optimization of system performance to ensure efficient operation.",
+      "extends": "information_technology",
+      "name": "performance_analysis",
+      "attributes": {}
+    },
+    "technology/information_technology/system_administration": {
+      "caption": "System Administration",
+      "description": "Management and maintenance of computer systems and servers.",
+      "extends": "information_technology",
+      "name": "system_administration",
+      "attributes": {}
+    },
+    "technology/iot/industrial_iot": {
+      "caption": "Industrial IoT",
+      "description": "IoT applications in industrial settings for automation, monitoring, and optimization.",
+      "extends": "internet_of_things",
+      "name": "industrial_iot",
+      "attributes": {}
+    },
+    "technology/iot/iot": {
+      "caption": "Internet of Things (IoT)",
+      "description": "Connecting everyday objects to the internet for data exchange and automation.",
+      "extends": "technology",
+      "name": "internet_of_things",
+      "attributes": {}
+    },
+    "technology/iot/iot_devices": {
+      "caption": "IoT Devices",
+      "description": "Physical devices embedded with sensors, software, and connectivity to collect and exchange data.",
+      "extends": "internet_of_things",
+      "name": "iot_devices",
+      "attributes": {}
+    },
+    "technology/iot/iot_networks": {
+      "caption": "IoT Networks",
+      "description": "Communication protocols and network infrastructure for connecting IoT devices.",
+      "extends": "internet_of_things",
+      "name": "iot_networks",
+      "attributes": {}
+    },
+    "technology/iot/iot_security": {
+      "caption": "IoT Security",
+      "description": "Protection of IoT devices, networks, and data from cyber threats and vulnerabilities.",
+      "extends": "internet_of_things",
+      "name": "iot_security",
+      "attributes": {}
+    },
+    "technology/iot/smart_homes": {
+      "caption": "Smart Homes",
+      "description": "Residential environments with IoT devices for automation, monitoring, and control.",
+      "extends": "internet_of_things",
+      "name": "smart_homes",
+      "attributes": {}
+    },
+    "technology/networking/network_architecture": {
+      "caption": "Network Architecture",
+      "description": "Design and structure of computer networks including topology, protocols, and components.",
+      "extends": "networking",
+      "name": "network_architecture",
+      "attributes": {}
+    },
+    "technology/networking/network_management": {
+      "caption": "Network Management",
+      "description": "Tasks like monitoring, configuring, and optimizing networks.",
+      "extends": "networking",
+      "name": "network_management",
+      "attributes": {}
+    },
+    "technology/networking/network_operations": {
+      "caption": "Network Operations",
+      "description": "Ensures the smooth operation and performance of network infrastructure.",
+      "extends": "networking",
+      "name": "network_operations",
+      "attributes": {}
+    },
+    "technology/networking/network_protocols": {
+      "caption": "Network Protocols",
+      "description": "Rules and standards that govern communication between devices in a network.",
+      "extends": "networking",
+      "name": "network_protocols",
+      "attributes": {}
+    },
+    "technology/networking/network_security": {
+      "caption": "Network Security",
+      "description": "Protection of network infrastructure and data from unauthorized access and attacks.",
+      "extends": "networking",
+      "name": "network_security",
+      "attributes": {}
+    },
+    "technology/networking/networking": {
+      "caption": "Networking",
+      "description": "Design, management, and security of computer networks.",
+      "extends": "technology",
+      "name": "networking",
+      "attributes": {}
+    },
+    "technology/security/application_security": {
+      "caption": "Application Security",
+      "description": "Security measures and practices to protect applications from threats and vulnerabilities.",
+      "extends": "security",
+      "name": "application_security",
+      "attributes": {}
+    },
+    "technology/security/cyber_network_security": {
+      "caption": "Cyber Network Security",
+      "description": "Cybersecurity protection of network infrastructure and data from unauthorized access, misuse, or attacks.",
+      "extends": "security",
+      "name": "cyber_network_security",
+      "attributes": {}
+    },
+    "technology/security/cybersecurity": {
+      "caption": "Cybersecurity",
+      "description": "Protection of computer systems, networks, and data from digital attacks and unauthorized access.",
+      "extends": "security",
+      "name": "cybersecurity",
+      "attributes": {}
+    },
+    "technology/security/data_security": {
+      "caption": "Data Security",
+      "description": "Protection of digital data from unauthorized access, corruption, or theft throughout its lifecycle.",
+      "extends": "security",
+      "name": "data_security",
+      "attributes": {}
+    },
+    "technology/security/identity_management": {
+      "caption": "Identity Management",
+      "description": "Processes and technologies for managing digital identities and controlling access to resources.",
+      "extends": "security",
+      "name": "identity_management",
+      "attributes": {}
+    },
+    "technology/security/incident_management": {
+      "caption": "Incident Management",
+      "description": "Processes and tools for detecting, responding to, and resolving security incidents and IT service disruptions.",
+      "extends": "security",
+      "name": "incident_management",
+      "attributes": {}
+    },
+    "technology/security/security": {
+      "caption": "Security",
+      "description": "Protecting systems, data, and networks from cyber threats and vulnerabilities.",
+      "extends": "technology",
+      "name": "security",
+      "attributes": {}
+    },
+    "technology/software_engineering/apis_integration": {
+      "caption": "APIs and Integration",
+      "description": "Application Programming Interfaces and integration technologies that enable different software systems to communicate and work together.",
+      "extends": "software_engineering",
+      "name": "apis_integration",
+      "attributes": {}
+    },
+    "technology/software_engineering/devops": {
+      "caption": "DevOps",
+      "description": "Practices that combine software development and IT operations to shorten development cycles and improve deployment reliability.",
+      "extends": "software_engineering",
+      "name": "devops",
+      "attributes": {}
+    },
+    "technology/software_engineering/mlops": {
+      "caption": "MLOps",
+      "description": "Set of practices that combines machine learning and DevOps to standardize and streamline the machine learning lifecycle.",
+      "extends": "software_engineering",
+      "name": "mlops",
+      "attributes": {}
+    },
+    "technology/software_engineering/quality_assurance": {
+      "caption": "Quality Assurance",
+      "description": "Processes and practices to ensure software quality through testing, code review, and quality standards.",
+      "extends": "software_engineering",
+      "name": "quality_assurance",
+      "attributes": {}
+    },
+    "technology/software_engineering/software_development": {
+      "caption": "Software Development",
+      "description": "Process of designing, creating, testing, and maintaining software applications and systems.",
+      "extends": "software_engineering",
+      "name": "software_development",
+      "attributes": {}
+    },
+    "technology/software_engineering/software_engineering": {
+      "caption": "Software Engineering",
+      "description": "Designing, developing, and maintaining software applications and systems.",
+      "extends": "technology",
+      "name": "software_engineering",
+      "attributes": {}
+    },
+    "technology/technology": {
+      "caption": "Technology",
+      "description": "Development, management, and use of systems, devices, and software to solve problems and enhance human capabilities.",
+      "extends": "base_domain",
+      "name": "technology",
+      "category": "technology",
+      "attributes": {}
+    },
+    "telecommunications/internet_services": {
+      "caption": "Internet Services",
+      "description": "ISP operations, broadband services, internet connectivity, and access technologies",
+      "extends": "telecommunications",
+      "name": "internet_services",
+      "attributes": {}
+    },
+    "telecommunications/iot_connectivity": {
+      "caption": "IoT Connectivity",
+      "description": "IoT networks, M2M communications, NB-IoT, LoRaWAN, and connected device management",
+      "extends": "telecommunications",
+      "name": "iot_connectivity",
+      "attributes": {}
+    },
+    "telecommunications/network_infrastructure": {
+      "caption": "Network Infrastructure",
+      "description": "Telecom network design, fiber optics, network equipment, and infrastructure management",
+      "extends": "telecommunications",
+      "name": "network_infrastructure",
+      "attributes": {}
+    },
+    "telecommunications/telecom_operations": {
+      "caption": "Telecom Operations",
+      "description": "Service provisioning, billing systems, customer management, and operations support",
+      "extends": "telecommunications",
+      "name": "telecom_operations",
+      "attributes": {}
+    },
+    "telecommunications/telecommunications": {
+      "caption": "Telecommunications",
+      "description": "Domain covering network infrastructure, wireless communications, telecom services, and connectivity solutions",
+      "extends": "base_domain",
+      "name": "telecommunications",
+      "category": "telecommunications",
+      "attributes": {}
+    },
+    "telecommunications/voip_and_unified_communications": {
+      "caption": "VoIP and Unified Communications",
+      "description": "Voice over IP, video conferencing, unified communications platforms, and collaboration tools",
+      "extends": "telecommunications",
+      "name": "voip_and_unified_communications",
+      "attributes": {}
+    },
+    "telecommunications/wireless_communications": {
+      "caption": "Wireless Communications",
+      "description": "Mobile networks, 5G/6G technology, wireless protocols, and cellular services",
+      "extends": "telecommunications",
+      "name": "wireless_communications",
+      "attributes": {}
+    },
+    "transportation/automotive": {
+      "caption": "Automotive",
+      "description": "The design, development, manufacturing, and marketing of motor vehicles. Subdomains: Vehicle Design, Automotive Engineering, Electric Vehicles, and Vehicle Manufacturing.",
+      "extends": "transportation",
+      "name": "automotive",
+      "attributes": {}
+    },
+    "transportation/autonomous_vehicles": {
+      "caption": "Autonomous Vehicles",
+      "description": "Vehicles equipped with technology to navigate and operate without human control. Subdomains: Self-Driving Cars, Autonomous Trucks, Sensor Technology, and Vehicle AI.",
+      "extends": "transportation",
+      "name": "autonomous_vehicles",
+      "attributes": {}
+    },
+    "transportation/freight": {
+      "caption": "Freight",
+      "description": "The transportation of goods in bulk. Subdomains: Freight Forwarding, Cargo Management, Logistics Operations, and Freight Brokerage.",
+      "extends": "transportation",
+      "name": "freight",
+      "attributes": {}
+    },
+    "transportation/logistics": {
+      "caption": "Logistics",
+      "description": "The coordination of complex operations involving people, facilities, and supplies. Subdomains: Warehousing, Distribution Management, Transportation Planning, and Reverse Logistics.",
+      "extends": "transportation",
+      "name": "logistics",
+      "attributes": {}
+    },
+    "transportation/public_transit": {
+      "caption": "Public Transit",
+      "description": "Shared transportation services available for the public, such as buses and trains. Subdomains: Urban Transit Planning, Rail Systems, Bus Networks, and Transit Operations.",
+      "extends": "transportation",
+      "name": "public_transit",
+      "attributes": {}
+    },
+    "transportation/supply_chain": {
+      "caption": "Supply Chain",
+      "description": "The system of production, processing, and distribution of goods. Subdomains: Supplier Management, Production Scheduling, Inventory Control, and Global Supply Chain.",
+      "extends": "transportation",
+      "name": "supply_chain",
+      "attributes": {}
+    },
+    "transportation/transportation": {
+      "caption": "Transportation",
+      "description": "Systems and processes involved in the movement of goods and people, as well as the physical infrastructure supporting them. Subdomains: Logistics, Automotive, Public Transit, Supply Chain, Freight, and Autonomous Vehicles.",
+      "extends": "base_domain",
+      "name": "transportation",
+      "category": "transportation",
+      "attributes": {}
+    },
+    "trust_and_safety/content_moderation": {
+      "caption": "Content Moderation",
+      "description": "Reviewing and managing user-generated content to ensure it complies with community guidelines and legal standards. Subdomains: Automated Moderation, Community Guidelines, Human Moderation, and Harmful Content Detection.",
+      "extends": "trust_and_safety",
+      "name": "content_moderation",
+      "attributes": {}
+    },
+    "trust_and_safety/data_privacy": {
+      "caption": "Data Privacy",
+      "description": "Safeguarding personal information from unauthorized access and ensuring compliance with privacy laws and regulations. Subdomains: Privacy Regulations Compliance, Data Encryption, Data Anonymization, and User Consent Management.",
+      "extends": "trust_and_safety",
+      "name": "data_privacy",
+      "attributes": {}
+    },
+    "trust_and_safety/fraud_prevention": {
+      "caption": "Fraud Prevention",
+      "description": "Identifying and stopping fraudulent activities to protect individuals and organizations from financial and reputational damage. Subdomains: Transaction Monitoring, Identity Verification, Fraud Analytics, and Fraud Awareness Training.",
+      "extends": "trust_and_safety",
+      "name": "fraud_prevention",
+      "attributes": {}
+    },
+    "trust_and_safety/online_safety": {
+      "caption": "Online Safety",
+      "description": "Protecting internet users from various forms of harm to ensure a secure digital environment. Subdomains: Cybersecurity Awareness, Child Online Protection, Identity Protection, and Digital Wellbeing.",
+      "extends": "trust_and_safety",
+      "name": "online_safety",
+      "attributes": {}
+    },
+    "trust_and_safety/risk_management": {
+      "caption": "Risk Management",
+      "description": "Identifying, assessing, and prioritizing risks to minimize their impact on an organization's objectives and operations. Subdomains: Risk Assessment, Mitigation Strategies, Crisis Management, and Compliance and Auditing.",
+      "extends": "trust_and_safety",
+      "name": "risk_management",
+      "attributes": {}
+    },
+    "trust_and_safety/trust_and_safety": {
+      "caption": "Trust and Safety",
+      "description": "Maintaining a secure and reliable environment, primarily online, by managing risks, preventing harm, and ensuring safety and privacy. Subdomains: Online Safety, Content Moderation, Fraud Prevention, Data Privacy, and Risk Management.",
+      "extends": "base_domain",
+      "name": "trust_and_safety",
+      "category": "trust_and_safety",
+      "attributes": {}
+    }
+  }
+}
