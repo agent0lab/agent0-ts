@@ -8,8 +8,12 @@ export default {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: {
         types: ['jest', 'node'],
+        isolatedModules: true,
       },
       useESM: true,
+      diagnostics: {
+        ignoreCodes: [151002],
+      },
     }],
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
@@ -23,10 +27,9 @@ export default {
   testTimeout: 120000, // 2 minutes for integration tests with blockchain operations
   maxWorkers: 1, // Run tests sequentially to avoid nonce conflicts
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^(\\.\\.?/src/.*)\\.js$': '$1.ts',
   },
   transformIgnorePatterns: [
     'node_modules/(?!(ipfs-http-client)/)',
   ],
 };
-

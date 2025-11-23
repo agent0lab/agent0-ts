@@ -11,9 +11,9 @@
     "prebuild": "npm run codegen",
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "lint": "eslint src",
     "format": "prettier --write src",
     "clean": "rm -rf dist"
@@ -46,6 +46,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@hashgraphonline/standards-sdk": "^0.1.139",
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
     "graphql-request": "^6.1.0",

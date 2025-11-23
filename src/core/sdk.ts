@@ -30,6 +30,10 @@ import {
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
 } from './contracts.js';
+import {
+  RegistryBroker,
+  type RegistryBrokerClientOptions,
+} from './registry-broker.js';
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -166,6 +170,13 @@ export class SDK {
    */
   registries(): Record<string, Address> {
     return { ...this._registries };
+  }
+
+  /**
+   * Create a registry broker client for interacting with ERC-8004 agents.
+   */
+  createRegistryBroker(options?: RegistryBrokerClientOptions): RegistryBroker {
+    return new RegistryBroker(options ?? {});
   }
 
   /**
@@ -792,4 +803,3 @@ export class SDK {
     return this._subgraphClient;
   }
 }
-
