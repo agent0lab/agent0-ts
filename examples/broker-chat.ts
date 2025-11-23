@@ -47,10 +47,19 @@ async function main(): Promise<void> {
   });
   console.log(`Session established: ${chat.sessionId}`);
 
-  const reply = extractReply(chat.response);
-
+  const firstReply = extractReply(chat.response);
   console.log('Agent reply:');
-  console.log(reply || '[empty response]');
+  console.log(firstReply || '[empty response]');
+
+  const followUp = await broker.sendErc8004Message({
+    sessionId: chat.sessionId,
+    uaid: agent.uaid,
+    message: 'Great. Please share one concrete task you can perform and what info you need from me.',
+  });
+
+  const secondReply = extractReply(followUp);
+  console.log('\nFollow-up reply:');
+  console.log(secondReply || '[empty response]');
 }
 
 main().catch((error) => {
