@@ -2,7 +2,7 @@ import {
   RegistryBrokerClient,
   RegistryBrokerError,
   RegistryBrokerParseError,
-} from '@hashgraphonline/standards-sdk';
+} from '@hol-org/rb-client';
 import type {
   AgentAuthConfig,
   AgentSearchHit,
@@ -12,7 +12,9 @@ import type {
   SearchParams,
   SearchResult,
   SendMessageResponse,
-} from '@hashgraphonline/standards-sdk';
+  VectorSearchRequest,
+  VectorSearchResponse,
+} from '@hol-org/rb-client';
 
 export const ERC8004_DEFAULT_ADAPTER = 'erc8004-adapter';
 export const ERC8004_DEFAULT_REGISTRY = 'erc-8004';
@@ -63,15 +65,20 @@ export class RegistryBroker {
   }
 
   async searchErc8004Agents(options: Erc8004SearchOptions = {}): Promise<SearchResult> {
+    const registry = options.registry ?? ERC8004_DEFAULT_REGISTRY;
     const searchParams: SearchParams = {
       q: options.query,
       limit: options.limit ?? 25,
       sortBy: options.sortBy ?? 'most-recent',
-      registry: options.registry ?? ERC8004_DEFAULT_REGISTRY,
-      adapters: options.adapters ?? [ERC8004_DEFAULT_ADAPTER],
+      registry,
       minTrust: options.minTrust,
       protocols: options.protocols,
     };
+    if (options.adapters) {
+      searchParams.adapters = options.adapters;
+    } else if (registry === ERC8004_DEFAULT_REGISTRY) {
+      searchParams.adapters = [ERC8004_DEFAULT_ADAPTER];
+    }
     return this.client.search(searchParams);
   }
 
@@ -127,6 +134,68 @@ export class RegistryBroker {
     });
   }
 
+  async vectorSearch(request: VectorSearchRequest): Promise<VectorSearchResponse> {
+    const result = await this.client.vectorSearch(request);
+    const hits = result.hits ?? [];
+    return {
+      ...result,
+      hits: hits.map((hit) => ({
+        ...hit,
+        uaid:
+          (hit as { uaid?: string }).uaid ??
+          hit.agent?.uaid ??
+          hit.agent?.id ??
+          null,
+      })),
+    };
+  }
+
+  async vectorSearchErc8004(
+    query: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      adapters?: string[];
+      protocols?: string[];
+      registry?: string;
+    }
+  ): Promise<VectorSearchResponse> {
+    const filter: VectorSearchRequest['filter'] = {
+      registry: options?.registry ?? ERC8004_DEFAULT_REGISTRY,
+      protocols: options?.protocols ?? ['a2a'],
+    };
+    const request: VectorSearchRequest = {
+      query,
+      limit: options?.limit,
+      offset: options?.offset,
+      filter,
+    };
+
+    try {
+      return await this.vectorSearch(request);
+    } catch {
+      const fallback = await this.searchErc8004Agents(
+        {
+          query,
+          registry: request.filter?.registry,
+          protocols: request.filter?.protocols,
+          limit: request.limit,
+        }
+      );
+      const fallbackHits = fallback.hits ?? [];
+      return {
+        hits: fallbackHits.map((hit) => ({
+          agent: hit as AgentSearchHit,
+          score: 0,
+          uaid: (hit as { uaid?: string }).uaid ?? hit.id ?? null,
+          highlights: {},
+        })),
+        total: fallback.total ?? fallbackHits.length,
+        took: 0,
+      };
+    }
+  }
+
   async chat(options: Erc8004ChatOptions): Promise<Erc8004ChatResult> {
     const uaid = options.uaid.trim();
     if (!uaid) {
@@ -161,13 +230,14 @@ export class RegistryBroker {
       auth: options.auth,
       senderUaid: options.senderUaid,
     });
+    const sessionId = session.sessionId ?? '';
     const response = await this.sendErc8004Message({
-      sessionId: session.sessionId,
+      sessionId,
       uaid,
       message: options.message,
       auth: options.auth,
     });
-    return { sessionId: session.sessionId, response, mode: 'plaintext' };
+    return { sessionId, response, mode: 'plaintext' };
   }
 
   get getClient(): RegistryBrokerClient {
@@ -184,4 +254,6 @@ export type {
   RegistryBrokerClientOptions,
   SearchResult,
   SendMessageResponse,
+  VectorSearchRequest,
+  VectorSearchResponse,
 };

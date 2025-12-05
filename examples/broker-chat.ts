@@ -28,13 +28,24 @@ async function main(): Promise<void> {
     sortBy: 'most-recent',
   });
 
+  const vector = await broker.vectorSearchErc8004(searchQuery, {
+    limit: 5,
+  });
+
   if (!result?.hits?.length) {
     throw new Error('No ERC-8004 agents found for this query');
   }
 
   console.log(`Found ${result.hits.length} candidates`);
+  console.log(`Vector search hits: ${vector.hits.length}`);
+  if (vector.hits.length > 0) {
+    const top = vector.hits.find((hit) => hit.uaid);
+    console.log('Top vector hit UAID:', top?.uaid ?? '[none]');
+  }
 
-  const agent = selectAgentWithUaid(result.hits);
+  const agent =
+    selectAgentWithUaid(vector.hits as AgentSearchHit[]) ||
+    selectAgentWithUaid(result.hits);
   if (!agent?.uaid) {
     throw new Error('No ERC-8004 agent with a UAID was found for this query');
   }

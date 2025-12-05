@@ -46,7 +46,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@hashgraphonline/standards-sdk": "^0.1.139",
+    "@hol-org/rb-client": "^0.1.141-canary.12",
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
     "graphql-request": "^6.1.0",

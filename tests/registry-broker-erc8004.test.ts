@@ -11,7 +11,8 @@ const resolveApiKey = (): string | undefined =>
   undefined;
 
 const defaultQuery =
-  process.env.ERC8004_AGENT_QUERY?.trim() || 'defillama-verifiable-agent';
+  process.env.ERC8004_AGENT_QUERY?.trim() || '';
+const defaultRegistry = process.env.ERC8004_REGISTRY?.trim() || 'openrouter';
 
 const pickAgentWithUaid = (hits: AgentSearchHit[]): AgentSearchHit | null => {
   for (const hit of hits) {
@@ -40,6 +41,7 @@ describe('RegistryBroker ERC-8004 integration', () => {
   it('searches for ERC-8004 agents', async () => {
     const result = await broker.searchErc8004Agents({
       query: defaultQuery,
+      registry: defaultRegistry,
       limit: 8,
       sortBy: 'most-recent',
     });
@@ -53,6 +55,7 @@ describe('RegistryBroker ERC-8004 integration', () => {
   it('creates a session and exchanges a message with an ERC-8004 agent', async () => {
     const search = await broker.searchErc8004Agents({
       query: defaultQuery,
+      registry: defaultRegistry,
       limit: 8,
       sortBy: 'most-recent',
     });
@@ -74,5 +77,14 @@ describe('RegistryBroker ERC-8004 integration', () => {
 
     const reply = extractReplyText(chatResult.response);
     expect(reply.length).toBeGreaterThan(0);
+  });
+
+  it('performs a vector search', async () => {
+    const response = await broker.vectorSearchErc8004(defaultQuery, {
+      limit: 3,
+    });
+    expect(Array.isArray(response.hits)).toBe(true);
+    const uaidPresent = response.hits.some((hit) => Boolean((hit as { uaid?: string }).uaid));
+    expect(uaidPresent).toBe(true);
   });
 });
