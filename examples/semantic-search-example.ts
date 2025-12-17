@@ -114,46 +114,6 @@ async function main() {
   });
   console.log();
 
-  // 6. Semantic search with name filter
-  console.log('6. Semantic search with name filter:');
-  console.log('   Query: "agent" + name contains "Test"');
-  const nameFilteredResults = await sdk.searchAgents({
-    query: 'agent',
-    name: 'Test',
-  });
-  console.log(`   Found ${nameFilteredResults.items.length} agents`);
-  nameFilteredResults.items.forEach((agent) => {
-    console.log(`   - ${agent.name}`);
-  });
-  console.log();
-
-  // 7. Error handling example
-  console.log('7. Error handling:');
-  try {
-    const invalidSdk = new SDK({
-      chainId: 11155111,
-      rpcUrl: process.env.RPC_URL || 'https://sepolia.infura.io/v3/YOUR_PROJECT_ID',
-      semanticSearchUrl: 'https://invalid-url-that-does-not-exist.com',
-    });
-    
-    await invalidSdk.searchAgents({
-      query: 'test',
-    });
-  } catch (error) {
-    console.log('   ✓ Caught error for invalid URL:', error instanceof Error ? error.message : String(error));
-  }
-  console.log();
-
-  // 8. Fallback to subgraph search
-  console.log('8. Fallback to subgraph search (no query):');
-  console.log('   No query provided - should use subgraph search');
-  const subgraphResults = await sdk.searchAgents({
-    mcp: true,
-    active: true,
-  });
-  console.log(`   Found ${subgraphResults.items.length} agents (via subgraph)`);
-  console.log();
-
   console.log('=== Examples Complete ===');
 }
 

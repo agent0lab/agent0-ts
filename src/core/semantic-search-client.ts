@@ -25,7 +25,8 @@ export class SemanticSearchClient {
   /**
    * Extract retry-after value from response headers
    */
-  private getRetryAfter(headers: Headers): number | undefined {
+  private getRetryAfter(headers: Headers | undefined): number | undefined {
+    if (!headers) return undefined;
     const retryAfter = headers.get('Retry-After');
     if (retryAfter) {
       const seconds = parseInt(retryAfter, 10);
@@ -44,11 +45,12 @@ export class SemanticSearchClient {
   /**
    * Extract rate limit information from response headers
    */
-  private getRateLimitInfo(headers: Headers): {
+  private getRateLimitInfo(headers: Headers | undefined): {
     limit?: number;
     remaining?: number;
     reset?: number;
   } {
+    if (!headers) return {};
     return {
       limit: headers.get('X-RateLimit-Limit') ? parseInt(headers.get('X-RateLimit-Limit')!, 10) : undefined,
       remaining: headers.get('X-RateLimit-Remaining') ? parseInt(headers.get('X-RateLimit-Remaining')!, 10) : undefined,
