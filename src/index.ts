@@ -17,6 +17,8 @@ export { Web3Client } from './core/web3-client.js';
 export type { TransactionOptions } from './core/web3-client.js';
 export { IPFSClient } from './core/ipfs-client.js';
 export type { IPFSClientConfig } from './core/ipfs-client.js';
+export { ArweaveClient } from './core/arweave-client.js';
+export type { ArweaveClientConfig } from './core/arweave-client.js';
 export { SubgraphClient } from './core/subgraph-client.js';
 export { FeedbackManager } from './core/feedback-manager.js';
 export { EndpointCrawler } from './core/endpoint-crawler.js';

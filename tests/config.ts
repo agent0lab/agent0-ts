@@ -21,6 +21,12 @@ export const AGENT_PRIVATE_KEY = process.env.AGENT_PRIVATE_KEY || '';
 // IPFS Configuration (Pinata)
 export const PINATA_JWT = process.env.PINATA_JWT || '';
 
+// Arweave Configuration
+// Note: Uses production Arweave mainnet (no testnet exists)
+// Turbo provides free uploads for files <100KB (typical agent files are 1-10KB)
+// No additional credentials needed - reuses AGENT_PRIVATE_KEY for EVM signing
+export const ARWEAVE_ENABLED = process.env.ARWEAVE_ENABLED !== 'false'; // Default: enabled
+
 // Subgraph Configuration
 export const SUBGRAPH_URL =
   process.env.SUBGRAPH_URL ||

@@ -8,6 +8,7 @@
 import type { IPFSHTTPClient } from 'ipfs-http-client';
 import type { RegistrationFile } from '../models/interfaces.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { formatRegistrationFileForStorage } from '../utils/registration-format.js';
 
 export interface IPFSClientConfig {
   url?: string; // IPFS node URL (e.g., "http://localhost:5001")
@@ -40,7 +41,9 @@ export class IPFSClient {
       this.provider = 'node';
       // Lazy initialization - client will be created on first use
     } else {
-      throw new Error('No IPFS provider configured. Specify url, pinataEnabled, or filecoinPinEnabled.');
+      throw new Error(
+        'No IPFS provider configured. Specify url, pinataEnabled, or filecoinPinEnabled.'
+      );
     }
   }
 
@@ -79,14 +82,14 @@ export class IPFSClient {
       // Add timeout to fetch
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.PINATA_UPLOAD);
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers,
         body: formData,
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -115,13 +118,13 @@ export class IPFSClient {
           if (verifyResponse.status === 429) {
             console.warn(
               `[IPFS] Pinata returned CID ${cid} but gateway is rate-limited (HTTP 429). ` +
-              `Content is likely available but verification skipped due to rate limiting.`
+                `Content is likely available but verification skipped due to rate limiting.`
             );
           } else {
             // Other HTTP errors might indicate a real problem
             throw new Error(
               `Pinata returned CID ${cid} but content is not accessible on gateway (HTTP ${verifyResponse.status}). ` +
-              `This may indicate the upload failed. Full Pinata response: ${JSON.stringify(result)}`
+                `This may indicate the upload failed. Full Pinata response: ${JSON.stringify(result)}`
             );
           }
         }
@@ -132,20 +135,20 @@ export class IPFSClient {
           if (verifyError.message.includes('timeout') || verifyError.message.includes('aborted')) {
             console.warn(
               `[IPFS] Pinata returned CID ${cid} but verification timed out. ` +
-              `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
+                `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
             );
           } else if (verifyError.message.includes('429')) {
             // Rate limit is non-fatal
             console.warn(
               `[IPFS] Pinata returned CID ${cid} but gateway is rate-limited. ` +
-              `Content is likely available but verification skipped.`
+                `Content is likely available but verification skipped.`
             );
           } else {
             // Other errors might indicate a real problem, but we'll still continue
             // since Pinata API returned success - content might just need time to propagate
             console.warn(
               `[IPFS] Pinata returned CID ${cid} but verification failed: ${verifyError.message}. ` +
-              `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
+                `Content may propagate with delay. Full Pinata response: ${JSON.stringify(result)}`
             );
           }
         }
@@ -248,7 +251,7 @@ export class IPFSClient {
 
     // For Pinata and Filecoin Pin, use IPFS gateways
     if (this.provider === 'pinata' || this.provider === 'filecoinPin') {
-      const gateways = IPFS_GATEWAYS.map(gateway => `${gateway}${cid}`);
+      const gateways = IPFS_GATEWAYS.map((gateway) => `${gateway}${cid}`);
 
       // Try all gateways in parallel - use the first successful response
       const promises = gateways.map(async (gateway) => {
@@ -356,59 +359,12 @@ export class IPFSClient {
     chainId?: number,
     identityRegistryAddress?: string
   ): Promise<string> {
-    // Convert from internal format { type, value, meta } to ERC-8004 format { name, endpoint, version }
-    const endpoints: Array<Record<string, unknown>> = [];
-    for (const ep of registrationFile.endpoints) {
-      const endpointDict: Record<string, unknown> = {
-        name: ep.type, // EndpointType enum value (e.g., "MCP", "A2A")
-        endpoint: ep.value,
-      };
-      
-      // Spread meta fields (version, mcpTools, mcpPrompts, etc.) into the endpoint dict
-      if (ep.meta) {
-        Object.assign(endpointDict, ep.meta);
-      }
-      
-      endpoints.push(endpointDict);
-    }
-    
-    // Add walletAddress as an endpoint if present
-    if (registrationFile.walletAddress) {
-      const walletChainId = registrationFile.walletChainId || chainId || 1;
-      endpoints.push({
-        name: 'agentWallet',
-        endpoint: `eip155:${walletChainId}:${registrationFile.walletAddress}`,
-      });
-    }
-    
-    // Build registrations array
-    const registrations: Array<Record<string, unknown>> = [];
-    if (registrationFile.agentId) {
-      const [, , tokenId] = registrationFile.agentId.split(':');
-      const agentRegistry = chainId && identityRegistryAddress
-        ? `eip155:${chainId}:${identityRegistryAddress}`
-        : `eip155:1:{identityRegistry}`;
-      registrations.push({
-        agentId: parseInt(tokenId, 10),
-        agentRegistry,
-      });
-    }
-    
-    // Build ERC-8004 compliant registration file
-    const data = {
-      type: 'https://eips.ethereum.org/EIPS/eip-8004#registration-v1',
-      name: registrationFile.name,
-      description: registrationFile.description,
-      ...(registrationFile.image && { image: registrationFile.image }),
-      endpoints,
-      ...(registrations.length > 0 && { registrations }),
-      ...(registrationFile.trustModels.length > 0 && {
-        supportedTrusts: registrationFile.trustModels,
-      }),
-      active: registrationFile.active,
-      x402support: registrationFile.x402support,
-    };
-    
+    const data = formatRegistrationFileForStorage(
+      registrationFile,
+      chainId,
+      identityRegistryAddress
+    );
+
     return this.addJson(data);
   }
 
@@ -431,4 +387,3 @@ export class IPFSClient {
     }
   }
 }
-

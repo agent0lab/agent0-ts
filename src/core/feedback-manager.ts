@@ -11,6 +11,7 @@ import type {
 import type { AgentId, Address, URI, Timestamp, IdemKey } from '../models/types.js';
 import type { Web3Client } from './web3-client.js';
 import type { IPFSClient } from './ipfs-client.js';
+import type { ArweaveClient } from './arweave-client.js';
 import type { SubgraphClient } from './subgraph-client.js';
 import { parseAgentId, formatAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format.js';
 import { DEFAULTS } from '../utils/constants.js';
@@ -35,6 +36,7 @@ export class FeedbackManager {
   constructor(
     private web3Client: Web3Client,
     private ipfsClient?: IPFSClient,
+    private arweaveClient?: ArweaveClient,
     private reputationRegistry?: ethers.Contract,
     private identityRegistry?: ethers.Contract,
     private subgraphClient?: SubgraphClient
@@ -268,7 +270,24 @@ export class FeedbackManager {
     let feedbackUri = '';
     let feedbackHash = '0x' + '00'.repeat(32); // Default empty hash
 
-    if (this.ipfsClient) {
+    // Try Arweave first (permanent storage), then IPFS fallback
+    if (this.arweaveClient) {
+      try {
+        const chainId = this.web3Client.chainId;
+        const txId = await this.arweaveClient.addFeedbackFile(
+          feedbackFile,
+          Number(chainId),
+          agentId,
+          clientAddress
+        );
+        feedbackUri = `ar://${txId}`;
+        // Calculate hash of sorted JSON
+        const sortedJson = JSON.stringify(feedbackFile, Object.keys(feedbackFile).sort());
+        feedbackHash = this.web3Client.keccak256(sortedJson);
+      } catch (error) {
+        // Failed to store on Arweave - continue without Arweave storage
+      }
+    } else if (this.ipfsClient) {
       // Store feedback file on IPFS
       try {
         const cid = await this.ipfsClient.addJson(feedbackFile);
@@ -283,8 +302,8 @@ export class FeedbackManager {
         // Continue without IPFS storage - feedback will be stored on-chain only
       }
     } else if (feedbackFile.context || feedbackFile.capability || feedbackFile.name) {
-      // If we have rich data but no IPFS, we need to store it somewhere
-      throw new Error('Rich feedback data requires IPFS client for storage');
+      // If we have rich data but no storage client, we need to store it somewhere
+      throw new Error('Rich feedback data requires Arweave or IPFS client for storage');
     }
 
     // Submit to blockchain
