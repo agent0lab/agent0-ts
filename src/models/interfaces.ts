@@ -116,6 +116,7 @@ export interface SearchParams {
   mcpResources?: string[];
   active?: boolean;
   x402support?: boolean;
+  minScore?: number; // Minimum similarity score (0.0-1.0) for semantic search (only used when query is provided)
 }
 
 /**

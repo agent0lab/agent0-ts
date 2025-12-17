@@ -46,6 +46,26 @@ async function main() {
   });
   console.log();
 
+  // 2b. Semantic search with minScore
+  console.log('2b. Semantic search with minimum score:');
+  console.log('   Query: "agent" + minScore: 0.7 (only high relevance results)');
+  const minScoreResults = await sdk.searchAgents({
+    query: 'agent',
+    minScore: 0.7, // Only return results with similarity score >= 0.7
+  });
+  console.log(`   Found ${minScoreResults.items.length} agents with score >= 0.7`);
+  if (minScoreResults.items.length > 0) {
+    minScoreResults.items.forEach((agent, index) => {
+      console.log(`   ${index + 1}. ${agent.name} (score: ${agent.extras.score?.toFixed(3)})`);
+    });
+  }
+  console.log();
+  console.log(`   Found ${filteredResults.items.length} agents`);
+  filteredResults.items.forEach((agent, index) => {
+    console.log(`   ${index + 1}. ${agent.name} (MCP: ${agent.mcp}, Active: ${agent.active})`);
+  });
+  console.log();
+
   // 3. Semantic search with sorting
   console.log('3. Semantic search with sorting:');
   console.log('   Query: "agent" sorted by updatedAt descending');

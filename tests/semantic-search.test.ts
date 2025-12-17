@@ -71,6 +71,32 @@ describe('Semantic Search', () => {
       expect(results).toBeDefined();
       expect(results.items).toBeDefined();
     }, 30000);
+
+    it('should support minScore with semantic search', async () => {
+      const results = await sdk.searchAgents({
+        query: 'AI agent for trading',
+        minScore: 0.5, // Only return results with score >= 0.5
+      });
+
+      expect(results).toBeDefined();
+      expect(results.items).toBeDefined();
+      
+      // All results should have score >= minScore
+      results.items.forEach((agent) => {
+        if (agent.extras.score !== undefined) {
+          expect(agent.extras.score).toBeGreaterThanOrEqual(0.5);
+        }
+      });
+    }, 30000);
+
+    it('should throw error if minScore is used without query', async () => {
+      await expect(
+        sdk.searchAgents({
+          minScore: 0.5,
+          mcp: true,
+        })
+      ).rejects.toThrow('minScore can only be used with semantic search');
+    });
   });
 
   describe('Error Handling', () => {

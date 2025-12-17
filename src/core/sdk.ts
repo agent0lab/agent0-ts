@@ -370,6 +370,11 @@ export class SDK {
   ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
     const searchParams: SearchParams & { query?: string } = params || {};
     
+    // Validate: minScore can only be used with semantic search (when query is provided)
+    if (searchParams.minScore !== undefined && (!searchParams.query || !searchParams.query.trim())) {
+      throw new Error('minScore can only be used with semantic search (when query parameter is provided)');
+    }
+    
     // If query is provided, use semantic search
     if (searchParams.query && searchParams.query.trim()) {
       // Type guard: ensure query is defined
@@ -404,6 +409,7 @@ export class SDK {
       limit: pageSize,
       cursor: cursor,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
+      minScore: params.minScore, // Minimum similarity score (0.0-1.0)
       name: params.name, // Use name for substring search
       chains: params.chains, // Multi-chain support
       sort: sort && sort.length > 0 ? sort : undefined,
