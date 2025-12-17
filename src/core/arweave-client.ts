@@ -4,7 +4,6 @@
  * Uses the same pattern as IPFSClient for architectural consistency.
  */
 
-import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import type { RegistrationFile } from '../models/interfaces.js';
 import { formatRegistrationFileForStorage } from '../utils/registration-format.js';
 import { generateArweaveRegistrationTags, generateArweaveFeedbackTags } from '../utils/arweave-tags.js';
@@ -20,21 +19,23 @@ export class ArweaveClient {
 
   constructor(config: ArweaveClientConfig) {
     this.config = config;
-    this._initializeTurbo();
   }
 
   /**
-   * Initialize Turbo SDK with EVM signer for uploads
+   * Initialize Turbo SDK with EVM signer for uploads (lazy, only when needed)
    */
-  private _initializeTurbo() {
-    const signer = new EthereumSigner(this.config.privateKey);
+  private async _ensureTurbo(): Promise<void> {
+    if (!this.turbo) {
+      const { TurboFactory, EthereumSigner } = await import('@ardrive/turbo-sdk');
+      const signer = new EthereumSigner(this.config.privateKey);
 
-    const turboConfig: any = {
-      signer,
-      token: 'ethereum',
-    };
+      const turboConfig: any = {
+        signer,
+        token: 'ethereum',
+      };
 
-    this.turbo = TurboFactory.authenticated(turboConfig);
+      this.turbo = TurboFactory.authenticated(turboConfig);
+    }
   }
 
   /**
@@ -46,6 +47,10 @@ export class ArweaveClient {
    * @returns Arweave transaction ID
    */
   async add(data: string, tags?: Array<{ name: string; value: string }>): Promise<string> {
+    await this._ensureTurbo();
+    if (!this.turbo) {
+      throw new Error('No Arweave client available');
+    }
     try {
       const result = await this.turbo.upload({
         data,
