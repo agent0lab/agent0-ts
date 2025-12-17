@@ -11,26 +11,26 @@ import type {
   SearchResultMeta,
   RegistrationFile,
   Endpoint,
-} from '../models/interfaces';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types';
-import type { AgentId, ChainId, Address, URI } from '../models/types';
-import { EndpointType, TrustModel } from '../models/enums';
-import { formatAgentId, parseAgentId } from '../utils/id-format';
-import { IPFS_GATEWAYS, ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants';
-import { Web3Client, type TransactionOptions } from './web3-client';
-import { IPFSClient, type IPFSClientConfig } from './ipfs-client';
-import { ArweaveClient, type ArweaveClientConfig } from './arweave-client';
-import { SubgraphClient } from './subgraph-client';
-import { FeedbackManager } from './feedback-manager';
-import { AgentIndexer } from './indexer';
-import { Agent } from './agent';
+} from '../models/interfaces.js';
+import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types.js';
+import type { AgentId, ChainId, Address, URI } from '../models/types.js';
+import { EndpointType, TrustModel } from '../models/enums.js';
+import { formatAgentId, parseAgentId } from '../utils/id-format.js';
+import { IPFS_GATEWAYS, ARWEAVE_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { Web3Client, type TransactionOptions } from './web3-client.js';
+import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
+import { ArweaveClient, type ArweaveClientConfig } from './arweave-client.js';
+import { SubgraphClient } from './subgraph-client.js';
+import { FeedbackManager } from './feedback-manager.js';
+import { AgentIndexer } from './indexer.js';
+import { Agent } from './agent.js';
 import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
   VALIDATION_REGISTRY_ABI,
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
-} from './contracts';
+} from './contracts.js';
 
 export interface SDKConfig {
   chainId: ChainId;

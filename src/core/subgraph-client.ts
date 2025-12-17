@@ -3,9 +3,9 @@
  */
 
 import { GraphQLClient } from 'graphql-request';
-import type { AgentSummary, SearchParams } from '../models/interfaces';
-import { normalizeAddress } from '../utils/validation';
-import type { Agent, AgentRegistrationFile } from '../models/generated/subgraph-types';
+import type { AgentSummary, SearchParams } from '../models/interfaces.js';
+import { normalizeAddress } from '../utils/validation.js';
+import type { Agent, AgentRegistrationFile } from '../models/generated/subgraph-types.js';
 
 export interface SubgraphQueryOptions {
   where?: Record<string, unknown>;

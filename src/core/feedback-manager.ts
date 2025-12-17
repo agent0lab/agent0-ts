@@ -7,14 +7,14 @@ import type {
   Feedback,
   SearchFeedbackParams,
   FeedbackIdTuple,
-} from '../models/interfaces';
-import type { AgentId, Address, URI, Timestamp, IdemKey } from '../models/types';
-import type { Web3Client } from './web3-client';
-import type { IPFSClient } from './ipfs-client';
-import type { ArweaveClient } from './arweave-client';
-import type { SubgraphClient } from './subgraph-client';
-import { parseAgentId, formatAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format';
-import { DEFAULTS } from '../utils/constants';
+} from '../models/interfaces.js';
+import type { AgentId, Address, URI, Timestamp, IdemKey } from '../models/types.js';
+import type { Web3Client } from './web3-client.js';
+import type { IPFSClient } from './ipfs-client.js';
+import type { ArweaveClient } from './arweave-client.js';
+import type { SubgraphClient } from './subgraph-client.js';
+import { parseAgentId, formatAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format.js';
+import { DEFAULTS } from '../utils/constants.js';
 
 export interface FeedbackAuth {
   agentId: bigint;

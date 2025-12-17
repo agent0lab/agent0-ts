@@ -6,9 +6,9 @@
  */
 
 import type { IPFSHTTPClient } from 'ipfs-http-client';
-import type { RegistrationFile } from '../models/interfaces';
-import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants';
-import { formatRegistrationFileForStorage } from '../utils/registration-format';
+import type { RegistrationFile } from '../models/interfaces.js';
+import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { formatRegistrationFileForStorage } from '../utils/registration-format.js';
 
 export interface IPFSClientConfig {
   url?: string; // IPFS node URL (e.g., "http://localhost:5001")

@@ -3,9 +3,9 @@
  * Tags are cryptographically authenticated via Turbo SDK's EthereumSigner.
  */
 
-import type { RegistrationFile } from '../models/interfaces';
-import { EndpointType } from '../models/enums';
-import { SDK_VERSION } from './constants';
+import type { RegistrationFile } from '../models/interfaces.js';
+import { EndpointType } from '../models/enums.js';
+import { SDK_VERSION } from './constants.js';
 
 /**
  * Generate comprehensive tags for Arweave registration file uploads.
