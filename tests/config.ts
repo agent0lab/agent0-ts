@@ -33,6 +33,11 @@ export const AGENT_ID = process.env.AGENT_ID || '11155111:374';
 // Load from environment variable for security
 export const CLIENT_PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY || '';
 
+// Semantic Search Configuration
+export const SEMANTIC_SEARCH_URL =
+  process.env.SEMANTIC_SEARCH_URL ||
+  'https://agent0-semantic-search.dawid-pisarczyk.workers.dev';
+
 /**
  * Print current configuration (hiding sensitive values).
  */
@@ -44,6 +49,7 @@ export function printConfig(): void {
   console.log(`  PINATA_JWT: ${PINATA_JWT ? '***' : 'NOT SET'}`);
   console.log(`  SUBGRAPH_URL: ${SUBGRAPH_URL.substring(0, 50)}...`);
   console.log(`  AGENT_ID: ${AGENT_ID}`);
+  console.log(`  SEMANTIC_SEARCH_URL: ${SEMANTIC_SEARCH_URL.substring(0, 50)}...`);
   console.log();
 }
 

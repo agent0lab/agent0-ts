@@ -23,6 +23,10 @@ import { SubgraphClient } from './subgraph-client.js';
 import { FeedbackManager } from './feedback-manager.js';
 import { AgentIndexer } from './indexer.js';
 import { Agent } from './agent.js';
+import { SemanticSearchClient } from './semantic-search-client.js';
+import { convertSearchParamsToFilters } from '../utils/search-params-converter.js';
+import { mapStandardResultToAgentSummary } from '../utils/semantic-response-mapper.js';
+import type { StandardSearchRequest } from '../models/semantic-search-types.js';
 import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
@@ -44,6 +48,8 @@ export interface SDKConfig {
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
+  // Semantic search configuration
+  semanticSearchUrl?: string; // URL for semantic search service (default: 'https://agent0-semantic-search.dawid-pisarczyk.workers.dev')
 }
 
 /**
@@ -61,6 +67,7 @@ export class SDK {
   private readonly _registries: Record<string, Address>;
   private readonly _chainId: ChainId;
   private readonly _subgraphUrls: Record<ChainId, string> = {};
+  private readonly _semanticSearchUrl: string;
 
   constructor(config: SDKConfig) {
     this._chainId = config.chainId;
@@ -95,6 +102,9 @@ export class SDK {
 
     // Initialize indexer
     this._indexer = new AgentIndexer(this._web3Client, this._subgraphClient, this._subgraphUrls);
+
+    // Store semantic search URL (default if not provided)
+    this._semanticSearchUrl = config.semanticSearchUrl || 'https://agent0-semantic-search.dawid-pisarczyk.workers.dev';
 
     // Initialize IPFS client
     if (config.ipfs) {
@@ -342,15 +352,84 @@ export class SDK {
   /**
    * Search agents with filters
    * Supports multi-chain search when chains parameter is provided
+   * 
+   * If `query` is provided in params, uses semantic search instead of subgraph search.
+   * Semantic search enables natural language queries and semantic similarity matching.
+   * 
+   * @param params Search parameters. If `query` is provided, semantic search is used.
+   * @param sort Sort options (e.g., ["updatedAt:desc", "name:asc"])
+   * @param pageSize Number of results per page (default: 50)
+   * @param cursor Pagination cursor
+   * @returns Search results with items and pagination info
    */
   async searchAgents(
-    params?: SearchParams,
+    params?: SearchParams & { query?: string },
     sort?: string[],
     pageSize: number = 50,
     cursor?: string
   ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
-    const searchParams: SearchParams = params || {};
+    const searchParams: SearchParams & { query?: string } = params || {};
+    
+    // If query is provided, use semantic search
+    if (searchParams.query && searchParams.query.trim()) {
+      // Type guard: ensure query is defined
+      const semanticParams: SearchParams & { query: string } = {
+        ...searchParams,
+        query: searchParams.query,
+      };
+      return this._searchAgentsSemantic(semanticParams, sort, pageSize, cursor);
+    }
+    
+    // Otherwise, use traditional subgraph search
     return this._indexer.searchAgents(searchParams, pageSize, cursor, sort || []);
+  }
+
+  /**
+   * Perform semantic search using the semantic search service
+   */
+  private async _searchAgentsSemantic(
+    params: SearchParams & { query: string },
+    sort?: string[],
+    pageSize: number = 50,
+    cursor?: string
+  ): Promise<{ items: AgentSummary[]; nextCursor?: string; meta?: SearchResultMeta }> {
+    const client = new SemanticSearchClient(this._semanticSearchUrl);
+    
+    // Convert SearchParams to StandardFilters
+    const filters = convertSearchParamsToFilters(params);
+    
+    // Build semantic search request
+    const request: StandardSearchRequest = {
+      query: params.query,
+      limit: pageSize,
+      cursor: cursor,
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
+      name: params.name, // Use name for substring search
+      chains: params.chains, // Multi-chain support
+      sort: sort && sort.length > 0 ? sort : undefined,
+      includeMetadata: true,
+    };
+    
+    // Perform semantic search
+    const response = await client.searchAgents(request);
+    
+    // Map results to AgentSummary format
+    const items = response.results.map(mapStandardResultToAgentSummary);
+    
+    // Extract next cursor from pagination
+    const nextCursor = response.pagination?.nextCursor;
+    
+    return {
+      items,
+      nextCursor,
+      meta: {
+        chains: params.chains === 'all' ? [] : (Array.isArray(params.chains) ? params.chains : [this._chainId]),
+        successfulChains: params.chains === 'all' ? [] : (Array.isArray(params.chains) ? params.chains : [this._chainId]),
+        failedChains: [],
+        totalResults: response.total,
+        timing: { totalMs: 0 }, // Semantic search doesn't provide timing info
+      },
+    };
   }
 
   /**
