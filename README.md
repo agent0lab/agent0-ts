@@ -199,6 +199,47 @@ const feedbacks = await sdk.searchFeedback('84532:123'); // Base Sepolia
 const summary = await sdk.getReputationSummary('84532:123'); // Base Sepolia
 ```
 
+### 4b. Semantic Search
+
+The SDK supports semantic search using natural language queries. When you provide a `query` parameter, the SDK will use semantic search instead of traditional subgraph search.
+
+```typescript
+// Initialize SDK with semantic search URL
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: process.env.RPC_URL!,
+  semanticSearchUrl: 'https://your-semantic-search-service.com', // Optional: override default
+});
+
+// Semantic search with natural language query
+const results = await sdk.searchAgents({
+  query: 'AI agent for trading and DeFi yield optimization',
+  mcp: true,
+  active: true,
+});
+
+// Results include semantic search metadata
+for (const agent of results.items) {
+  console.log(`${agent.name} (score: ${agent.extras.score})`);
+  console.log(`  ${agent.description}`);
+}
+
+// Combine semantic search with filters and sorting
+const filteredResults = await sdk.searchAgents(
+  {
+    query: 'trading agent',
+    mcp: true,
+    chains: [11155111, 84532],
+  },
+  ['updatedAt:desc'], // Sort by updatedAt descending
+  10 // Page size
+);
+```
+
+**Semantic Search Standard**: The SDK implements the [Universal Agent Semantic Search API Standard v1.0](https://github.com/agent0lab/search-service/blob/main/docs/AG0_SEMANTIC_SEARCH_STANDARD.md), enabling hot-swappable providers and standardized client interfaces.
+
+**Self-Hosting**: You can self-host your own semantic search service. See the [search service repository](https://github.com/agent0lab/search-service) for deployment instructions using Cloudflare Workers, Venice AI embeddings, and Pinecone vector storage.
+
 ### 5. Give and Retrieve Feedback
 
 ```typescript
@@ -415,7 +456,6 @@ Browse these files to find appropriate skill and domain slugs. For more informat
 
 - Support for validations
 - Enhanced x402 payments
-- Semantic/Vectorial search
 - Advanced reputation aggregation
 - Import/Export to centralized catalogues
 
