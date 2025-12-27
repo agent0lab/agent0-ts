@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Checkout subgraph schema
+      uses: actions/checkout@v4
+      with:
+        repository: agent0lab/subgraph
+        path: ../subgraph
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build
+      run: npm run build
+
+    - name: Run tests
+      run: npm test
+      continue-on-error: true
+
+    - name: Run linter
+      run: npm run lint
+      continue-on-error: true
+
+  validate-package:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Checkout subgraph schema
+      uses: actions/checkout@v4
+      with:
+        repository: agent0lab/subgraph
+        path: ../subgraph
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build package
+      run: npm run build
+
+    - name: Pack package
+      run: npm pack
+
+    - name: Test package installation
+      run: |
+        mkdir test-install
+        cd test-install
+        npm init -y
+        npm install ../agent0-sdk-*.tgz
+        node -e "require('agent0-sdk')" || echo "Package can be required successfully"

@@ -16,7 +16,9 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src",
     "format": "prettier --write src",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "validate": "npm run lint && npm run build && npm run test",
+    "prepublishOnly": "npm run validate"
   },
   "keywords": [
     "erc-8004",
