@@ -1,35 +1,50 @@
 import 'dotenv/config';
-import { RegistryBroker, type AgentSearchHit } from '../src/core/registry-broker.js';
+import { SDK } from '../src/index.js';
+import {
+  HashgraphRegistryBrokerChatAdapter,
+  HashgraphRegistryBrokerSearchAdapter,
+} from '../src/adapters/registry-broker.js';
 
+const baseUrl =
+  process.env.REGISTRY_BROKER_BASE_URL?.trim() || 'https://hol.org/registry/api/v1';
 const apiKey =
   process.env.REGISTRY_BROKER_API_KEY?.trim() || process.env.RB_API_KEY?.trim() || undefined;
-const searchQuery = process.env.ERC8004_AGENT_QUERY?.trim() || 'defillama-verifiable-agent';
-
-const selectAgentWithUaid = (hits: AgentSearchHit[]): AgentSearchHit | null =>
-  hits.find((hit) => typeof hit.uaid === 'string' && hit.uaid.trim().length > 0) || null;
-
-const extractReply = (payload: { content?: unknown; message?: unknown }): string => {
-  if (typeof payload.content === 'string' && payload.content.trim().length > 0) {
-    return payload.content.trim();
+const registry = process.env.ERC8004_REGISTRY?.trim() || 'erc-8004';
+const adapters = (() => {
+  const raw = process.env.ERC8004_ADAPTERS?.trim();
+  if (!raw) {
+    return undefined;
   }
-  if (typeof payload.message === 'string') {
-    return payload.message.trim();
-  }
-  return '';
-};
+  const parsed = raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  return parsed.length > 0 ? parsed : undefined;
+})();
+const searchQuery =
+  process.env.ERC8004_AGENT_QUERY?.trim() || 'defillama-verifiable-agent';
+const targetUaid = process.env.ERC8004_AGENT_UAID?.trim() || '';
+
+const extractReply = (payload: { content?: string; message?: string }): string =>
+  payload.content?.trim() || payload.message?.trim() || '';
 
 async function main(): Promise<void> {
-  const broker = new RegistryBroker({ apiKey });
-
-  console.log(`Searching for ERC-8004 agents with query "${searchQuery}"`);
-  const result = await broker.searchErc8004Agents({
-    query: searchQuery,
-    limit: 10,
-    sortBy: 'most-recent',
+  const sdk = new SDK({
+    chainId: Number(process.env.CHAIN_ID ?? '11155111'),
+    rpcUrl: process.env.RPC_URL?.trim() || 'http://127.0.0.1:8545',
   });
 
-  const vector = await broker.vectorSearchErc8004(searchQuery, {
-    limit: 5,
+  sdk.registerSearchAdapter(new HashgraphRegistryBrokerSearchAdapter({ apiKey, baseUrl }));
+  sdk.registerChatAdapter(new HashgraphRegistryBrokerChatAdapter({ apiKey, baseUrl }));
+
+  console.log(`Using Registry Broker baseUrl: ${baseUrl}`);
+  console.log(`Searching registry "${registry}" for agents (query="${searchQuery || '[empty]'}")`);
+  const result = await sdk.search({
+    query: searchQuery,
+    registry,
+    adapters,
+    limit: 200,
+    sortBy: 'most-recent',
   });
 
   if (!result?.hits?.length) {
@@ -37,34 +52,35 @@ async function main(): Promise<void> {
   }
 
   console.log(`Found ${result.hits.length} candidates`);
-  console.log(`Vector search hits: ${vector.hits.length}`);
-  if (vector.hits.length > 0) {
-    const top = vector.hits.find((hit) => hit.uaid);
-    console.log('Top vector hit UAID:', top?.uaid ?? '[none]');
+
+  const selectedHit =
+    (targetUaid ? result.hits.find((hit) => hit.uaid === targetUaid) : null) ??
+    result.hits.find((hit) => (hit.uaid ?? '').includes(';proto=mcp;')) ??
+    result.hits.find((hit) => (hit.uaid ?? '').includes(';proto=a2a;')) ??
+    result.hits[0];
+
+  const selectedUaid = selectedHit?.uaid?.trim() ?? '';
+  if (!selectedUaid) {
+    throw new Error('Selected ERC-8004 agent is missing a UAID');
   }
 
-  const agent =
-    selectAgentWithUaid(vector.hits as AgentSearchHit[]) ||
-    selectAgentWithUaid(result.hits);
-  if (!agent?.uaid) {
-    throw new Error('No ERC-8004 agent with a UAID was found for this query');
-  }
-  console.log(`Opening session with UAID: ${agent.uaid}`);
-  const chat = await broker.chat({
-    uaid: agent.uaid,
+  console.log(`Opening session with UAID: ${selectedUaid}`);
+  const chat = await sdk.chat({
+    uaid: selectedUaid,
     historyTtlSeconds: 300,
     message: 'Give a one-sentence summary of your capabilities.',
-    encryption: { preference: 'preferred' },
+    encryption: { preference: 'disabled' },
   });
+
   console.log(`Session established: ${chat.sessionId}`);
 
   const firstReply = extractReply(chat.response);
   console.log('Agent reply:');
   console.log(firstReply || '[empty response]');
 
-  const followUp = await broker.sendErc8004Message({
+  const followUp = await sdk.sendChatMessage({
     sessionId: chat.sessionId,
-    uaid: agent.uaid,
+    uaid: selectedUaid,
     message: 'Great. Please share one concrete task you can perform and what info you need from me.',
   });
 

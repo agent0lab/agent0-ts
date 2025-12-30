@@ -24,16 +24,30 @@ import { FeedbackManager } from './feedback-manager.js';
 import { AgentIndexer } from './indexer.js';
 import { Agent } from './agent.js';
 import {
+  AgentAdapterRegistry,
+  type AgentAdapterId,
+  type AgentChatAdapter,
+  type AgentChatRequest,
+  type AgentChatResult,
+  type AgentChatCreateSessionRequest,
+  type AgentChatCreateSessionResponse,
+  type AgentChatSendMessageRequest,
+  type AgentChatSendMessageResponse,
+  type AgentChatStartRequest,
+  type AgentSearchAdapter,
+  type AgentSearchOptions,
+  type AgentSearchResult,
+  type AgentVectorSearchRequest,
+  type AgentVectorSearchResponse,
+} from './adapters.js';
+import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
   VALIDATION_REGISTRY_ABI,
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
 } from './contracts.js';
-import {
-  RegistryBroker,
-  type RegistryBrokerClientOptions,
-} from './registry-broker.js';
+
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -59,6 +73,7 @@ export class SDK {
   private _subgraphClient?: SubgraphClient;
   private readonly _feedbackManager: FeedbackManager;
   private readonly _indexer: AgentIndexer;
+  private readonly _adapters = new AgentAdapterRegistry();
   private _identityRegistry?: ethers.Contract;
   private _reputationRegistry?: ethers.Contract;
   private _validationRegistry?: ethers.Contract;
@@ -172,11 +187,182 @@ export class SDK {
     return { ...this._registries };
   }
 
-  /**
-   * Create a registry broker client for interacting with ERC-8004 agents.
-   */
-  createRegistryBroker(options?: RegistryBrokerClientOptions): RegistryBroker {
-    return new RegistryBroker(options ?? {});
+  registerSearchAdapter(adapter: AgentSearchAdapter): void {
+    this._adapters.registerSearchAdapter(adapter);
+  }
+
+  registerChatAdapter(adapter: AgentChatAdapter): void {
+    this._adapters.registerChatAdapter(adapter);
+  }
+
+  getSearchAdapter(id: AgentAdapterId): AgentSearchAdapter | undefined {
+    return this._adapters.getSearchAdapter(id);
+  }
+
+  getChatAdapter(id: AgentAdapterId): AgentChatAdapter | undefined {
+    return this._adapters.getChatAdapter(id);
+  }
+
+  listSearchAdapters(): AgentAdapterId[] {
+    return this._adapters.listSearchAdapters();
+  }
+
+  listChatAdapters(): AgentAdapterId[] {
+    return this._adapters.listChatAdapters();
+  }
+
+  private resolveSearchAdapterId(adapterId?: AgentAdapterId): AgentAdapterId {
+    const resolved = adapterId ?? this.listSearchAdapters()[0];
+    if (!resolved) {
+      throw new Error('No search adapters registered');
+    }
+    return resolved;
+  }
+
+  private resolveChatAdapterId(adapterId?: AgentAdapterId): AgentAdapterId {
+    const resolved = adapterId ?? this.listChatAdapters()[0];
+    if (!resolved) {
+      throw new Error('No chat adapters registered');
+    }
+    return resolved;
+  }
+
+  async search(
+    options: AgentSearchOptions,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentSearchResult> {
+    const resolvedId = this.resolveSearchAdapterId(adapterId);
+    const adapter = this.getSearchAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No search adapter registered for "${resolvedId}"`);
+    }
+    return adapter.search(options);
+  }
+
+  async vectorSearch(
+    request: AgentVectorSearchRequest,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentVectorSearchResponse> {
+    const resolvedId = this.resolveSearchAdapterId(adapterId);
+    const adapter = this.getSearchAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No search adapter registered for "${resolvedId}"`);
+    }
+    if (!adapter.vectorSearch) {
+      throw new Error(`Search adapter "${resolvedId}" does not support vectorSearch`);
+    }
+    return adapter.vectorSearch(request);
+  }
+
+  async createChatSession(
+    request: AgentChatCreateSessionRequest,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentChatCreateSessionResponse> {
+    const resolvedId = this.resolveChatAdapterId(adapterId);
+    const adapter = this.getChatAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No chat adapter registered for "${resolvedId}"`);
+    }
+    return adapter.createSession(request);
+  }
+
+  async sendChatMessage(
+    request: AgentChatSendMessageRequest,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentChatSendMessageResponse> {
+    const resolvedId = this.resolveChatAdapterId(adapterId);
+    const adapter = this.getChatAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No chat adapter registered for "${resolvedId}"`);
+    }
+    return adapter.sendMessage(request);
+  }
+
+  async startChat(
+    request: AgentChatStartRequest,
+    adapterId?: AgentAdapterId,
+  ) {
+    const resolvedId = this.resolveChatAdapterId(adapterId);
+    const adapter = this.getChatAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No chat adapter registered for "${resolvedId}"`);
+    }
+    if (!adapter.startChat) {
+      throw new Error(`Chat adapter "${resolvedId}" does not support startChat`);
+    }
+    return adapter.startChat(request);
+  }
+
+  async chat(
+    options: AgentChatRequest,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentChatResult> {
+    const adapterIdResolved = this.resolveChatAdapterId(adapterId);
+    const uaid = options.uaid.trim();
+    if (!uaid) {
+      throw new Error('uaid is required for chat');
+    }
+    const message = options.message.trim();
+    if (!message) {
+      throw new Error('message is required for chat');
+    }
+
+    const adapter = this.getChatAdapter(adapterIdResolved);
+    if (!adapter) {
+      throw new Error(`No chat adapter registered for "${adapterIdResolved}"`);
+    }
+
+    const preference = options.encryption?.preference ?? 'preferred';
+
+    if (preference !== 'disabled') {
+      if (!adapter.startChat) {
+        if (preference === 'required') {
+          throw new Error(
+            `Chat adapter "${adapterIdResolved}" does not support startChat`,
+          );
+        }
+      } else {
+        try {
+          const handle = await adapter.startChat({
+            uaid,
+            historyTtlSeconds: options.historyTtlSeconds,
+            auth: options.auth,
+            senderUaid: options.senderUaid,
+            encryption: options.encryption,
+          });
+          const response = await handle.send({
+            message,
+            plaintext: message,
+            auth: options.auth,
+          });
+          return { sessionId: handle.sessionId, response, mode: handle.mode };
+        } catch (error) {
+          if (preference === 'required') {
+            throw error;
+          }
+        }
+      }
+    }
+
+    const session = await adapter.createSession({
+      uaid,
+      historyTtlSeconds: options.historyTtlSeconds,
+      auth: options.auth,
+      senderUaid: options.senderUaid,
+    });
+    const sessionId = session.sessionId ?? '';
+    if (!sessionId) {
+      throw new Error(
+        `Chat adapter "${adapterIdResolved}" did not return a sessionId`,
+      );
+    }
+    const response = await adapter.sendMessage({
+      sessionId,
+      uaid,
+      message,
+      auth: options.auth,
+    });
+    return { sessionId, response, mode: 'plaintext' };
   }
 
   /**

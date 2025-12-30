@@ -5,6 +5,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./registry-broker": {
+      "types": "./dist/adapters/registry-broker.d.ts",
+      "import": "./dist/adapters/registry-broker.js"
+    }
+  },
   "scripts": {
     "codegen": "graphql-codegen --config codegen.yml",
     "postinstall": "npm run codegen",
@@ -46,13 +56,21 @@
     "access": "public"
   },
   "dependencies": {
-    "@hol-org/rb-client": "^0.1.141-canary.14",
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
     "graphql-request": "^6.1.0",
     "ipfs-http-client": "^60.0.1"
   },
+  "peerDependencies": {
+    "@hol-org/rb-client": "*"
+  },
+  "peerDependenciesMeta": {
+    "@hol-org/rb-client": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@hol-org/rb-client": "^0.1.147",
     "@graphql-codegen/cli": "^6.0.1",
     "@graphql-codegen/introspection": "^5.0.0",
     "@graphql-codegen/typescript": "^5.0.2",

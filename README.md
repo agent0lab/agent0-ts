@@ -42,6 +42,82 @@ npm install agent0-sdk
 import { SDK } from 'agent0-sdk';
 ```
 
+### Adapters (Extensible Search + Chat Backends)
+
+Agent0 SDK uses an adapter pattern for agent discovery (search/vector search) and agent communication (chat). Register one or many adapters, and the SDK will use the first registered adapter by default (or you can choose one explicitly per call).
+
+To plug in your own backend, implement `AgentSearchAdapter` and/or `AgentChatAdapter` and register them:
+
+```ts
+import { SDK, type AgentChatAdapter, type AgentSearchAdapter } from 'agent0-sdk';
+
+const mySearchAdapter: AgentSearchAdapter = {
+  id: 'my-search',
+  async search() {
+    return { hits: [], total: 0 };
+  },
+};
+
+const myChatAdapter: AgentChatAdapter = {
+  id: 'my-chat',
+  async createSession() {
+    return { sessionId: '' };
+  },
+  async sendMessage() {
+    return { message: '' };
+  },
+};
+
+const sdk = new SDK({ chainId: 11155111, rpcUrl: 'http://127.0.0.1:8545' });
+sdk.registerSearchAdapter(mySearchAdapter);
+sdk.registerChatAdapter(myChatAdapter);
+
+await sdk.search({ query: 'hello', limit: 5 }, 'my-search');
+await sdk.chat({ uaid: '...', message: 'hi' }, 'my-chat');
+```
+
+### Hashgraph Online Registry + Broker (Optional Adapters)
+
+Hashgraph Online provides a hosted Registry + Broker API that indexes **ERC‑8004 agent metadata** and supports **ERC‑8004‑compatible chat sessions**. Agent0 SDK ships adapters for this as an optional extension so projects that don’t use the service don’t pull the extra dependency graph.
+
+Install the client package:
+
+```bash
+npm install @hol-org/rb-client
+```
+
+Register the adapters (search + chat), then use the normal `SDK` methods:
+
+```ts
+import { SDK } from 'agent0-sdk';
+import { registerHashgraphRegistryBrokerAdapters } from 'agent0-sdk/registry-broker';
+
+const sdk = new SDK({ chainId: 11155111, rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8545' });
+registerHashgraphRegistryBrokerAdapters(sdk, {
+  baseUrl: process.env.REGISTRY_BROKER_BASE_URL || 'https://hol.org/registry/api/v1',
+  apiKey: process.env.REGISTRY_BROKER_API_KEY, // optional (depends on broker config)
+});
+
+const result = await sdk.search({
+  registry: 'erc-8004',
+  query: process.env.ERC8004_AGENT_QUERY || 'defillama-verifiable-agent',
+  limit: 8,
+  sortBy: 'most-recent',
+});
+```
+
+If you register multiple adapters, pass the adapter ID explicitly (second argument):
+
+```ts
+import {
+  HASHGRAPH_REGISTRY_BROKER_CHAT_ADAPTER_ID,
+  HASHGRAPH_REGISTRY_BROKER_SEARCH_ADAPTER_ID,
+} from 'agent0-sdk/registry-broker';
+
+await sdk.search({ query: 'hello', limit: 5 }, HASHGRAPH_REGISTRY_BROKER_SEARCH_ADAPTER_ID);
+await sdk.chat({ uaid: '...', message: 'hi' }, HASHGRAPH_REGISTRY_BROKER_CHAT_ADAPTER_ID);
+```
+
 ### Install from Source
 
 ```bash
