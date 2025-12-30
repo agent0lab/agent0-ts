@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "Node16",
+    "module": "NodeNext",
     "lib": ["ES2020"],
-    "moduleResolution": "node16",
+    "moduleResolution": "nodenext",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,7 +13,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "resolveJsonModule": true,
+    "resolveJsonModule": false,
     "allowSyntheticDefaultImports": true,
     "types": ["jest", "node"]
   },

@@ -8,6 +8,7 @@
 import type { IPFSHTTPClient } from 'ipfs-http-client';
 import type { RegistrationFile } from '../models/interfaces.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { parseAgentId } from '../utils/id-format.js';
 
 export interface IPFSClientConfig {
   url?: string; // IPFS node URL (e.g., "http://localhost:5001")
@@ -384,12 +385,30 @@ export class IPFSClient {
     // Build registrations array
     const registrations: Array<Record<string, unknown>> = [];
     if (registrationFile.agentId) {
-      const [, , tokenId] = registrationFile.agentId.split(':');
-      const agentRegistry = chainId && identityRegistryAddress
-        ? `eip155:${chainId}:${identityRegistryAddress}`
-        : `eip155:1:{identityRegistry}`;
+      // Support both internal SDK AgentId format ("chainId:tokenId") and CAIP-style ("eip155:chainId:tokenId")
+      const agentIdParts = registrationFile.agentId.split(':');
+      let parsedChainId: number | undefined;
+      let parsedTokenId: number | undefined;
+
+      if (agentIdParts.length === 3 && agentIdParts[0] === 'eip155') {
+        parsedChainId = parseInt(agentIdParts[1], 10);
+        parsedTokenId = parseInt(agentIdParts[2], 10);
+      } else {
+        const parsed = parseAgentId(registrationFile.agentId);
+        parsedChainId = parsed.chainId;
+        parsedTokenId = parsed.tokenId;
+      }
+
+      if (parsedTokenId === undefined || Number.isNaN(parsedTokenId)) {
+        throw new Error(`Invalid agentId for registration file: ${registrationFile.agentId}`);
+      }
+
+      const effectiveChainId = chainId ?? parsedChainId ?? 1;
+      const agentRegistry = identityRegistryAddress
+        ? `eip155:${effectiveChainId}:${identityRegistryAddress}`
+        : `eip155:${effectiveChainId}:{identityRegistry}`;
       registrations.push({
-        agentId: parseInt(tokenId, 10),
+        agentId: parsedTokenId,
         agentRegistry,
       });
     }

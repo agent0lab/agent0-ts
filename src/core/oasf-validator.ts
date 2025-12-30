@@ -2,8 +2,8 @@
  * OASF taxonomy validation utilities
  */
 
-import allSkills from '../taxonomies/all_skills.json';
-import allDomains from '../taxonomies/all_domains.json';
+import allSkills from '../taxonomies/generated/all_skills.js';
+import allDomains from '../taxonomies/generated/all_domains.js';
 
 interface SkillsData {
   skills: Record<string, unknown>;

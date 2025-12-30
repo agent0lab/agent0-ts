@@ -173,9 +173,9 @@ agent.setENS('myagent.eth');
 
 // Add OASF skills and domains (standardized taxonomies)
 agent.addSkill('data_engineering/data_transformation_pipeline', true);
-agent.addSkill('natural_language_processing/summarization', true);
+agent.addSkill('natural_language_processing/natural_language_generation/summarization', true);
 agent.addDomain('finance_and_business/investment_services', true);
-agent.addDomain('technology/data_science', true);
+agent.addDomain('technology/data_science/data_science', true);
 
 // Configure wallet and trust
 agent.setAgentWallet('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb', 11155111);
@@ -481,7 +481,7 @@ OASF skills and domains appear in your agent's registration file:
       ],
       "domains": [
         "finance_and_business/investment_services",
-        "technology/data_science"
+        "technology/data_science/data_science"
       ]
     }
   ]
