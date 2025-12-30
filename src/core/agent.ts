@@ -14,6 +14,14 @@ import { EndpointCrawler } from './endpoint-crawler.js';
 import { parseAgentId } from '../utils/id-format.js';
 import { TIMEOUTS } from '../utils/constants.js';
 import { validateSkill, validateDomain } from './oasf-validator.js';
+import type {
+  AgentAdapterId,
+  AgentChatAuthConfig,
+  AgentChatEncryptionOptions,
+  AgentChatResult,
+} from './adapters.js';
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 /**
  * Agent class for managing individual agents
@@ -61,6 +69,56 @@ export class Agent {
     return ep?.value;
   }
 
+  private resolveChatAdapter(adapterId?: AgentAdapterId) {
+    const resolved = adapterId ?? this.sdk.listChatAdapters()[0];
+    if (!resolved) {
+      throw new Error('No chat adapters registered');
+    }
+    const adapter = this.sdk.getChatAdapter(resolved);
+    if (!adapter) {
+      throw new Error(`No chat adapter registered for "${resolved}"`);
+    }
+    return adapter;
+  }
+
+  async message(
+    text: string,
+    options: {
+      sessionId?: string;
+      historyTtlSeconds?: number;
+      auth?: AgentChatAuthConfig;
+      senderUaid?: string;
+      encryption?: AgentChatEncryptionOptions;
+      streaming?: boolean;
+    } = {},
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentChatResult> {
+    const message = text.trim();
+    if (!message) {
+      throw new Error('message is required for chat');
+    }
+
+    const adapter = this.resolveChatAdapter(adapterId);
+
+    const handle = await adapter.message({
+      agent: this,
+      sessionId: options.sessionId,
+      historyTtlSeconds: options.historyTtlSeconds,
+      auth: options.auth,
+      senderUaid: options.senderUaid,
+      encryption: options.encryption,
+    });
+
+    const response = await handle.send({
+      message,
+      plaintext: message,
+      auth: options.auth,
+      streaming: options.streaming,
+    });
+
+    return { sessionId: handle.sessionId, response, mode: handle.mode };
+  }
+
   get ensEndpoint(): string | undefined {
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.ENS);
     return ep?.value;
@@ -98,7 +156,7 @@ export class Agent {
     );
 
     // Try to fetch capabilities from the endpoint (soft fail)
-    const meta: Record<string, unknown> = { version };
+    const meta: Record<string, JsonValue> = { version };
     if (autoFetch) {
       try {
         const capabilities = await this._endpointCrawler.fetchMcpCapabilities(endpoint);
@@ -131,7 +189,7 @@ export class Agent {
     );
 
     // Try to fetch capabilities from the endpoint (soft fail)
-    const meta: Record<string, unknown> = { version };
+    const meta: Record<string, JsonValue> = { version };
     if (autoFetch) {
       try {
         const capabilities = await this._endpointCrawler.fetchA2aCapabilities(agentcard);
@@ -362,7 +420,7 @@ export class Agent {
     return this;
   }
 
-  setMetadata(kv: Record<string, unknown>): this {
+  setMetadata(kv: Record<string, JsonValue>): this {
     // Mark all provided keys as dirty
     for (const key of Object.keys(kv)) {
       this._dirtyMetadata.add(key);
@@ -373,7 +431,7 @@ export class Agent {
     return this;
   }
 
-  getMetadata(): Record<string, unknown> {
+  getMetadata(): Record<string, JsonValue> {
     return { ...this.registrationFile.metadata };
   }
 
@@ -766,4 +824,3 @@ export class Agent {
     throw new Error('Could not extract agent ID from transaction receipt - no Registered or Transfer event found');
   }
 }
-

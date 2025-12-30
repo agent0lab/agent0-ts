@@ -26,3 +26,5 @@ export { AgentIndexer } from './core/indexer.js';
 // Export contract definitions
 export * from './core/contracts.js';
 
+// Adapter interfaces
+export * from './core/adapters.js';

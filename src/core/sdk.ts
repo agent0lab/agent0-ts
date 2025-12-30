@@ -12,17 +12,26 @@ import type {
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces.js';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types.js';
 import type { AgentId, ChainId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
 import { formatAgentId, parseAgentId } from '../utils/id-format.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
-import { Web3Client, type TransactionOptions } from './web3-client.js';
+import { Web3Client } from './web3-client.js';
 import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
 import { SubgraphClient } from './subgraph-client.js';
 import { FeedbackManager } from './feedback-manager.js';
 import { AgentIndexer } from './indexer.js';
 import { Agent } from './agent.js';
+import {
+  AgentAdapterRegistry,
+  type AgentAdapterId,
+  type AgentChatAdapter,
+  type AgentSearchAdapter,
+  type AgentSearchOptions,
+  type AgentSearchResult,
+  type AgentVectorSearchRequest,
+  type AgentVectorSearchResponse,
+} from './adapters.js';
 import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
@@ -30,6 +39,7 @@ import {
   DEFAULT_REGISTRIES,
   DEFAULT_SUBGRAPH_URLS,
 } from './contracts.js';
+
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -55,6 +65,7 @@ export class SDK {
   private _subgraphClient?: SubgraphClient;
   private readonly _feedbackManager: FeedbackManager;
   private readonly _indexer: AgentIndexer;
+  private readonly _adapters = new AgentAdapterRegistry();
   private _identityRegistry?: ethers.Contract;
   private _reputationRegistry?: ethers.Contract;
   private _validationRegistry?: ethers.Contract;
@@ -166,6 +177,73 @@ export class SDK {
    */
   registries(): Record<string, Address> {
     return { ...this._registries };
+  }
+
+  registerSearchAdapter(adapter: AgentSearchAdapter): void {
+    this._adapters.registerSearchAdapter(adapter);
+  }
+
+  registerChatAdapter(adapter: AgentChatAdapter): void {
+    this._adapters.registerChatAdapter(adapter);
+  }
+
+  getSearchAdapter(id: AgentAdapterId): AgentSearchAdapter | undefined {
+    return this._adapters.getSearchAdapter(id);
+  }
+
+  getChatAdapter(id: AgentAdapterId): AgentChatAdapter | undefined {
+    return this._adapters.getChatAdapter(id);
+  }
+
+  listSearchAdapters(): AgentAdapterId[] {
+    return this._adapters.listSearchAdapters();
+  }
+
+  listChatAdapters(): AgentAdapterId[] {
+    return this._adapters.listChatAdapters();
+  }
+
+  private resolveSearchAdapterId(adapterId?: AgentAdapterId): AgentAdapterId {
+    const resolved = adapterId ?? this.listSearchAdapters()[0];
+    if (!resolved) {
+      throw new Error('No search adapters registered');
+    }
+    return resolved;
+  }
+
+  private resolveChatAdapterId(adapterId?: AgentAdapterId): AgentAdapterId {
+    const resolved = adapterId ?? this.listChatAdapters()[0];
+    if (!resolved) {
+      throw new Error('No chat adapters registered');
+    }
+    return resolved;
+  }
+
+  async search(
+    options: AgentSearchOptions,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentSearchResult> {
+    const resolvedId = this.resolveSearchAdapterId(adapterId);
+    const adapter = this.getSearchAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No search adapter registered for "${resolvedId}"`);
+    }
+    return adapter.search(options);
+  }
+
+  async vectorSearch(
+    request: AgentVectorSearchRequest,
+    adapterId?: AgentAdapterId,
+  ): Promise<AgentVectorSearchResponse> {
+    const resolvedId = this.resolveSearchAdapterId(adapterId);
+    const adapter = this.getSearchAdapter(resolvedId);
+    if (!adapter) {
+      throw new Error(`No search adapter registered for "${resolvedId}"`);
+    }
+    if (!adapter.vectorSearch) {
+      throw new Error(`Search adapter "${resolvedId}" does not support vectorSearch`);
+    }
+    return adapter.vectorSearch(request);
   }
 
   /**
@@ -792,4 +870,3 @@ export class SDK {
     return this._subgraphClient;
   }
 }
-
