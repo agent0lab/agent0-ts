@@ -1,9 +1,8 @@
 import type {
   ChatConversationHandle,
-  CreateSessionResponse,
   CreateSessionRequestPayload,
+  CreateSessionResponse,
   SearchParams,
-  SearchResult,
   StartChatOptions,
   SendMessageRequestPayload,
   SendMessageResponse,
@@ -12,7 +11,6 @@ import type {
 } from '@hol-org/rb-client';
 import type {
   AgentChatConversationHandle,
-  AgentChatCreateSessionResponse,
   AgentChatSendMessageResponse,
   AgentSearchResult,
   AgentVectorSearchResponse,
@@ -29,22 +27,46 @@ export interface RegistryBrokerClientChatApi {
       payload: SendMessageRequestPayload,
     ) => Promise<SendMessageResponse>;
   };
-  search: (params?: SearchParams) => Promise<SearchResult>;
   vectorSearch: (request: VectorSearchRequest) => Promise<VectorSearchResponse>;
 }
 
 export const isRegistryBrokerClientChatApi = (
   client: RegistryBrokerClient,
 ): client is RegistryBrokerClient & RegistryBrokerClientChatApi =>
-  'search' in client && 'vectorSearch' in client && 'chat' in client;
+  'vectorSearch' in client && 'chat' in client;
 
-export const mapSearchResult = (result: SearchResult): AgentSearchResult => ({
+const extractNativeIdFromUaid = (uaid: string): string | null => {
+  const match = /(?:^|;)nativeId=([^;]+)/.exec(uaid);
+  const candidate = match?.[1]?.trim() ?? '';
+  return candidate.length > 0 ? candidate : null;
+};
+
+export const mapSearchResult = (result: {
+  hits?: Array<{
+    id: string;
+    uaid?: string;
+    originalId?: string;
+    registry?: string;
+    name?: string;
+    description?: string | null;
+  }>;
+  total?: number;
+}): AgentSearchResult => ({
   hits: (result.hits ?? []).map((hit) => ({
-    uaid: hit.uaid,
-    id: hit.id,
+    id:
+      typeof hit.originalId === 'string'
+        ? hit.originalId
+        : (() => {
+          const uaid =
+            typeof hit.uaid === 'string' && hit.uaid.trim().length > 0
+              ? hit.uaid.trim()
+              : null;
+          const nativeId = uaid ? extractNativeIdFromUaid(uaid) : null;
+          return nativeId ?? hit.id;
+        })(),
     registry: hit.registry,
     name: hit.name,
-    description: hit.description,
+    description: hit.description ?? undefined,
   })),
   total: result.total,
 });
@@ -55,8 +77,18 @@ export const mapVectorSearchResponse = (
   hits: (response.hits ?? []).map((hit) => ({
     agent: hit.agent
       ? {
-          uaid: hit.agent.uaid,
-          id: hit.agent.id,
+        id:
+          typeof hit.agent.originalId === 'string'
+            ? hit.agent.originalId
+            : (() => {
+                const uaid =
+                  typeof hit.agent.uaid === 'string' &&
+                  hit.agent.uaid.trim().length > 0
+                    ? hit.agent.uaid.trim()
+                    : null;
+                const nativeId = uaid ? extractNativeIdFromUaid(uaid) : null;
+                return nativeId ?? hit.agent.id;
+              })(),
           registry: hit.agent.registry,
           name: hit.agent.name,
           description: hit.agent.description,
@@ -67,12 +99,6 @@ export const mapVectorSearchResponse = (
   })),
   total: response.total,
   took: response.took,
-});
-
-export const mapCreateSessionResponse = (
-  response: CreateSessionResponse,
-): AgentChatCreateSessionResponse => ({
-  sessionId: response.sessionId,
 });
 
 export const mapSendMessageResponse = (
@@ -97,20 +123,21 @@ export const mapConversationHandle = (
       message: options.message,
       plaintext,
       auth: options.auth,
+      streaming: options.streaming,
     });
     return mapSendMessageResponse(response);
   },
 });
 
-export const resolveChatTarget = (
-  uaid: string | undefined,
-  agentUrl: string | undefined,
-): { uaid: string } | { agentUrl: string } => {
-  const trimmedUaid = uaid?.trim();
+export const resolveChatTarget = (options: {
+  uaid?: string;
+  agentUrl?: string;
+}): { uaid: string } | { agentUrl: string } => {
+  const trimmedUaid = options.uaid?.trim();
   if (trimmedUaid) {
     return { uaid: trimmedUaid };
   }
-  const trimmedUrl = agentUrl?.trim();
+  const trimmedUrl = options.agentUrl?.trim();
   if (trimmedUrl) {
     return { agentUrl: trimmedUrl };
   }

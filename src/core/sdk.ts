@@ -12,12 +12,11 @@ import type {
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces.js';
-import type { AgentRegistrationFile as SubgraphRegistrationFile } from '../models/generated/subgraph-types.js';
 import type { AgentId, ChainId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
 import { formatAgentId, parseAgentId } from '../utils/id-format.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
-import { Web3Client, type TransactionOptions } from './web3-client.js';
+import { Web3Client } from './web3-client.js';
 import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
 import { SubgraphClient } from './subgraph-client.js';
 import { FeedbackManager } from './feedback-manager.js';
@@ -27,13 +26,6 @@ import {
   AgentAdapterRegistry,
   type AgentAdapterId,
   type AgentChatAdapter,
-  type AgentChatRequest,
-  type AgentChatResult,
-  type AgentChatCreateSessionRequest,
-  type AgentChatCreateSessionResponse,
-  type AgentChatSendMessageRequest,
-  type AgentChatSendMessageResponse,
-  type AgentChatStartRequest,
   type AgentSearchAdapter,
   type AgentSearchOptions,
   type AgentSearchResult,
@@ -252,117 +244,6 @@ export class SDK {
       throw new Error(`Search adapter "${resolvedId}" does not support vectorSearch`);
     }
     return adapter.vectorSearch(request);
-  }
-
-  async createChatSession(
-    request: AgentChatCreateSessionRequest,
-    adapterId?: AgentAdapterId,
-  ): Promise<AgentChatCreateSessionResponse> {
-    const resolvedId = this.resolveChatAdapterId(adapterId);
-    const adapter = this.getChatAdapter(resolvedId);
-    if (!adapter) {
-      throw new Error(`No chat adapter registered for "${resolvedId}"`);
-    }
-    return adapter.createSession(request);
-  }
-
-  async sendChatMessage(
-    request: AgentChatSendMessageRequest,
-    adapterId?: AgentAdapterId,
-  ): Promise<AgentChatSendMessageResponse> {
-    const resolvedId = this.resolveChatAdapterId(adapterId);
-    const adapter = this.getChatAdapter(resolvedId);
-    if (!adapter) {
-      throw new Error(`No chat adapter registered for "${resolvedId}"`);
-    }
-    return adapter.sendMessage(request);
-  }
-
-  async startChat(
-    request: AgentChatStartRequest,
-    adapterId?: AgentAdapterId,
-  ) {
-    const resolvedId = this.resolveChatAdapterId(adapterId);
-    const adapter = this.getChatAdapter(resolvedId);
-    if (!adapter) {
-      throw new Error(`No chat adapter registered for "${resolvedId}"`);
-    }
-    if (!adapter.startChat) {
-      throw new Error(`Chat adapter "${resolvedId}" does not support startChat`);
-    }
-    return adapter.startChat(request);
-  }
-
-  async chat(
-    options: AgentChatRequest,
-    adapterId?: AgentAdapterId,
-  ): Promise<AgentChatResult> {
-    const adapterIdResolved = this.resolveChatAdapterId(adapterId);
-    const uaid = options.uaid.trim();
-    if (!uaid) {
-      throw new Error('uaid is required for chat');
-    }
-    const message = options.message.trim();
-    if (!message) {
-      throw new Error('message is required for chat');
-    }
-
-    const adapter = this.getChatAdapter(adapterIdResolved);
-    if (!adapter) {
-      throw new Error(`No chat adapter registered for "${adapterIdResolved}"`);
-    }
-
-    const preference = options.encryption?.preference ?? 'preferred';
-
-    if (preference !== 'disabled') {
-      if (!adapter.startChat) {
-        if (preference === 'required') {
-          throw new Error(
-            `Chat adapter "${adapterIdResolved}" does not support startChat`,
-          );
-        }
-      } else {
-        try {
-          const handle = await adapter.startChat({
-            uaid,
-            historyTtlSeconds: options.historyTtlSeconds,
-            auth: options.auth,
-            senderUaid: options.senderUaid,
-            encryption: options.encryption,
-          });
-          const response = await handle.send({
-            message,
-            plaintext: message,
-            auth: options.auth,
-          });
-          return { sessionId: handle.sessionId, response, mode: handle.mode };
-        } catch (error) {
-          if (preference === 'required') {
-            throw error;
-          }
-        }
-      }
-    }
-
-    const session = await adapter.createSession({
-      uaid,
-      historyTtlSeconds: options.historyTtlSeconds,
-      auth: options.auth,
-      senderUaid: options.senderUaid,
-    });
-    const sessionId = session.sessionId ?? '';
-    if (!sessionId) {
-      throw new Error(
-        `Chat adapter "${adapterIdResolved}" did not return a sessionId`,
-      );
-    }
-    const response = await adapter.sendMessage({
-      sessionId,
-      uaid,
-      message,
-      auth: options.auth,
-    });
-    return { sessionId, response, mode: 'plaintext' };
   }
 
   /**

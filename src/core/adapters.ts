@@ -1,7 +1,8 @@
+import type { Agent } from './agent.js';
+
 export type AgentAdapterId = string;
 
 export interface AgentSearchHit {
-  uaid?: string;
   id?: string;
   registry?: string;
   name?: string;
@@ -59,26 +60,6 @@ export interface AgentChatAuthConfig {
   headers?: Record<string, string>;
 }
 
-export interface AgentChatCreateSessionRequest {
-  uaid?: string;
-  agentUrl?: string;
-  historyTtlSeconds?: number;
-  auth?: AgentChatAuthConfig;
-  senderUaid?: string;
-}
-
-export interface AgentChatCreateSessionResponse {
-  sessionId?: string;
-}
-
-export interface AgentChatSendMessageRequest {
-  sessionId: string;
-  message: string;
-  uaid?: string;
-  auth?: AgentChatAuthConfig;
-  streaming?: boolean;
-}
-
 export interface AgentChatSendMessageResponse {
   message?: string;
   content?: string;
@@ -89,7 +70,12 @@ export interface AgentChatEncryptionOptions {
   preference?: 'preferred' | 'required' | 'disabled';
 }
 
-export interface AgentChatStartRequest extends AgentChatCreateSessionRequest {
+export interface AgentChatOpenConversationRequest {
+  agent: Agent;
+  sessionId?: string;
+  historyTtlSeconds?: number;
+  auth?: AgentChatAuthConfig;
+  senderUaid?: string;
   encryption?: AgentChatEncryptionOptions;
 }
 
@@ -100,16 +86,8 @@ export interface AgentChatConversationHandle {
     message?: string;
     plaintext?: string;
     auth?: AgentChatAuthConfig;
+    streaming?: boolean;
   }) => Promise<AgentChatSendMessageResponse>;
-}
-
-export interface AgentChatRequest {
-  uaid: string;
-  message: string;
-  historyTtlSeconds?: number;
-  auth?: AgentChatAuthConfig;
-  senderUaid?: string;
-  encryption?: AgentChatEncryptionOptions;
 }
 
 export interface AgentChatResult {
@@ -126,13 +104,9 @@ export interface AgentSearchAdapter {
 
 export interface AgentChatAdapter {
   readonly id: AgentAdapterId;
-  createSession: (
-    request: AgentChatCreateSessionRequest,
-  ) => Promise<AgentChatCreateSessionResponse>;
-  sendMessage: (
-    request: AgentChatSendMessageRequest,
-  ) => Promise<AgentChatSendMessageResponse>;
-  startChat?: (request: AgentChatStartRequest) => Promise<AgentChatConversationHandle>;
+  message: (
+    request: AgentChatOpenConversationRequest,
+  ) => Promise<AgentChatConversationHandle>;
 }
 
 export interface AgentAdapterHost {

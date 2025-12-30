@@ -23,7 +23,8 @@ const adapters = (() => {
 })();
 const searchQuery =
   process.env.ERC8004_AGENT_QUERY?.trim() || 'defillama-verifiable-agent';
-const targetUaid = process.env.ERC8004_AGENT_UAID?.trim() || '';
+const targetAgentId = process.env.ERC8004_AGENT_ID?.trim() || '';
+const targetAgentUrl = process.env.ERC8004_AGENT_URL?.trim() || '';
 
 const extractReply = (payload: { content?: string; message?: string }): string =>
   payload.content?.trim() || payload.message?.trim() || '';
@@ -38,8 +39,27 @@ async function main(): Promise<void> {
   sdk.registerChatAdapter(new HashgraphRegistryBrokerChatAdapter({ apiKey, baseUrl }));
 
   console.log(`Using Registry Broker baseUrl: ${baseUrl}`);
+
+  if (targetAgentUrl) {
+    const agent = await sdk
+      .createAgent('Remote Agent', 'Remote Agent handle')
+      .setA2A(targetAgentUrl, '0.30', false);
+    const chat = await agent.message('Give a one-sentence summary of your capabilities.', {
+      historyTtlSeconds: 300,
+      encryption: { preference: 'disabled' },
+    });
+
+    console.log(`Session established: ${chat.sessionId}`);
+
+    const firstReply = extractReply(chat.response);
+    console.log('Agent reply:');
+    console.log(firstReply || '[empty response]');
+
+    return;
+  }
+
   console.log(`Searching registry "${registry}" for agents (query="${searchQuery || '[empty]'}")`);
-  const result = await sdk.search({
+  let result = await sdk.search({
     query: searchQuery,
     registry,
     adapters,
@@ -48,27 +68,33 @@ async function main(): Promise<void> {
   });
 
   if (!result?.hits?.length) {
-    throw new Error('No ERC-8004 agents found for this query');
+    console.log('No agents found for this query; falling back to most recent agents.');
+    result = await sdk.search({
+      registry,
+      adapters,
+      limit: 200,
+      sortBy: 'most-recent',
+    });
+  }
+
+  if (!result?.hits?.length) {
+    throw new Error('No ERC-8004 agents found in this registry');
   }
 
   console.log(`Found ${result.hits.length} candidates`);
 
-  const selectedHit =
-    (targetUaid ? result.hits.find((hit) => hit.uaid === targetUaid) : null) ??
-    result.hits.find((hit) => (hit.uaid ?? '').includes(';proto=mcp;')) ??
-    result.hits.find((hit) => (hit.uaid ?? '').includes(';proto=a2a;')) ??
-    result.hits[0];
-
-  const selectedUaid = selectedHit?.uaid?.trim() ?? '';
-  if (!selectedUaid) {
-    throw new Error('Selected ERC-8004 agent is missing a UAID');
+  if (!targetAgentId) {
+    console.log('Set ERC8004_AGENT_ID to open a chat session. Top results:');
+    result.hits.slice(0, 5).forEach((hit) => {
+      console.log(`- ${(hit.name ?? '').trim() || '[no name]'} (${hit.id ?? '[no id]'})`);
+    });
+    return;
   }
 
-  console.log(`Opening session with UAID: ${selectedUaid}`);
-  const chat = await sdk.chat({
-    uaid: selectedUaid,
+  console.log(`Loading agent: ${targetAgentId}`);
+  const agent = await sdk.loadAgent(targetAgentId);
+  const chat = await agent.message('Give a one-sentence summary of your capabilities.', {
     historyTtlSeconds: 300,
-    message: 'Give a one-sentence summary of your capabilities.',
     encryption: { preference: 'disabled' },
   });
 
@@ -78,13 +104,15 @@ async function main(): Promise<void> {
   console.log('Agent reply:');
   console.log(firstReply || '[empty response]');
 
-  const followUp = await sdk.sendChatMessage({
-    sessionId: chat.sessionId,
-    uaid: selectedUaid,
-    message: 'Great. Please share one concrete task you can perform and what info you need from me.',
-  });
+  const followUp = await agent.message(
+    'Great. Please share one concrete task you can perform and what info you need from me.',
+    {
+      sessionId: chat.sessionId,
+      encryption: { preference: 'disabled' },
+    },
+  );
 
-  const secondReply = extractReply(followUp);
+  const secondReply = extractReply(followUp.response);
   console.log('\nFollow-up reply:');
   console.log(secondReply || '[empty response]');
 }
