@@ -2,7 +2,7 @@
  * Main SDK class for Agent0
  */
 
-import { ethers } from 'ethers';
+import { ethers, type BrowserProvider, type Provider } from 'ethers';
 import type {
   AgentSummary,
   Feedback,
@@ -17,7 +17,7 @@ import type { AgentId, ChainId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
 import { formatAgentId, parseAgentId } from '../utils/id-format.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
-import { Web3Client, type TransactionOptions } from './web3-client.js';
+import { Web3Client, type TransactionOptions, type Web3ClientOptions } from './web3-client.js';
 import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
 import { SubgraphClient } from './subgraph-client.js';
 import { FeedbackManager } from './feedback-manager.js';
@@ -31,16 +31,63 @@ import {
   DEFAULT_SUBGRAPH_URLS,
 } from './contracts.js';
 
+/**
+ * SDK configuration options
+ * 
+ * Backend usage (with private key):
+ * @example
+ * const sdk = new SDK({
+ *   chainId: 11155111,
+ *   rpcUrl: 'https://sepolia.infura.io/v3/YOUR_KEY',
+ *   signer: process.env.PRIVATE_KEY,
+ * });
+ * 
+ * Frontend usage (with browser wallet):
+ * @example
+ * import { connectBrowserWallet } from '@agent0/sdk';
+ * 
+ * const { provider, signer, chainId } = await connectBrowserWallet();
+ * const sdk = new SDK({
+ *   chainId,
+ *   provider,
+ *   signer,
+ * });
+ */
 export interface SDKConfig {
+  /**
+   * Chain ID for the network
+   */
   chainId: ChainId;
-  rpcUrl: string;
-  signer?: string | ethers.Wallet | ethers.Signer; // Private key string OR ethers Wallet/Signer (optional for read-only operations)
+  
+  /**
+   * RPC URL for the network
+   * Required for backend usage, optional for frontend when provider is supplied
+   */
+  rpcUrl?: string;
+  
+  /**
+   * External provider (BrowserProvider for frontend, JsonRpcProvider for backend)
+   * When provided, rpcUrl becomes optional
+   */
+  provider?: Provider | BrowserProvider;
+  
+  /**
+   * Private key string, ethers Wallet, or Signer for signing transactions
+   * Optional for read-only operations
+   */
+  signer?: string | ethers.Wallet | ethers.Signer;
+  
+  /**
+   * Override default registry addresses per chain
+   */
   registryOverrides?: Record<ChainId, Record<string, Address>>;
+  
   // IPFS configuration
   ipfs?: 'node' | 'filecoinPin' | 'pinata';
   ipfsNodeUrl?: string;
   filecoinPrivateKey?: string;
   pinataJwt?: string;
+  
   // Subgraph configuration
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
@@ -65,8 +112,18 @@ export class SDK {
   constructor(config: SDKConfig) {
     this._chainId = config.chainId;
 
-    // Initialize Web3 client
-    this._web3Client = new Web3Client(config.rpcUrl, config.signer);
+    // Validate configuration
+    if (!config.rpcUrl && !config.provider && !config.signer) {
+      throw new Error('Either rpcUrl, provider, or a connected signer must be specified');
+    }
+
+    // Initialize Web3 client with options object for better frontend support
+    const web3Options: Web3ClientOptions = {
+      rpcUrl: config.rpcUrl,
+      provider: config.provider,
+      signer: config.signer,
+    };
+    this._web3Client = new Web3Client(web3Options);
     // Note: chainId will be fetched asynchronously on first use
 
     // Resolve registry addresses

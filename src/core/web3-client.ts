@@ -8,7 +8,9 @@ import {
   type Wallet,
   type Signer,
   type JsonRpcProvider,
+  type BrowserProvider,
   type InterfaceAbi,
+  type Provider,
 } from 'ethers';
 
 export interface TransactionOptions {
@@ -19,51 +21,117 @@ export interface TransactionOptions {
 }
 
 /**
+ * Options for Web3Client initialization
+ */
+export interface Web3ClientOptions {
+  /**
+   * RPC endpoint URL (required for backend, optional for frontend with external provider)
+   */
+  rpcUrl?: string;
+  /**
+   * Private key string, ethers Wallet, or Signer for signing transactions
+   */
+  signer?: string | Wallet | Signer;
+  /**
+   * External provider (BrowserProvider for frontend, JsonRpcProvider for backend)
+   * When provided with a signer that has its own provider, this is optional
+   */
+  provider?: Provider | BrowserProvider | JsonRpcProvider;
+}
+
+/**
  * Web3 client for interacting with ERC-8004 smart contracts
+ * Supports both backend (with private key) and frontend (with browser wallet) usage
  */
 export class Web3Client {
-  public readonly provider: JsonRpcProvider;
+  public readonly provider: Provider | BrowserProvider | JsonRpcProvider;
   public readonly signer?: Wallet | Signer;
   public chainId: bigint;
 
   /**
    * Initialize Web3 client
-   * @param rpcUrl - RPC endpoint URL
-   * @param signerOrKey - Optional private key string OR ethers Wallet/Signer for signing transactions
+   * 
+   * Backend usage:
+   * @example
+   * const client = new Web3Client('https://rpc.example.com', privateKey);
+   * 
+   * Frontend usage:
+   * @example
+   * const browserProvider = new ethers.BrowserProvider(window.ethereum);
+   * const signer = await browserProvider.getSigner();
+   * const client = new Web3Client({ provider: browserProvider, signer });
+   * 
+   * @param rpcUrlOrOptions - RPC endpoint URL (backend) OR Web3ClientOptions object (frontend/advanced)
+   * @param signerOrKey - Optional private key string OR ethers Wallet/Signer for signing transactions (only used when first param is string)
    */
-  constructor(rpcUrl: string, signerOrKey?: string | Wallet | Signer) {
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+  constructor(rpcUrlOrOptions: string | Web3ClientOptions, signerOrKey?: string | Wallet | Signer) {
+    // Handle both legacy (string, signer) and new options-based signatures
+    let options: Web3ClientOptions;
     
-    if (signerOrKey) {
-      if (typeof signerOrKey === 'string') {
+    if (typeof rpcUrlOrOptions === 'string') {
+      // Legacy signature: (rpcUrl, signer?)
+      options = {
+        rpcUrl: rpcUrlOrOptions,
+        signer: signerOrKey,
+      };
+    } else {
+      // New options-based signature
+      options = rpcUrlOrOptions;
+    }
+
+    // Determine provider
+    if (options.provider) {
+      // Use provided external provider (frontend mode)
+      this.provider = options.provider;
+    } else if (options.rpcUrl) {
+      // Create JsonRpcProvider from RPC URL (backend mode)
+      this.provider = new ethers.JsonRpcProvider(options.rpcUrl);
+    } else if (options.signer && (options.signer as any).provider) {
+      // Extract provider from signer if available
+      this.provider = (options.signer as any).provider;
+    } else {
+      throw new Error('Either rpcUrl or provider must be specified');
+    }
+
+    // Handle signer setup
+    if (options.signer) {
+      if (typeof options.signer === 'string') {
         // Private key string - create a new Wallet
-        // Validate that it's not an empty string
-        if (signerOrKey.trim() === '') {
+        if (options.signer.trim() === '') {
           throw new Error('Private key cannot be empty');
         }
-        this.signer = new ethers.Wallet(signerOrKey, this.provider);
+        // Need a JsonRpcProvider for Wallet, not BrowserProvider
+        if (this.provider instanceof ethers.JsonRpcProvider) {
+          this.signer = new ethers.Wallet(options.signer, this.provider);
+        } else {
+          throw new Error('Private key signer requires JsonRpcProvider. Use ethers.Wallet with BrowserProvider.');
+        }
       } else {
-        // Already a Wallet or Signer - connect to provider if needed
-        const currentProvider = (signerOrKey as any).provider;
-        if (currentProvider && currentProvider === this.provider) {
+        // Already a Wallet or Signer
+        const signerProvider = (options.signer as any).provider;
+        
+        if (options.provider) {
+          // Frontend mode: Keep signer with its own provider (don't reconnect)
+          // This preserves the browser wallet connection
+          this.signer = options.signer;
+        } else if (signerProvider && signerProvider === this.provider) {
           // Already connected to the same provider
-          this.signer = signerOrKey;
-        } else if (typeof signerOrKey.connect === 'function') {
-          // Connect to provider
+          this.signer = options.signer;
+        } else if (typeof options.signer.connect === 'function' && this.provider instanceof ethers.JsonRpcProvider) {
+          // Backend mode: Connect signer to SDK's provider
           try {
-            this.signer = signerOrKey.connect(this.provider);
+            this.signer = options.signer.connect(this.provider);
           } catch (error) {
             throw new Error(`Failed to connect signer to provider: ${error instanceof Error ? error.message : String(error)}`);
           }
         } else {
-          // Signer without connect method - use as-is
-          this.signer = signerOrKey;
+          // Signer without connect method or non-JsonRpcProvider - use as-is
+          this.signer = options.signer;
         }
       }
     }
 
-    // Get chain ID asynchronously (will be set in async initialization)
-    // For now, we'll fetch it when needed
+    // Chain ID will be fetched asynchronously
     this.chainId = 0n;
   }
 

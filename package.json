@@ -1,14 +1,12 @@
 {
-  "name": "agent0-sdk",
-  "version": "0.31.0",
+  "name": "@kolhapuresatyajeet/agent0-sdk",
+  "version": "0.1.0-beta.1",
   "description": "TypeScript SDK for agent portability, discovery and trust based on ERC-8004",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "codegen": "graphql-codegen --config codegen.yml",
-    "postinstall": "npm run codegen",
-    "prebuild": "npm run codegen",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "test": "jest",

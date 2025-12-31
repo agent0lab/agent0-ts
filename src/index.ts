@@ -14,7 +14,7 @@ export { SDK } from './core/sdk.js';
 export type { SDKConfig } from './core/sdk.js';
 export { Agent } from './core/agent.js';
 export { Web3Client } from './core/web3-client.js';
-export type { TransactionOptions } from './core/web3-client.js';
+export type { TransactionOptions, Web3ClientOptions } from './core/web3-client.js';
 export { IPFSClient } from './core/ipfs-client.js';
 export type { IPFSClientConfig } from './core/ipfs-client.js';
 export { SubgraphClient } from './core/subgraph-client.js';

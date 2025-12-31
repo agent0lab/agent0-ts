@@ -384,7 +384,9 @@ export class IPFSClient {
     // Build registrations array
     const registrations: Array<Record<string, unknown>> = [];
     if (registrationFile.agentId) {
-      const [, , tokenId] = registrationFile.agentId.split(':');
+      // agentId format is "chainId:tokenId" (e.g., "11155111:123")
+      const parts = registrationFile.agentId.split(':');
+      const tokenId = parts[parts.length - 1]; // Get the last part (tokenId)
       const agentRegistry = chainId && identityRegistryAddress
         ? `eip155:${chainId}:${identityRegistryAddress}`
         : `eip155:1:{identityRegistry}`;
