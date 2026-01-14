@@ -73,8 +73,10 @@ async function main() {
     {
       query: 'agent',
     },
-    ['updatedAt:desc'],
-    10
+    {
+      sort: ['updatedAt:desc'],
+      pageSize: 10,
+    }
   );
   console.log(`   Found ${sortedResults.items.length} agents`);
   if (sortedResults.items.length > 0) {
@@ -95,8 +97,9 @@ async function main() {
     {
       query: 'agent',
     },
-    undefined,
-    5
+    {
+      pageSize: 5,
+    }
   );
   console.log(`   First page: ${firstPage.items.length} agents`);
   console.log(`   Total available: ${firstPage.meta?.totalResults || 'unknown'}`);
@@ -108,9 +111,10 @@ async function main() {
       {
         query: 'agent',
       },
-      undefined,
-      5,
-      firstPage.nextCursor
+      {
+        pageSize: 5,
+        cursor: firstPage.nextCursor,
+      }
     );
     console.log(`   Second page: ${secondPage.items.length} agents`);
   }
