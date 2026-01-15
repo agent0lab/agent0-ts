@@ -129,6 +129,7 @@ export interface SearchParams {
   chains?: number[] | 'all'; // ChainId[] or 'all' to search all configured chains
   name?: string; // case-insensitive substring
   description?: string; // semantic; vector distance < threshold
+  query?: string; // Natural language query for semantic search (enables semantic search when provided)
   owners?: Address[];
   operators?: Address[];
   mcp?: boolean;
@@ -143,6 +144,7 @@ export interface SearchParams {
   mcpResources?: string[];
   active?: boolean;
   x402support?: boolean;
+  minScore?: number; // Minimum similarity score (0.0-1.0) for semantic search (only used when query is provided)
 }
 
 /**

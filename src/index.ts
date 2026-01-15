@@ -26,3 +26,14 @@ export { AgentIndexer } from './core/indexer.js';
 // Export contract definitions
 export * from './core/contracts.js';
 
+// Export semantic search error classes
+export {
+  SemanticSearchError,
+  RateLimitError,
+  ValidationError,
+  BadRequestError,
+  InternalServerError,
+  NotFoundError,
+  NetworkError,
+} from './core/semantic-search-errors.js';
+
