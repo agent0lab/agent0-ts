@@ -60,6 +60,7 @@ export class ViemChainClient implements ChainClient {
   public readonly rpcUrl: string;
 
   private readonly publicClient: ReturnType<typeof createPublicClient>;
+  private readonly receiptClient?: ReturnType<typeof createPublicClient>;
   private readonly walletClient?: ReturnType<typeof createWalletClient>;
   private readonly account?: PrivateKeyAccount;
 
@@ -90,6 +91,14 @@ export class ViemChainClient implements ChainClient {
         transport: http(this.rpcUrl),
       });
     } else if (config.walletProvider) {
+      // When using a browser wallet, transactions may be submitted via the wallet's RPC backend.
+      // Some public RPCs can lag or be out of sync, which can cause receipt polling timeouts.
+      // We keep `publicClient` on rpcUrl for normal reads, but use this receiptClient as a fallback
+      // for `waitForTransaction` when the rpcUrl path times out.
+      this.receiptClient = createPublicClient({
+        chain: viemChain,
+        transport: custom(config.walletProvider),
+      });
       this.walletClient = createWalletClient({
         chain: viemChain,
         transport: custom(config.walletProvider),
@@ -229,10 +238,23 @@ export class ViemChainClient implements ChainClient {
   }
 
   async waitForTransaction(args: { hash: `0x${string}`; timeoutMs?: number }): Promise<ChainReceipt> {
-    const receipt = await this.publicClient.waitForTransactionReceipt({
-      hash: args.hash as Hex,
-      timeout: args.timeoutMs,
-    });
+    let receipt: any;
+    try {
+      receipt = await this.publicClient.waitForTransactionReceipt({
+        hash: args.hash as Hex,
+        timeout: args.timeoutMs,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (this.receiptClient && message.toLowerCase().includes('timed out')) {
+        receipt = await this.receiptClient.waitForTransactionReceipt({
+          hash: args.hash as Hex,
+          timeout: args.timeoutMs,
+        });
+      } else {
+        throw err;
+      }
+    }
 
     const logs: ChainLog[] = (receipt.logs || []).map((l: any) => ({
       address: toSdkAddress(l.address),
