@@ -39,7 +39,7 @@ async function main() {
 
   // 1. Prepare an OFF-CHAIN feedback file (optional).
   // Only use this if you have rich fields (text/context/capability/etc).
-  // On-chain fields (score/tag1/tag2/endpoint) are passed directly to giveFeedback(...).
+  // On-chain fields (value/tag1/tag2/endpoint) are passed directly to giveFeedback(...).
   const feedbackFile = sdk.prepareFeedbackFile({
     text: undefined,
     capability: 'tools',
@@ -67,7 +67,7 @@ async function main() {
   console.log(
     `Feedback submitted with ID: ${formatFeedbackId(feedback.id[0], feedback.id[1], feedback.id[2])}`
   );
-  console.log(`Score: ${feedback.score}, Tags: ${feedback.tags}`);
+  console.log(`Value: ${feedback.value}, Tags: ${feedback.tags}`);
 
   // 3. Search for feedback
   console.log('\nSearching for feedback...');
@@ -78,7 +78,7 @@ async function main() {
       capabilities: ['tools'],
       skills: ['financial_analysis'],
     },
-    { minScore: 70, maxScore: 100 }
+    { minValue: 70, maxValue: 100 }
   );
   console.log(`Found ${results.length} feedback entries`);
 
@@ -102,7 +102,7 @@ async function main() {
   // 5. Get reputation summary
   console.log('\nGetting reputation summary...');
   const summary = await sdk.getReputationSummary(agentId, 'data_analyst');
-  console.log(`Reputation: ${summary.averageScore}/100 from ${summary.count} reviews`);
+  console.log(`Reputation: ${summary.averageValue} from ${summary.count} reviews`);
 }
 
 main().catch(console.error);

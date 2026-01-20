@@ -193,7 +193,10 @@ export class ViemChainClient implements ChainClient {
     }
 
     // Ensure account exists / is connected
-    const account = (this.account?.address ?? (await this.ensureAddress())) as unknown as ViemAddress;
+    // IMPORTANT:
+    // - If we have a local private key account, pass the ACCOUNT OBJECT so viem signs locally and uses eth_sendRawTransaction.
+    // - If we're on a browser wallet, pass the address so the wallet signs and uses eth_sendTransaction (via the wallet provider).
+    const accountForViem = (this.account ?? ((await this.ensureAddress()) as unknown as ViemAddress)) as any;
 
     // Browser safety: if wallet is on the wrong chain, fail with a clear message.
     try {
@@ -213,7 +216,7 @@ export class ViemChainClient implements ChainClient {
       abi: args.abi as any,
       functionName: args.functionName as any,
       args: (args.args ?? []) as any,
-      account,
+      account: accountForViem,
       ...toViemTxOptions(args.options),
     })) as Hex;
     return hash as `0x${string}`;
@@ -227,11 +230,11 @@ export class ViemChainClient implements ChainClient {
     if (!this.walletClient) {
       throw new Error('No signer available. Configure walletProvider (browser) or privateKey (server).');
     }
-    const account = (this.account?.address ?? (await this.ensureAddress())) as unknown as ViemAddress;
+    const accountForViem = (this.account ?? ((await this.ensureAddress()) as unknown as ViemAddress)) as any;
     const hash = (await (this.walletClient as any).sendTransaction({
       to: toViemAddress(args.to),
       data: args.data as Hex,
-      account,
+      account: accountForViem,
       ...toViemTxOptions(args.options),
     })) as Hex;
     return hash as `0x${string}`;

@@ -108,7 +108,7 @@ describe('Agent Search and Discovery', () => {
   });
 
   it('should search agents by reputation', async () => {
-    const results = await sdk.searchAgentsByReputation({ minAverageScore: 80 });
+    const results = await sdk.searchAgentsByReputation({ minAverageValue: 80 });
     expect(results.items.length).toBeGreaterThanOrEqual(0);
   });
 

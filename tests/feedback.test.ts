@@ -5,7 +5,7 @@
  * Flow:
  * 1. Create and register a new agent (so the test doesn't rely on a hardcoded agentId)
  * 2. Client submits one or more feedback entries
- * 3. Verify feedback data consistency (score, tags, capability, skill)
+ * 3. Verify feedback data consistency (value, tags, capability, skill)
  * 4. Wait for blockchain finalization
  * 5. Verify feedback can be retrieved and searched
  */
@@ -19,8 +19,11 @@ const HAS_REQUIRED_ENV =
   Boolean(CLIENT_PRIVATE_KEY && CLIENT_PRIVATE_KEY.trim() !== '') &&
   Boolean(PINATA_JWT && PINATA_JWT.trim() !== '');
 
-const describeMaybe = HAS_REQUIRED_ENV ? describe : describe.skip;
-const itMaybe = HAS_REQUIRED_ENV ? it : it.skip;
+// These are live/integration tests (on-chain + IPFS).
+// Default: enabled when env vars are present. Set RUN_LIVE_TESTS=0 to disable.
+const RUN_LIVE_TESTS = process.env.RUN_LIVE_TESTS !== '0';
+const describeMaybe = RUN_LIVE_TESTS && HAS_REQUIRED_ENV ? describe : describe.skip;
+const itMaybe = RUN_LIVE_TESTS && HAS_REQUIRED_ENV ? it : it.skip;
 
 // Client configuration (different wallet)
 const clientPrivateKey = CLIENT_PRIVATE_KEY;
@@ -46,7 +49,7 @@ function generateFeedbackData(index: number) {
   const skills = ['python', 'javascript', 'machine_learning', 'web_development', 'cloud_computing'];
 
   return {
-    score: scores[Math.floor(Math.random() * scores.length)],
+    value: scores[Math.floor(Math.random() * scores.length)],
     tags: tagsSets[Math.floor(Math.random() * tagsSets.length)],
     capability: capabilities[Math.floor(Math.random() * capabilities.length)],
     skill: skills[Math.floor(Math.random() * skills.length)],
@@ -156,7 +159,7 @@ describeMaybe('Agent Feedback Flow with IPFS Pin', () => {
       // Note: feedbackAuth is no longer required in ERC-8004 Jan 2026 spec
       const feedback = await clientSdk.giveFeedback(
         agentId,
-        feedbackData.score,
+        feedbackData.value,
         tag1,
         tag2,
         endpoint,
@@ -174,7 +177,7 @@ describeMaybe('Agent Feedback Flow with IPFS Pin', () => {
         feedback,
       });
 
-      expect(feedback.score).toBe(feedbackData.score);
+      expect(feedback.value).toBe(feedbackData.value);
       expect(feedback.tags).toEqual(feedbackData.tags);
       expect(feedback.capability).toBe(feedbackData.capability);
       expect(feedback.skill).toBe(feedbackData.skill);
@@ -226,7 +229,7 @@ describeMaybe('Agent Feedback Flow with IPFS Pin', () => {
     const retrievedFeedback = await agentSdkWithSigner.getFeedback(agentId, clientAddress, feedbackIndex);
 
     expect(retrievedFeedback).toBeTruthy();
-    expect(retrievedFeedback.score).toBeDefined();
+    expect(retrievedFeedback.value).toBeDefined();
     expect(retrievedFeedback.agentId).toBe(agentId);
   });
 
@@ -259,9 +262,9 @@ describeMaybe('Agent Feedback Flow with IPFS Pin', () => {
     });
     expect(Array.isArray(tagResults)).toBe(true);
 
-    // Search by score range
-    const scoreResults = await agentSdkWithSigner.searchFeedback({ agentId }, { minScore: 75, maxScore: 95 });
-    expect(Array.isArray(scoreResults)).toBe(true);
+    // Search by value range
+    const valueResults = await agentSdkWithSigner.searchFeedback({ agentId }, { minValue: 75, maxValue: 95 });
+    expect(Array.isArray(valueResults)).toBe(true);
   });
 });
 

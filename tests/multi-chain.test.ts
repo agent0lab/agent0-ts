@@ -20,13 +20,13 @@ const SUPPORTED_CHAINS = [11155111, 84532, 80002]; // ETH Sepolia, Base Sepolia,
 // These are agents that are known to have feedback entries
 const TEST_AGENTS_WITH_FEEDBACK: Record<number, string[]> = {
   11155111: ['11155111:1377', '11155111:1340'], // Both have feedback
-  84532: ['84532:557', '84532:545', '84532:543', '84532:541', '84532:540', '84532:539', '84532:538', '84532:536'], // All have feedback and averageScore=5.0
+  84532: ['84532:557', '84532:545', '84532:543', '84532:541', '84532:540', '84532:539', '84532:538', '84532:536'], // All have feedback and averageValue=5.0
 };
 
-// Known agents with reputation (averageScore) for reputation search tests
+// Known agents with reputation (averageValue) for reputation search tests
 const TEST_AGENTS_WITH_REPUTATION: Record<number, string[]> = {
-  11155111: [], // No agents with calculated averageScore on this chain
-  84532: ['84532:557', '84532:545', '84532:543', '84532:541', '84532:540', '84532:539', '84532:538', '84532:536'], // All have averageScore=5.0
+  11155111: [], // No agents with calculated averageValue on this chain
+  84532: ['84532:557', '84532:545', '84532:543', '84532:541', '84532:540', '84532:539', '84532:538', '84532:536'], // All have averageValue=5.0
   80002: [], // No agents with reputation on this chain
 };
 
@@ -161,7 +161,7 @@ describe('Multi-Chain Agent Operations', () => {
             console.log(`✅ Chain ${chainId}: Found ${feedbacks.length} feedback entries`);
             console.log(`   Agent ID: ${testAgentId}`);
             if (feedbacks.length > 0) {
-              console.log(`   First feedback score: ${feedbacks[0].score ?? 'N/A'}`);
+              console.log(`   First feedback value: ${feedbacks[0].value ?? 'N/A'}`);
               if (feedbacks[0].tags && feedbacks[0].tags.length > 0) {
                 console.log(`   First feedback tags: ${feedbacks[0].tags.join(', ')}`);
               }
@@ -211,7 +211,7 @@ describe('Multi-Chain Agent Operations', () => {
           console.log(`✅ Default chain: Found ${feedbacks.length} feedback entries`);
           console.log(`   Agent ID: ${testAgentId}`);
           if (feedbacks.length > 0) {
-            console.log(`   First feedback score: ${feedbacks[0].score ?? 'N/A'}`);
+            console.log(`   First feedback value: ${feedbacks[0].value ?? 'N/A'}`);
           }
         } else {
           console.log('⚠️  No agents found on default chain');
@@ -274,8 +274,8 @@ describe('Multi-Chain Agent Operations', () => {
                 // Show first agent details
                 if (agents.length > 0) {
                   const firstAgent = agents[0];
-                  const avgScore = firstAgent.extras?.averageScore ?? 'N/A';
-                  console.log(`   First agent: ${firstAgent.name} (Avg Score: ${avgScore})`);
+                  const avgValue = (firstAgent.extras as any)?.averageValue ?? 'N/A';
+                  console.log(`   First agent: ${firstAgent.name} (Avg Value: ${avgValue})`);
                 }
               } else {
                 console.log(`⚠️  Chain ${chainId}: Reputation search found 0 agents`);
@@ -369,8 +369,8 @@ describe('Multi-Chain Agent Operations', () => {
             console.log(`   Sample agents:`);
             for (let i = 0; i < Math.min(3, agents.length); i++) {
               const agent = agents[i];
-              const avgScore = agent.extras?.averageScore ?? 'N/A';
-              console.log(`      ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgScore})`);
+              const avgValue = (agent.extras as any)?.averageValue ?? 'N/A';
+              console.log(`      ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgValue})`);
             }
           }
         } catch (error) {
@@ -426,7 +426,7 @@ describe('Multi-Chain Agent Operations', () => {
                 if (summary.count > 0) {
                   reputationFound++;
                   if (reputationFound <= 3) {
-                    console.log(`   ✅ ${agentId}: ${summary.count} feedback, avg: ${summary.averageScore.toFixed(2)}`);
+                    console.log(`   ✅ ${agentId}: ${summary.count} feedback, avg: ${summary.averageValue.toFixed(2)}`);
                   }
                 }
               } catch {
@@ -452,8 +452,8 @@ describe('Multi-Chain Agent Operations', () => {
           console.log(`   Sample agents:`);
           for (let i = 0; i < Math.min(5, agents.length); i++) {
             const agent = agents[i];
-            const avgScore = agent.extras?.averageScore ?? 'N/A';
-            console.log(`      ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgScore})`);
+            const avgValue = (agent.extras as any)?.averageValue ?? 'N/A';
+            console.log(`      ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgValue})`);
           }
         }
       } catch (error) {
@@ -470,11 +470,11 @@ describe('Multi-Chain Agent Operations', () => {
 
       try {
         // Use known tags that exist in feedback data
-        // Test with chains that have reputation data (84532 has agents with averageScore)
+        // Test with chains that have reputation data (84532 has agents with averageValue)
         const result = await sdk.searchAgentsByReputation(
           {
             tags: TEST_TAGS.slice(0, 1), // Use "price" tag which exists in feedback
-            minAverageScore: 0, // No threshold to see any results
+            minAverageValue: 0, // No threshold to see any results
           },
           {
             chains: [84532], // Use chain with reputation data
@@ -489,8 +489,8 @@ describe('Multi-Chain Agent Operations', () => {
         if (agents.length > 0) {
           for (let i = 0; i < Math.min(3, agents.length); i++) {
             const agent = agents[i];
-            const avgScore = agent.extras?.averageScore ?? 'N/A';
-            console.log(`   ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgScore})`);
+            const avgValue = (agent.extras as any)?.averageValue ?? 'N/A';
+            console.log(`   ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgValue})`);
           }
         } else {
           console.log(`   ⚠️  No agents found with tag '${TEST_TAGS[0]}' (may need to check if tag filtering works)`);
@@ -547,11 +547,11 @@ describe('Multi-Chain Agent Operations', () => {
 
               expect(summary).toBeTruthy();
               expect(summary.count).toBeGreaterThanOrEqual(0);
-              expect(summary.averageScore).toBeGreaterThanOrEqual(0);
+              expect(summary.averageValue).toBeGreaterThanOrEqual(0);
               console.log(`✅ Chain ${chainId}: Got reputation summary`);
               console.log(`   Agent ID: ${testAgentId}`);
               console.log(`   Count: ${summary.count}`);
-              console.log(`   Average Score: ${summary.averageScore.toFixed(2)}`);
+              console.log(`   Average Value: ${summary.averageValue.toFixed(2)}`);
             } catch (error) {
               console.log(`⚠️  Chain ${chainId}: Failed to get reputation for ${testAgentId}: ${error}`);
             }
@@ -608,11 +608,11 @@ describe('Multi-Chain Agent Operations', () => {
 
             expect(summary).toBeTruthy();
             expect(summary.count).toBeGreaterThanOrEqual(0);
-            expect(summary.averageScore).toBeGreaterThanOrEqual(0);
+            expect(summary.averageValue).toBeGreaterThanOrEqual(0);
             console.log(`✅ Default chain: Got reputation summary`);
             console.log(`   Agent ID: ${testAgentId}`);
             console.log(`   Count: ${summary.count}`);
-            console.log(`   Average Score: ${summary.averageScore.toFixed(2)}`);
+            console.log(`   Average Value: ${summary.averageValue.toFixed(2)}`);
           } catch (error) {
             console.log(`⚠️  Default chain: Failed to get reputation for ${testAgentId}: ${error}`);
             throw error;
@@ -672,7 +672,7 @@ describe('Multi-Chain Agent Operations', () => {
                 if (summary.count > 0) {
                   reputationFound++;
                   if (reputationFound <= 3) {
-                    console.log(`   ✅ ${agentId}: ${summary.count} feedback, avg: ${summary.averageScore.toFixed(2)}`);
+                    console.log(`   ✅ ${agentId}: ${summary.count} feedback, avg: ${summary.averageValue.toFixed(2)}`);
                   }
                 }
               } catch {
@@ -708,8 +708,8 @@ describe('Multi-Chain Agent Operations', () => {
           console.log(`   Sample agents:`);
           for (let i = 0; i < Math.min(5, agents.length); i++) {
             const agent = agents[i];
-            const avgScore = agent.extras?.averageScore ?? 'N/A';
-            console.log(`      ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgScore})`);
+            const avgValue = (agent.extras as any)?.averageValue ?? 'N/A';
+            console.log(`      ${i + 1}. ${agent.name} (Chain: ${agent.chainId}, Avg: ${avgValue})`);
           }
         }
       } catch (error) {

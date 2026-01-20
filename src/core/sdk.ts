@@ -380,7 +380,7 @@ export class SDK {
       filters.skills,
       filters.tasks,
       filters.names,
-      filters.minAverageScore,
+      filters.minAverageValue,
       includeRevoked,
       pageSize,
       skip,
@@ -445,7 +445,7 @@ export class SDK {
    */
   async giveFeedback(
     agentId: AgentId,
-    score: number,
+    value: number | string,
     tag1?: string,
     tag2?: string,
     endpoint?: string,
@@ -455,7 +455,7 @@ export class SDK {
     this._feedbackManager.setReputationRegistryAddress(this.reputationRegistryAddress());
     this._feedbackManager.setIdentityRegistryAddress(this.identityRegistryAddress());
 
-    return this._feedbackManager.giveFeedback(agentId, score, tag1, tag2, endpoint, feedbackFile);
+    return this._feedbackManager.giveFeedback(agentId, value, tag1, tag2, endpoint, feedbackFile);
   }
 
   /**
@@ -481,8 +481,8 @@ export class SDK {
       tasks: filters.tasks,
       names: filters.names,
       includeRevoked: filters.includeRevoked,
-      minScore: options.minScore,
-      maxScore: options.maxScore,
+      minValue: options.minValue,
+      maxValue: options.maxValue,
     };
     return this._feedbackManager.searchFeedback(params);
   }
@@ -519,7 +519,7 @@ export class SDK {
     agentId: AgentId,
     tag1?: string,
     tag2?: string
-  ): Promise<{ count: number; averageScore: number }> {
+  ): Promise<{ count: number; averageValue: number }> {
     // Update feedback manager with registries
     this._feedbackManager.setReputationRegistryAddress(this.reputationRegistryAddress());
 

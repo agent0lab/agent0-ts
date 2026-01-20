@@ -49,8 +49,8 @@ export function isValidURI(uri: string): boolean {
 /**
  * Validate feedback score (0-100)
  */
-export function isValidScore(score: number): boolean {
-  return Number.isInteger(score) && score >= 0 && score <= 100;
+export function isValidFeedbackValue(value: number): boolean {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 /**

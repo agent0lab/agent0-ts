@@ -18,7 +18,10 @@ const HAS_REQUIRED_ENV = Boolean(
     PINATA_JWT.trim() !== ''
 );
 const HAS_CLIENT_KEY = Boolean(CLIENT_PRIVATE_KEY && CLIENT_PRIVATE_KEY.trim() !== '');
-const describeMaybe = HAS_REQUIRED_ENV ? describe : describe.skip;
+// Live/integration test (on-chain + IPFS).
+// Default: enabled when env vars are present. Set RUN_LIVE_TESTS=0 to disable.
+const RUN_LIVE_TESTS = process.env.RUN_LIVE_TESTS !== '0';
+const describeMaybe = RUN_LIVE_TESTS && HAS_REQUIRED_ENV ? describe : describe.skip;
 const itWalletMaybe = HAS_CLIENT_KEY ? it : it.skip;
 
 function generateRandomData() {

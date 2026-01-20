@@ -15,6 +15,7 @@ import type { SubgraphClient } from './subgraph-client.js';
 import { parseAgentId, formatAgentId, formatFeedbackId, parseFeedbackId } from '../utils/id-format.js';
 import { DEFAULTS } from '../utils/constants.js';
 import { REPUTATION_REGISTRY_ABI } from './contracts.js';
+import { encodeReputationValue, decodeReputationValue } from '../utils/value-encoding.js';
 import { decodeEventLog, type Hex } from 'viem';
 
 /**
@@ -60,7 +61,7 @@ export class FeedbackManager {
   /**
    * Prepare an off-chain feedback file.
    *
-   * This does NOT include on-chain fields (score/tag1/tag2/endpoint). Those are passed
+   * This does NOT include on-chain fields (value/tag1/tag2/endpoint). Those are passed
    * directly to giveFeedback(...) and stored on-chain.
    */
   prepareFeedbackFile(
@@ -93,7 +94,7 @@ export class FeedbackManager {
    */
   async giveFeedback(
     agentId: AgentId,
-    score: number,
+    value: number | string,
     tag1?: string,
     tag2?: string,
     endpoint?: string,
@@ -135,7 +136,9 @@ export class FeedbackManager {
     }
 
     // Prepare on-chain data
-    const scoreOnChain = Math.round(score);
+    const encoded = encodeReputationValue(value);
+    const rawValue = encoded.value;
+    const valueDecimals = encoded.valueDecimals;
     const tag1OnChain = tag1 || '';
     const tag2OnChain = tag2 || '';
     const endpointOnChain = endpoint || '';
@@ -164,7 +167,7 @@ export class FeedbackManager {
           agentId: tokenId,
           clientAddress: `eip155:${agentChainId}:${clientAddress}`,
           createdAt,
-          score: scoreOnChain,
+          value: encoded.normalized,
 
           // OPTIONAL fields that mirror on-chain (spec)
           ...(tag1OnChain ? { tag1: tag1OnChain } : {}),
@@ -204,7 +207,8 @@ export class FeedbackManager {
         functionName: 'giveFeedback',
         args: [
           BigInt(tokenId),
-          scoreOnChain,
+          rawValue,
+          valueDecimals,
           tag1OnChain,
           tag2OnChain,
           endpointOnChain,
@@ -243,7 +247,7 @@ export class FeedbackManager {
       id: [parsedId.agentId, parsedId.clientAddress, parsedId.feedbackIndex] as FeedbackIdTuple,
       agentId,
       reviewer: clientAddress,
-      score: scoreOnChain > 0 ? scoreOnChain : undefined,
+      value: decodeReputationValue(rawValue, valueDecimals),
       tags: [tag1OnChain || undefined, tag2OnChain || undefined].filter(Boolean) as string[],
       endpoint: endpointOnChain || undefined,
       text: textValue,
@@ -288,8 +292,8 @@ export class FeedbackManager {
     const { tokenId } = parseAgentId(agentId);
 
     try {
-      const [score, tag1, tag2, isRevoked] = await this.chainClient.readContract<
-        readonly [number, string, string, boolean]
+      const [rawValue, valueDecimals, tag1, tag2, isRevoked] = await this.chainClient.readContract<
+        readonly [bigint, number, string, string, boolean]
       >({
         address: this.reputationRegistryAddress,
         abi: REPUTATION_REGISTRY_ABI,
@@ -360,7 +364,7 @@ export class FeedbackManager {
         id: [agentId, clientAddress.toLowerCase(), feedbackIndex] as FeedbackIdTuple,
         agentId,
         reviewer: clientAddress,
-        score: Number(score),
+        value: decodeReputationValue(rawValue, Number(valueDecimals)),
         tags,
         endpoint,
         fileURI,
@@ -442,8 +446,8 @@ export class FeedbackManager {
         skills: params.skills,
         tasks: params.tasks,
         names: params.names,
-        minScore: params.minScore,
-        maxScore: params.maxScore,
+        minValue: params.minValue,
+        maxValue: params.maxValue,
         includeRevoked: params.includeRevoked || false,
       },
       100, // first
@@ -538,7 +542,7 @@ export class FeedbackManager {
       id,
       agentId,
       reviewer: clientAddress,
-      score: feedbackData.score !== undefined && feedbackData.score !== null ? Number(feedbackData.score) : undefined,
+      value: feedbackData.value !== undefined && feedbackData.value !== null ? Number(feedbackData.value) : undefined,
       tags,
       endpoint:
         typeof feedbackData.endpoint === 'string'
@@ -642,7 +646,7 @@ export class FeedbackManager {
     agentId: AgentId,
     tag1?: string,
     tag2?: string
-  ): Promise<{ count: number; averageScore: number }> {
+  ): Promise<{ count: number; averageValue: number }> {
     // Parse chainId from agentId
     let chainId: number | undefined;
     let fullAgentId: string;
@@ -709,21 +713,21 @@ export class FeedbackManager {
           const validFeedbacks = filteredFeedbacks.filter((fb: any) => !fb.isRevoked);
 
           if (validFeedbacks.length > 0) {
-            const scores = validFeedbacks
-              .map((fb: any) => fb.score)
-              .filter((score: any) => score !== null && score !== undefined && score > 0);
+            const values = validFeedbacks
+              .map((fb: any) => fb.value)
+              .filter((v: any) => v !== null && v !== undefined);
             
-            if (scores.length > 0) {
-              const sum = scores.reduce((a: number, b: number) => a + b, 0);
-              const averageScore = sum / scores.length;
+            if (values.length > 0) {
+              const sum = values.reduce((a: number, b: number) => a + Number(b), 0);
+              const averageValue = sum / values.length;
               return {
                 count: validFeedbacks.length,
-                averageScore: Math.round(averageScore * 100) / 100, // Round to 2 decimals
+                averageValue: Math.round(averageValue * 100) / 100, // Round to 2 decimals
               };
             }
           }
 
-        return { count: 0, averageScore: 0 };
+        return { count: 0, averageValue: 0 };
       } catch (error) {
         // Fall through to blockchain query if subgraph fails
       }
@@ -753,10 +757,12 @@ export class FeedbackManager {
       });
 
       if (!clients || clients.length === 0) {
-        return { count: 0, averageScore: 0 };
+        return { count: 0, averageValue: 0 };
       }
 
-      const [count, averageScore] = await this.chainClient.readContract<readonly [bigint, number]>({
+      const [count, summaryValue, summaryValueDecimals] = await this.chainClient.readContract<
+        readonly [bigint, bigint, number]
+      >({
         address: this.reputationRegistryAddress,
         abi: REPUTATION_REGISTRY_ABI,
         functionName: 'getSummary',
@@ -765,7 +771,7 @@ export class FeedbackManager {
 
       return {
         count: Number(count),
-        averageScore: Number(averageScore),
+        averageValue: decodeReputationValue(summaryValue, Number(summaryValueDecimals)),
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

@@ -2,7 +2,7 @@
  * On-chain Only Feedback Example (ERC-8004 Jan 2026)
  *
  * This example demonstrates how to submit feedback that is *only* stored on-chain:
- * - score
+ * - value
  * - tag1
  * - tag2
  * - endpoint (optional on-chain field)
@@ -43,7 +43,7 @@ async function main() {
   );
 
   console.log('Submitted feedback:', feedback.id, {
-    score: feedback.score,
+    value: feedback.value,
     tags: feedback.tags,
     endpoint: feedback.endpoint,
   });

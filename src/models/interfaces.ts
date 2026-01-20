@@ -68,7 +68,7 @@ export interface Feedback {
   id: FeedbackIdTuple; // (agentId, clientAddress, feedbackIndex)
   agentId: AgentId;
   reviewer: Address;
-  score?: number; // 0-100
+  value?: number;
   tags: string[];
   /**
    * Optional on-chain field in ERC-8004 Jan 2026.
@@ -166,7 +166,7 @@ export interface ReputationSearchFilters {
   skills?: string[];
   tasks?: string[];
   names?: string[];
-  minAverageScore?: number;
+  minAverageValue?: number;
 }
 
 export interface ReputationSearchOptions extends SearchOptions {
@@ -185,8 +185,8 @@ export interface SearchFeedbackParams {
   skills?: string[];
   tasks?: string[];
   names?: string[]; // MCP tool/resource/prompt names
-  minScore?: number; // 0-100
-  maxScore?: number; // 0-100
+  minValue?: number;
+  maxValue?: number;
   includeRevoked?: boolean;
 }
 
@@ -205,8 +205,8 @@ export interface FeedbackSearchFilters {
 }
 
 export interface FeedbackSearchOptions {
-  minScore?: number; // 0-100
-  maxScore?: number; // 0-100
+  minValue?: number;
+  maxValue?: number;
 }
 
 /**

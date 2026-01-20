@@ -4,7 +4,7 @@ Agent0 is the TypeScript SDK for agentic economies. It enables agents to registe
 
 ## What Does Agent0 SDK Do?
 
-Agent0 SDK v1.1.2 enables you to:
+Agent0 SDK v1.2.0 enables you to:
 
 - **Create and manage agent identities** - Register your AI agent on-chain with a unique identity, configure presentation fields (name, description, image), set wallet addresses, and manage trust models with x402 support
 - **Advertise agent capabilities** - Publish MCP and A2A endpoints, with automated extraction of MCP tools and A2A skills from endpoints
@@ -16,9 +16,9 @@ Agent0 SDK v1.1.2 enables you to:
 
 ## ⚠️ Beta Release
 
-Agent0 SDK v1.1.2 is beta. We're actively testing and improving it.
+Agent0 SDK v1.2.0 is beta. We're actively testing and improving it.
 
-For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.0.3.md` and `release_notes/RELEASE_NOTES_1.1.0.md`.
+For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.2.0.md` and prior notes in `release_notes/`.
 
 **Bug reports & feedback:** GitHub: [Report issues](https://github.com/agent0lab/agent0-ts/issues) | Telegram: [Agent0 channel](https://t.me/agent0kitchen) | Email: team@ag0.xyz
 
@@ -199,7 +199,7 @@ const allResults = await sdk.searchAgents({
 
 // Search agents by reputation across chains
 const reputationResults = await sdk.searchAgentsByReputation(
-  { minAverageScore: 80 },
+  { minAverageValue: 80 },
   { includeRevoked: false, pageSize: 20, chains: [11155111, 84532] }
 );
 
@@ -227,7 +227,7 @@ const feedbackFile = sdk.prepareFeedbackFile({
 // Give feedback (on-chain fields are passed directly)
 const feedback = await sdk.giveFeedback(
   '11155111:123',
-  85, // score (0-100)
+  85, // value (number|string)
   'data_analyst', // tag1 (optional)
   'finance', // tag2 (optional)
   'https://api.example.com/feedback', // endpoint (optional on-chain)
@@ -237,12 +237,12 @@ const feedback = await sdk.giveFeedback(
 // Search feedback
 const feedbackResults = await sdk.searchFeedback(
   { agentId: '11155111:123', capabilities: ['tools'] },
-  { minScore: 80, maxScore: 100 }
+  { minValue: 80, maxValue: 100 }
 );
 
 // Get reputation summary
 const summary = await sdk.getReputationSummary('11155111:123');
-console.log(`Average score: ${summary.averageScore}`);
+console.log(`Average value: ${summary.averageValue}`);
 ```
 
 ## IPFS Configuration Options
@@ -324,13 +324,13 @@ const allChainsResult = await sdk.searchAgents({
 
 // Multi-chain reputation search
 const reputationResult = await sdk.searchAgentsByReputation(
-  { minAverageScore: 80 },
+  { minAverageValue: 80 },
   { includeRevoked: false, pageSize: 20, chains: [11155111, 84532] }
 );
 
 // Search all chains for agents with reputation
 const allChainsReputation = await sdk.searchAgentsByReputation(
-  { minAverageScore: 80 },
+  { minAverageValue: 80 },
   { includeRevoked: false, pageSize: 20, chains: 'all' }
 );
 

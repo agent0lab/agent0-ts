@@ -416,8 +416,8 @@ export class SubgraphClient {
       skills?: string[];
       tasks?: string[];
       names?: string[];
-      minScore?: number;
-      maxScore?: number;
+      minValue?: number;
+      maxValue?: number;
       includeRevoked?: boolean;
     },
     first: number = 100,
@@ -463,12 +463,12 @@ export class SubgraphClient {
       tagFilterCondition = tagWhereItems.join(', ');
     }
 
-    if (params.minScore !== undefined) {
-      whereConditions.push(`score_gte: ${params.minScore}`);
+    if (params.minValue !== undefined) {
+      whereConditions.push(`value_gte: ${params.minValue}`);
     }
 
-    if (params.maxScore !== undefined) {
-      whereConditions.push(`score_lte: ${params.maxScore}`);
+    if (params.maxValue !== undefined) {
+      whereConditions.push(`value_lte: ${params.maxValue}`);
     }
 
     // Feedback file filters
@@ -519,7 +519,7 @@ export class SubgraphClient {
           id
           agent { id agentId chainId }
           clientAddress
-          score
+          value
           tag1
           tag2
           endpoint
@@ -580,7 +580,7 @@ export class SubgraphClient {
             id
             agent { id agentId chainId }
             clientAddress
-            score
+            value
             tag1
             tag2
             feedbackURI
@@ -633,13 +633,13 @@ export class SubgraphClient {
     skills?: string[],
     tasks?: string[],
     names?: string[],
-    minAverageScore?: number,
+    minAverageValue?: number,
     includeRevoked: boolean = false,
     first: number = 100,
     skip: number = 0,
     orderBy: string = 'createdAt',
     orderDirection: 'asc' | 'desc' = 'desc'
-  ): Promise<Array<QueryAgent & { averageScore?: number | null }>> {
+  ): Promise<Array<QueryAgent & { averageValue?: number | null }>> {
     // Build feedback filters
     const feedbackFilters: string[] = [];
 
@@ -754,7 +754,7 @@ export class SubgraphClient {
       }
     }
 
-    // Build feedback where for agent query (to calculate scores)
+    // Build feedback where for agent query (to calculate values)
     const feedbackWhereForAgents = feedbackFilters.length > 0
       ? `{ ${feedbackFilters.join(', ')} }`
       : '{}';
@@ -801,7 +801,7 @@ export class SubgraphClient {
             createdAt
           }
           feedback(where: ${feedbackWhereForAgents}) {
-            score
+            value
             isRevoked
             feedbackFile {
               capability
@@ -815,21 +815,23 @@ export class SubgraphClient {
     `;
 
     try {
-      const result = await this.query<{ agents: Array<QueryAgent & { feedback: Array<{ score: number; isRevoked: boolean }> }> }>(query);
+      const result = await this.query<{
+        agents: Array<QueryAgent & { feedback: Array<{ value: number; isRevoked: boolean }> }>;
+      }>(query);
       const agentsResult = result.agents || [];
 
-      // Calculate average scores
+      // Calculate average values
       const agentsWithScores = agentsResult.map((agent) => {
         const feedbacks = agent.feedback || [];
-        let averageScore: number | null = null;
+        let averageValue: number | null = null;
         
         if (feedbacks.length > 0) {
-          const scores = feedbacks
-            .filter((fb) => fb.score > 0)
-            .map((fb) => fb.score);
+          const values = feedbacks
+            .filter((fb) => fb.value !== null && fb.value !== undefined)
+            .map((fb) => fb.value);
           
-          if (scores.length > 0) {
-            averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          if (values.length > 0) {
+            averageValue = values.reduce((sum, v) => sum + v, 0) / values.length;
           }
         }
 
@@ -837,15 +839,15 @@ export class SubgraphClient {
         const { feedback, ...agentData } = agent;
         return {
           ...agentData,
-          averageScore,
+          averageValue,
         };
       });
 
-      // Filter by minAverageScore
+      // Filter by minAverageValue
       let filteredAgents = agentsWithScores;
-      if (minAverageScore !== undefined) {
+      if (minAverageValue !== undefined) {
         filteredAgents = agentsWithScores.filter(
-          (agent) => agent.averageScore !== null && agent.averageScore >= minAverageScore
+          (agent) => agent.averageValue !== null && agent.averageValue >= minAverageValue
         );
       }
 

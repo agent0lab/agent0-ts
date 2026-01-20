@@ -528,7 +528,7 @@ export class AgentIndexer {
     skills?: string[],
     tasks?: string[],
     names?: string[],
-    minAverageScore?: number,
+    minAverageValue?: number,
     includeRevoked: boolean = false,
     first: number = 50,
     skip: number = 0,
@@ -554,7 +554,7 @@ export class AgentIndexer {
         skills,
         tasks,
         names,
-        minAverageScore,
+        minAverageValue,
         includeRevoked,
         first,
         skip,
@@ -586,7 +586,7 @@ export class AgentIndexer {
         skills,
         tasks,
         names,
-        minAverageScore,
+        minAverageValue,
         includeRevoked,
         first,
         skip,
@@ -594,7 +594,7 @@ export class AgentIndexer {
         orderDirection
       );
 
-      // Transform to AgentSummary with averageScore in extras
+      // Transform to AgentSummary with averageValue in extras
       const items: AgentSummary[] = agentsData.map((agent) => {
         const regFile = agent.registrationFile;
         
@@ -620,7 +620,7 @@ export class AgentIndexer {
           active: regFile?.active ?? false,
           x402support: regFile?.x402support ?? false,
           extras: {
-            averageScore: agent.averageScore !== null ? agent.averageScore : undefined,
+            averageValue: agent.averageValue !== null ? agent.averageValue : undefined,
           },
         };
       });
@@ -647,7 +647,7 @@ export class AgentIndexer {
     skills?: string[],
     tasks?: string[],
     names?: string[],
-    minAverageScore?: number,
+    minAverageValue?: number,
     includeRevoked: boolean = false,
     pageSize: number = 50,
     skip: number = 0,
@@ -709,7 +709,7 @@ export class AgentIndexer {
             skills,
             tasks,
             names,
-            minAverageScore,
+            minAverageValue,
             includeRevoked,
             pageSize * 3, // Fetch extra to allow for filtering/sorting
             0, // We'll handle pagination after aggregation
@@ -797,7 +797,7 @@ export class AgentIndexer {
       };
     }
 
-    // Transform to AgentSummary with averageScore in extras
+    // Transform to AgentSummary with averageValue in extras
     const results: AgentSummary[] = allAgents.map((agent) => {
       const regFile = agent.registrationFile || {};
       
@@ -823,17 +823,17 @@ export class AgentIndexer {
         active: regFile?.active ?? false,
         x402support: regFile?.x402support ?? false,
         extras: {
-          averageScore: agent.averageScore !== null ? agent.averageScore : undefined,
+          averageValue: agent.averageValue !== null ? agent.averageValue : undefined,
         },
       };
     });
 
-    // Sort by averageScore (descending) if available, otherwise by createdAt
+    // Sort by averageValue (descending) if available, otherwise by createdAt
     results.sort((a, b) => {
-      const aScore = a.extras?.averageScore ?? 0;
-      const bScore = b.extras?.averageScore ?? 0;
-      if (aScore !== bScore) {
-        return bScore - aScore; // Descending
+      const aValue = (a.extras as any)?.averageValue ?? 0;
+      const bValue = (b.extras as any)?.averageValue ?? 0;
+      if (aValue !== bValue) {
+        return bValue - aValue; // Descending
       }
       // Secondary sort by chainId, then agentId
       if (a.chainId !== b.chainId) {

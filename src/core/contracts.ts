@@ -177,6 +177,13 @@ export const IDENTITY_REGISTRY_ABI = [
   },
   {
     inputs: [{ internalType: 'uint256', name: 'agentId', type: 'uint256' }],
+    name: 'unsetAgentWallet',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: 'agentId', type: 'uint256' }],
     name: 'getAgentWallet',
     outputs: [{ internalType: 'address', name: '', type: 'address' }],
     stateMutability: 'view',
@@ -227,7 +234,8 @@ export const REPUTATION_REGISTRY_ABI = [
   {
     inputs: [
       { internalType: 'uint256', name: 'agentId', type: 'uint256' },
-      { internalType: 'uint8', name: 'score', type: 'uint8' },
+      { internalType: 'int256', name: 'value', type: 'int256' },
+      { internalType: 'uint8', name: 'valueDecimals', type: 'uint8' },
       { internalType: 'string', name: 'tag1', type: 'string' },
       { internalType: 'string', name: 'tag2', type: 'string' },
       { internalType: 'string', name: 'endpoint', type: 'string' },
@@ -280,7 +288,8 @@ export const REPUTATION_REGISTRY_ABI = [
     ],
     name: 'readFeedback',
     outputs: [
-      { internalType: 'uint8', name: 'score', type: 'uint8' },
+      { internalType: 'int256', name: 'value', type: 'int256' },
+      { internalType: 'uint8', name: 'valueDecimals', type: 'uint8' },
       { internalType: 'string', name: 'tag1', type: 'string' },
       { internalType: 'string', name: 'tag2', type: 'string' },
       { internalType: 'bool', name: 'isRevoked', type: 'bool' },
@@ -298,7 +307,8 @@ export const REPUTATION_REGISTRY_ABI = [
     name: 'getSummary',
     outputs: [
       { internalType: 'uint64', name: 'count', type: 'uint64' },
-      { internalType: 'uint8', name: 'averageScore', type: 'uint8' },
+      { internalType: 'int256', name: 'summaryValue', type: 'int256' },
+      { internalType: 'uint8', name: 'summaryValueDecimals', type: 'uint8' },
     ],
     stateMutability: 'view',
     type: 'function',
@@ -315,7 +325,8 @@ export const REPUTATION_REGISTRY_ABI = [
     outputs: [
       { internalType: 'address[]', name: 'clients', type: 'address[]' },
       { internalType: 'uint64[]', name: 'feedbackIndexes', type: 'uint64[]' },
-      { internalType: 'uint8[]', name: 'scores', type: 'uint8[]' },
+      { internalType: 'int256[]', name: 'values', type: 'int256[]' },
+      { internalType: 'uint8[]', name: 'valueDecimals', type: 'uint8[]' },
       { internalType: 'string[]', name: 'tag1s', type: 'string[]' },
       { internalType: 'string[]', name: 'tag2s', type: 'string[]' },
       { internalType: 'bool[]', name: 'revokedStatuses', type: 'bool[]' },
@@ -338,7 +349,8 @@ export const REPUTATION_REGISTRY_ABI = [
       { indexed: true, internalType: 'uint256', name: 'agentId', type: 'uint256' },
       { indexed: true, internalType: 'address', name: 'clientAddress', type: 'address' },
       { indexed: false, internalType: 'uint64', name: 'feedbackIndex', type: 'uint64' },
-      { indexed: false, internalType: 'uint8', name: 'score', type: 'uint8' },
+      { indexed: false, internalType: 'int256', name: 'value', type: 'int256' },
+      { indexed: false, internalType: 'uint8', name: 'valueDecimals', type: 'uint8' },
       { indexed: true, internalType: 'string', name: 'indexedTag1', type: 'string' },
       { indexed: false, internalType: 'string', name: 'tag1', type: 'string' },
       { indexed: false, internalType: 'string', name: 'tag2', type: 'string' },

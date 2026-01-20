@@ -22,8 +22,11 @@ const HAS_REQUIRED_ENV = Boolean(
     PINATA_JWT &&
     PINATA_JWT.trim() !== ''
 );
-const describeMaybe = HAS_REQUIRED_ENV ? describe : describe.skip;
-const itMaybe = HAS_REQUIRED_ENV ? it : it.skip;
+// Live/integration test (on-chain + IPFS).
+// Default: enabled when env vars are present. Set RUN_LIVE_TESTS=0 to disable.
+const RUN_LIVE_TESTS = process.env.RUN_LIVE_TESTS !== '0';
+const describeMaybe = RUN_LIVE_TESTS && HAS_REQUIRED_ENV ? describe : describe.skip;
+const itMaybe = RUN_LIVE_TESTS && HAS_REQUIRED_ENV ? it : it.skip;
 
 describeMaybe('Agent Transfer', () => {
   let agentSdk: SDK;

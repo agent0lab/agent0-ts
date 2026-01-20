@@ -43,10 +43,10 @@ async function main() {
   console.log('\nSearching agents by reputation...');
   const reputationResults = await sdk.searchAgentsByReputation({
     tags: ['data_analyst', 'finance'],
-    minAverageScore: 80,
+    minAverageValue: 80,
   });
   console.log(`Found ${reputationResults.items.length} agents with high reputation`);
-  // Note: averageScore is available in agent.extras.averageScore
+  // Note: averageValue is available in agent.extras.averageValue
 
   // 5. Get specific agent by ID
   console.log('\nGetting specific agent...');
