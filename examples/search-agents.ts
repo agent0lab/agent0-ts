@@ -21,12 +21,12 @@ async function main() {
   // 1. Search agents by name
   console.log('Searching agents by name...');
   const nameResults = await sdk.searchAgents({ name: 'AI' });
-  console.log(`Found ${nameResults.items.length} agents matching "AI"`);
+  console.log(`Found ${nameResults.length} agents matching "AI"`);
 
   // 2. Search agents with MCP endpoint
   console.log('\nSearching agents with MCP endpoint...');
   const mcpResults = await sdk.searchAgents({ hasMCP: true });
-  console.log(`Found ${mcpResults.items.length} agents with MCP`);
+  console.log(`Found ${mcpResults.length} agents with MCP`);
 
   // 3. Search agents with specific tools
   console.log('\nSearching agents with specific tools...');
@@ -34,8 +34,8 @@ async function main() {
     mcpTools: ['financial_analyzer', 'data_processor'],
     active: true,
   });
-  console.log(`Found ${toolResults.items.length} active agents with specified tools`);
-  for (const agent of toolResults.items) {
+  console.log(`Found ${toolResults.length} active agents with specified tools`);
+  for (const agent of toolResults) {
     console.log(`  - ${agent.name} (${agent.agentId})`);
     console.log(`    Tools: ${agent.mcpTools.join(', ')}`);
   }
@@ -45,7 +45,7 @@ async function main() {
   const feedbackResults = await sdk.searchAgents({
     feedback: { minValue: 80, includeRevoked: false },
   });
-  console.log(`Found ${feedbackResults.items.length} agents with high average feedback value`);
+  console.log(`Found ${feedbackResults.length} agents with high average feedback value`);
   // Note: averageValue is available in agent.averageValue
 
   // 5. Get specific agent by ID
@@ -67,17 +67,11 @@ async function main() {
     console.error(`Failed to get agent: ${error}`);
   }
 
-  // 6. Pagination example
-  console.log('\nPagination example...');
-  let cursor: string | undefined;
-  let page = 1;
-  do {
-    const pageResults = await sdk.searchAgents({ active: true }, { pageSize: 10, cursor });
-    console.log(`Page ${page}: Found ${pageResults.items.length} agents`);
-    cursor = pageResults.nextCursor;
-    page++;
-    if (page > 3) break; // Limit to 3 pages for demo
-  } while (cursor);
+  // 6. Note on pagination
+  console.log('\nNote: searchAgents() no longer exposes pagination (pageSize/cursor/nextCursor).');
+  console.log('It returns a full list; use Array.prototype.slice(...) client-side if you want the first N items.');
+  const activeAgents = await sdk.searchAgents({ active: true });
+  console.log(`Active agents: total=${activeAgents.length}, showing first 10: ${activeAgents.slice(0, 10).length}`);
 }
 
 main().catch(console.error);

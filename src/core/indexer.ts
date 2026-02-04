@@ -75,11 +75,27 @@ export class AgentIndexer {
   }
 
   private _resolveChains(filters: SearchFilters, keywordPresent: boolean): ChainId[] {
+    // If the caller supplied a chain filter, use it exactly (aside from de-duplication).
     if (filters.chains === 'all') return this._getAllConfiguredChains();
-    if (Array.isArray(filters.chains) && filters.chains.length > 0) return filters.chains;
-    if (keywordPresent) return this._getAllConfiguredChains();
-    if (this.defaultChainId !== undefined) return [this.defaultChainId];
-    return [];
+    if (Array.isArray(filters.chains) && filters.chains.length > 0) {
+      const out: ChainId[] = [];
+      for (const c of filters.chains) {
+        const cid = Number(c);
+        if (!Number.isFinite(cid)) continue;
+        if (!out.includes(cid)) out.push(cid);
+      }
+      return out;
+    }
+
+    // Default behavior (keyword or not): query chain 1 + the SDK-initialized chainId.
+    // Avoid looking into chain 1 twice if SDK is initialized with chainId=1.
+    const out: ChainId[] = [];
+    const sdkChain = this.defaultChainId;
+    for (const c of [1, sdkChain] as Array<number | undefined>) {
+      if (c === undefined) continue;
+      if (!out.includes(c)) out.push(c);
+    }
+    return out;
   }
 
   // Pagination removed: cursor helpers deleted.

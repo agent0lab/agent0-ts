@@ -14,11 +14,11 @@ Agent0 SDK enables you to:
 - **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
 - **Public indexing** - Subgraph indexing both on-chain and IPFS data for fast search and retrieval
 
-## Pre-release (1.5.1)
+## Release (1.5.2)
 
-This branch contains a **1.5.1 pre-release** with a unified agent discovery/search API.
+This release includes the unified agent discovery/search API.
 
-For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.5.1-beta.1.md` (and prior notes in `release_notes/`).
+For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.5.2.md` (and prior notes in `release_notes/`).
 
 **Bug reports & feedback:** GitHub: [Report issues](https://github.com/agent0lab/agent0-ts/issues) | Telegram: [Agent0 channel](https://t.me/agent0kitchen) | Email: team@ag0.xyz
 
@@ -38,10 +38,10 @@ For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.5.1
 npm install agent0-sdk
 ```
 
-To install the **pre-release** explicitly:
+To install a specific version explicitly:
 
 ```bash
-npm install agent0-sdk@1.5.1-beta.1
+npm install agent0-sdk@1.5.2
 ```
 
 **Note:** This package is an ESM (ECMAScript Module) package. Use `import` statements in your code:

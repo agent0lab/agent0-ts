@@ -26,7 +26,7 @@ describeMaybe('Agent Search and Discovery (live)', () => {
   // does not rely on a fixed hardcoded agentId. It discovers agents via subgraph queries.
 
   it('should get agent by ID', async () => {
-    // Search for any available agent first - use pageSize like Python test
+    // Search for any available agent first
     const results = await sdk.searchAgents({}); // returns all
     expect(results.length).toBeGreaterThan(0);
     
