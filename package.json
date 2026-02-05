@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./taxonomies": {
+      "types": "./dist/taxonomies/index.d.ts",
+      "default": "./dist/taxonomies/index.js"
+    },
     "./eip6963": {
       "types": "./dist/browser/eip6963.d.ts",
       "default": "./dist/browser/eip6963.js"
@@ -36,7 +40,8 @@
     "blockchain",
     "ethereum",
     "ipfs",
-    "reputation"
+    "reputation",
+    "oasf"
   ],
   "author": "Agent0 Team <team@ag0.xyz>",
   "license": "MIT",

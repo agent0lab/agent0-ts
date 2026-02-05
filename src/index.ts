@@ -28,3 +28,11 @@ export type { TransactionMined, TransactionWaitOptions } from './core/transactio
 // Export contract definitions
 export * from './core/contracts.js';
 
+// Export OASF taxonomies
+export {
+  OASF_SKILLS,
+  OASF_DOMAINS,
+  OASF_SKILL_SLUGS,
+  OASF_DOMAIN_SLUGS,
+  OASF_VERSION,
+} from './taxonomies/index.js';
