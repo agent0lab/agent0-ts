@@ -14,11 +14,11 @@ Agent0 SDK enables you to:
 - **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
 - **Public indexing** - Subgraph indexing both on-chain and IPFS data for fast search and retrieval
 
-## Release (1.5.2)
+## Release (1.5.3)
 
 This release includes the unified agent discovery/search API.
 
-For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.5.2.md` (and prior notes in `release_notes/`).
+For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.5.3.md` (and prior notes in `release_notes/`).
 
 **Bug reports & feedback:** GitHub: [Report issues](https://github.com/agent0lab/agent0-ts/issues) | Telegram: [Agent0 channel](https://t.me/agent0kitchen) | Email: team@ag0.xyz
 
@@ -41,7 +41,7 @@ npm install agent0-sdk
 To install a specific version explicitly:
 
 ```bash
-npm install agent0-sdk@1.5.2
+npm install agent0-sdk@1.5.3
 ```
 
 **Note:** This package is an ESM (ECMAScript Module) package. Use `import` statements in your code:
@@ -299,7 +299,9 @@ await regTx.waitConfirmed();
 The SDK supports querying agents across multiple blockchain networks:
 
 - **Ethereum Mainnet** (Chain ID: `1`)
+- **Base Mainnet** (Chain ID: `8453`)
 - **Ethereum Sepolia** (Chain ID: `11155111`)
+- **Base Sepolia** (Chain ID: `84532`)
 - **Polygon Mainnet** (Chain ID: `137`)
 
 ### Chain-Agnostic Agent IDs
@@ -327,7 +329,7 @@ Search across multiple chains simultaneously:
 // Search across multiple chains
 const result = await sdk.searchAgents({
   active: true,
-  chains: [1, 11155111, 137]  // Ethereum Mainnet, Ethereum Sepolia, Polygon Mainnet
+  chains: [1, 8453, 11155111, 84532, 137]  // Ethereum Mainnet, Base Mainnet, Ethereum Sepolia, Base Sepolia, Polygon Mainnet
 });
 
 // Search all configured chains
@@ -338,7 +340,7 @@ const allChainsResult = await sdk.searchAgents({
 
 // Multi-chain feedback-derived reputation search (unified search)
 const reputationResult = await sdk.searchAgents(
-  { chains: [1, 11155111, 137], feedback: { minValue: 80, includeRevoked: false } }
+  { chains: [1, 8453, 11155111, 84532, 137], feedback: { minValue: 80, includeRevoked: false } }
 );
 
 // Search all chains for agents with reputation (unified search)

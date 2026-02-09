@@ -480,12 +480,33 @@ export const DEFAULT_REGISTRIES: Record<ChainId, Record<string, string>> = {
     REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
     // VALIDATION: indexing currently disabled in subgraph; set when deployed/enabled
   },
+  8453: {
+    // Base Mainnet
+    // (Deployed contracts currently share the same addresses as Ethereum Mainnet)
+    IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+    REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+    // VALIDATION: indexing currently disabled in subgraph; set when deployed/enabled
+  },
+  137: {
+    // Polygon Mainnet
+    // (Deployed contracts currently share the same addresses as Ethereum Mainnet)
+    IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+    REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+    // VALIDATION: indexing currently disabled in subgraph; set when deployed/enabled
+  },
   11155111: {
     // Ethereum Sepolia
     // Aligned with Python SDK (agent0-py) defaults
     IDENTITY: '0x8004A818BFB912233c491871b3d84c89A494BD9e',
     REPUTATION: '0x8004B663056A597Dffe9eCcC1965A193B7388713',
     // VALIDATION: not deployed in Python defaults yet
+  },
+  84532: {
+    // Base Sepolia
+    // (Deployed contracts currently share the same addresses as Ethereum Sepolia)
+    IDENTITY: '0x8004A818BFB912233c491871b3d84c89A494BD9e',
+    REPUTATION: '0x8004B663056A597Dffe9eCcC1965A193B7388713',
+    // VALIDATION: not deployed in defaults yet
   },
 };
 
@@ -494,8 +515,12 @@ export const DEFAULT_REGISTRIES: Record<ChainId, Record<string, string>> = {
  */
 export const DEFAULT_SUBGRAPH_URLS: Record<ChainId, string> = {
   1: 'https://gateway.thegraph.com/api/7fd2e7d89ce3ef24cd0d4590298f0b2c/subgraphs/id/FV6RR6y13rsnCxBAicKuQEwDp8ioEGiNaWaZUmvr1F8k', // Ethereum Mainnet
+  8453:
+    'https://gateway.thegraph.com/api/536c6d8572876cabea4a4ad0fa49aa57/subgraphs/id/43s9hQRurMGjuYnC1r2ZwS6xSQktbFyXMPMqGKUFJojb', // Base Mainnet
   11155111:
     'https://gateway.thegraph.com/api/00a452ad3cd1900273ea62c1bf283f93/subgraphs/id/6wQRC7geo9XYAhckfmfo8kbMRLeWU8KQd3XsJqFKmZLT', // Ethereum Sepolia
+  84532:
+    'https://gateway.thegraph.com/api/536c6d8572876cabea4a4ad0fa49aa57/subgraphs/id/4yYAvQLFjBhBtdRCY7eUWo181VNoTSLLFd5M7FXQAi6u', // Base Sepolia
   137: 'https://gateway.thegraph.com/api/782d61ed390e625b8867995389699b4c/subgraphs/id/9q16PZv1JudvtnCAf44cBoxg82yK9SSsFvrjCY9xnneF', // Polygon Mainnet
 };
 

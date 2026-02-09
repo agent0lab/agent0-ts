@@ -10,3 +10,6 @@ This release is a **bugfix** for transaction confirmation in browser-wallet flow
 
 
 
+
+
+
