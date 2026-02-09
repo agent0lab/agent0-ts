@@ -15,6 +15,6 @@
 
 ## Notes
 
-- The Graph Gateway endpoints require authentication (API key / authorization header). If you see an “auth error”, use the gateway form `https://gateway.thegraph.com/api/<API_KEY>/subgraphs/id/<SUBGRAPH_ID>`.
+- The default subgraph URLs shipped in this release already include the project’s sponsored Graph Gateway API key, so you should not need to provide any additional auth to use the defaults. If you want to use your own key (or a different endpoint), override per-chain via `subgraphOverrides`.
 
 
