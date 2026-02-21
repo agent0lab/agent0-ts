@@ -28,8 +28,8 @@ Sends a message to the agent’s A2A endpoint. The server may reply with a direc
 
 **Returns**
 
-- **MessageResponse** — direct reply from the agent (no task). Contains at least `type: 'message'` and the message content (e.g. `content`, `parts`).
-- **TaskResponse** — server created a task. Contains `type: 'task'`, `taskId` (opaque string), `**contextId`** (opaque string grouping this task with related tasks/messages), and `**task**` — the task handle (e.g. an `AgentTask` object). Use `response.task` to work with the task; use `agent.task(taskId)` only when loading by ID (e.g. after restart).
+- **MessageResponse** — direct reply from the agent (no task). Typed object with message content (e.g. `content`, `parts`) and optional `contextId`. No `task` or `taskId`.
+- **TaskResponse** — server created a task. Typed object with **`taskId`** (opaque string), **`contextId`**, and **`task`** (the task handle, e.g. an `AgentTask`). Use `response.task` to work with the task; use `agent.task(taskId)` only when loading by ID (e.g. after restart). Discriminate from MessageResponse by shape: TaskResponse has `task` and `taskId`; MessageResponse does not (e.g. `'task' in response`).
 - If the server responds with **HTTP 402**, the result is a response object that includes `**x402Required`** (see §4). The SDK does not throw; the caller checks `response.x402Required` and may call `response.x402Payment.pay()` to pay and retry.
 
 **Errors**
@@ -47,14 +47,14 @@ Sends a message to the agent’s A2A endpoint. The server may reply with a direc
 
 ### 2.1 Getting a task handle
 
-- `**response.task`** — When `messageA2A` returns a **TaskResponse** (`response.type === 'task'`), `**response.task`** is the task handle (e.g. an **AgentTask** object) for that task. Use it directly.
+- **`response.task`** — When `messageA2A` returns a **TaskResponse**, **`response.task`** is the task handle (e.g. an **AgentTask** object). Use it directly. Discriminate by shape: e.g. `'task' in response` or `response.task !== undefined`.
 - `**agent.task(taskId)`** — Load an existing task by ID when you don’t have the response (e.g. after restart or when the ID was stored). `taskId` is an opaque string from the A2A server. Returns the same kind of task handle as `response.task`.
 
 Example:
 
 ```ts
 const response = await agent.messageA2A({ type: 'task-proposal', goal: 'analyze ETH sentiment' });
-if (response.type === 'task') {
+if ('task' in response) {
   const task = response.task;  // AgentTask — use task.query(), task.message(), task.cancel()
 }
 // Or, when you only have the ID: const task = agent.task(taskId);
@@ -228,9 +228,11 @@ if (a2aResult.x402Required) {
 
 ## 5. Types (summary)
 
-- **MessageResponse** — `type: 'message'`; message content (e.g. `content` or `parts`). May include `**contextId`** when the server associates the message with a context (use it in the next `messageA2A` call to continue that context).
-- **TaskResponse** — `type: 'task'`; `taskId: string`; `**contextId`** (string, conversation context); `**task**` (the AgentTask handle); optional task snapshot.
-- **Response union** — `MessageResponse | TaskResponse` for `messageA2A`; discriminate with `response.type`. For task responses, use `response.task` to get the AgentTask.
+Response objects are typed so the SDK and callers work with **MessageResponse** and **TaskResponse** as distinct types. Discriminate by shape (e.g. `'task' in response`); no `type` field is required.
+
+- **MessageResponse** — Interface: message content (e.g. `content?: string`, `parts?: Part[]`), optional `contextId`. No `task` or `taskId`.
+- **TaskResponse** — Interface: **`taskId: string`**; **`contextId: string`**; **`task: AgentTask`**; optional task snapshot. Has `task` and `taskId`; use these to narrow from the union.
+- **Response union** — `messageA2A` returns **`MessageResponse | TaskResponse`**. Narrow by shape: e.g. `if ('task' in response)` then `response` is TaskResponse and use `response.task` to get the AgentTask.
 - **List tasks result** — list of tasks + optional `nextPageToken`. May include `x402Required` + `x402Payment`.
 - **AgentTask** (task handle) — has read-only `**taskId`** and `**contextId**` (strings); methods `query()`, `message()`, `cancel()`, and optionally `subscribe()`. Same type returned by `response.task` and `agent.task(taskId)`. Each method may return a result that includes `x402Required` + `x402Payment`.
 - **x402Payment** — **`accepts`** (array of payment options; each has at least `price`, `token`, and optionally `network`, `scheme`, `description`, `maxAmountRequired`). When the endpoint accepts multiple chains/tokens/schemes, **`accepts`** has multiple entries. **`pay(accept?)`** — pass the chosen option when there are multiple, or call **`pay()`** when there is one. Top-level **`price`** / **`token`** / **`network`** may be present for single-option convenience.
