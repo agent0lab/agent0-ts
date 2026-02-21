@@ -6,11 +6,17 @@ This document specifies new APIs on the Agent0 SDK **Agent** type: A2A messaging
 
 ---
 
-## 1. A2A messaging
+## 1. Messaging
 
-### 1.1 Send message
+### 1.0 Unified message
 
-`**agent.messageA2A(content [, options])`**
+**`agent.message(content [, options])`** — Unified entry point. Determines which message methods are available for this agent (A2A, XMTP), uses a fixed priority order (**A2A first, then XMTP**), and delegates to the corresponding method (e.g. `messageA2A`, then `messageXMTP`). Returns the same shape as the underlying call (e.g. `MessageResponse | TaskResponse` when A2A is used). The SDK exposes this and the protocol-specific methods (`messageA2A`, `messageXMTP`); callers may use either.
+
+**Options** — Passed through to the underlying method. When A2A is used: same as **`messageA2A`** (`blocking`, `contextId`, `taskId` — see §1.1). When XMTP is used: no options specified for now.
+
+### 1.1 A2A: messageA2A
+
+**`agent.messageA2A(content [, options])`**
 
 Sends a message to the agent’s A2A endpoint. The server may reply with a direct message or create a task.
 
@@ -118,8 +124,8 @@ A task handle (e.g. **AgentTask**) is an object tied to a single task ID.
 
 ### 3.3 Messaging an agent via XMTP
 
-- `**agent.messageXmtp(content)**` — Send a message from the **connected wallet** to this agent's XMTP address. Convenience for "message this agent"; equivalent to resolving the agent's wallet/XMTP address and calling `**sdk.messageTo(agentAddress, content)`**. Requires the agent to have a wallet set.
-- `**agent.xmtpConversation()`**  — Get the connected wallet's conversation with this agent. Returns the same handle as `sdk.conversationWith(agentAddress)` for the agent's address.
+- **`agent.messageXMTP(content)`** — Send a message from the **connected wallet** to this agent's XMTP address. Resolves the agent's wallet/XMTP address and sends via **`sdk.messageTo(agentAddress, content)`**. Requires the agent to have a wallet set.
+- **`agent.xmtpConversation()`** — Get the connected wallet's conversation with this agent. Returns a handle with **`history([options])`** and **`message(content)`**.
 
 **Conversation handle** (from `**sdk.conversationWith(peerAddress)`** or `**agent.xmtpConversation()`**): `**history([options])**` — past messages, optional pagination; `**message(content)**` — send a message.
 
@@ -227,8 +233,8 @@ Response objects are typed so the SDK and callers work with **MessageResponse** 
 - **TaskResponse** — Interface: `**taskId: string`**; `**contextId: string`**; `**task: AgentTask**`; optional task snapshot. Has `task` and `taskId`; use these to narrow from the union.
 - **Response union** — `messageA2A` returns `**MessageResponse | TaskResponse`**. Narrow by shape: e.g. `if ('task' in response)` then `response` is TaskResponse and use `response.task` to get the AgentTask.
 - **List tasks result** — list of tasks + optional `nextPageToken`. May include `x402Required` + `x402Payment`.
-- **AgentTask** (task handle) — has read-only `**taskId`** and `**contextId`** (strings); methods `query()`, `message()`, `cancel()`. Same type returned by `response.task` and `agent.task(taskId)`. Each method may return a result that includes `x402Required` + `x402Payment`.
+- **AgentTask** (task handle) — has read-only **`taskId`** and **`contextId`** (strings); methods `query()`, `message()`, `cancel()`. Returned by `response.task` and by `agent.task(taskId)`. Each method may return a result that includes `x402Required` + `x402Payment`.
 - **x402Payment** — `**accepts`** (array of payment options; each has at least `price`, `token`, and optionally `network`, `scheme`, `description`, `maxAmountRequired`). When the endpoint accepts multiple chains/tokens/schemes, `**accepts`** has multiple entries. `**pay(accept?)**` — pass the chosen option when there are multiple, or call `**pay()**` when there is one. Top-level `**price**` / `**token**` / `**network**` may be present for single-option convenience.
-- **Conversation handle** — `history([options])`, `message(content)`. From `**sdk.conversationWith(peerAddress)`** or `**agent.xmtpConversation()`** (conversation with that agent). Send via `**sdk.messageTo(peerAddress, content)**` or `**agent.messageXmtp(content)**` to message an agent. List via `**sdk.xmtpConversations()**`.
+- **Conversation handle** — `history([options])`, `message(content)`. From `**sdk.conversationWith(peerAddress)`** or `**agent.xmtpConversation()`** (conversation with that agent). Send via **`sdk.messageTo(peerAddress, content)`** or **`agent.messageXMTP(content)`** to message an agent. Use **`agent.message(content)`** for a unified entry point (A2A first, then XMTP). List via `**sdk.xmtpConversations()**`.
 
 All “payable” methods: their return type is effectively `NormalResult | { x402Required: true; x402Payment: X402Payment }`, where `NormalResult` is the success type for that method. They use `**sdk.request(options)**` (generic HTTP x402 handler) internally; that method is also exposed for custom or arbitrary HTTP calls that may return 402.
