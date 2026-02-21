@@ -164,11 +164,12 @@ These methods use a **generic HTTP x402 handler** internally (§4.2). The SDK al
 - **headers** *(optional)* — Request headers.
 - **body** *(optional)* — Request body (string or buffer).
 - **parseResponse** *(optional)* — Function that takes the successful response (e.g. 200 body) and returns the typed result. If omitted, the handler may return the raw response or a default parse.
+- **payment** *(optional)* — Optionally, payment payload or params to send with the initial request (e.g. `PAYMENT-SIGNATURE` or x402-defined payload). When provided, the first request is sent with that payment; if the server accepts it, the response is 2xx and no 402 (one round trip). If the server returns 402 (e.g. invalid or wrong payment), the handler returns `x402Required` + `x402Payment` as in the normal flow. Payable methods (A2A, MCP, etc.) accept the same optional **payment** in their options and pass it through.
 
 **Behavior**
 
-- Sends the request. If the server responds with **HTTP 402**, the handler parses the 402 body (payment requirements), does **not** throw, and returns a result object with **`x402Required: true`** and **`x402Payment`** (price, token, network, description, **`pay()`**, etc.). **`pay()`** performs the payment (e.g. build payload, sign, send `PAYMENT-SIGNATURE`, retry the **same** request) and resolves with the same shape as a successful call (using `parseResponse` if provided).
-- If the server responds with 2xx, the handler returns the parsed result (via `parseResponse` if provided) or the raw response.
+- **Normal flow (no payment on first request):** The first request is sent without payment. If the server responds with **HTTP 402**, the handler parses the 402 body (payment requirements), does **not** throw, and returns a result object with **`x402Required: true`** and **`x402Payment`** (price, token, network, description, **`pay()`**, etc.). **`pay()`** performs the payment (e.g. build payload, sign, send `PAYMENT-SIGNATURE`, retry the **same** request) and resolves with the same shape as a successful call (using `parseResponse` if provided). If the server responds with 2xx, the handler returns the parsed result (via `parseResponse` if provided) or the raw response.
+- **Optional: payment with first request.** If **payment** is provided, the first request is sent **with** that payment. If the server responds with 2xx, the handler returns the result—one round trip, no 402. If the server responds with 402, the handler returns **`x402Required`** and **`x402Payment`** (and **`pay()`** to retry) as in the normal flow.
 - Other status codes or network errors are thrown or surfaced per SDK convention.
 
 Callers can use this for arbitrary HTTP endpoints that may return 402; A2A and MCP methods call it internally with the appropriate URL, body, and parser.
@@ -196,7 +197,7 @@ When the server responds with **HTTP 402**:
 
 ### 4.4 Usage pattern
 
-Caller (or autonomous agent) can inspect payment details before calling `pay()`:
+**Normal flow:** Request without payment. If the server returns 402, the SDK returns a result with **`x402Required`** and **`x402Payment`**; the caller can inspect (e.g. price, token) and then call **`pay()`** to pay and retry:
 
 ```ts
 const response = await agent.messageA2A(content);
@@ -220,6 +221,8 @@ if (a2aResult.x402Required) {
   // paid = normal list result (tasks + optional nextPageToken)
 }
 ```
+
+**Optional: payment with first request.** When the agent already knows the cost, it can pass **`payment`** in options (e.g. `messageA2A(content, { payment: ... })`, or `sdk.request({ ..., payment: ... })`). The first request is sent with that payment; if the server accepts it, the response is 2xx and no 402. Only if something goes wrong does the server return 402 and the caller sees `x402Required` + `x402Payment.pay()`.
 
 ### 4.5 Pay() behavior and errors
 
