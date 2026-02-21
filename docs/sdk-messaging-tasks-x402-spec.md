@@ -94,9 +94,6 @@ A task handle (e.g. **AgentTask**) is an object tied to a single task ID.
 | `**task.query([options])`** | Get current task state (status, artifacts, optional message history). Options may include `historyLength`.                                                                                                     | Get Task `GET /tasks/{id}`                     |
 | `**task.message(content)**` | Send another message to this task (follow-up). Same `content` shapes as `messageA2A`. The SDK sends this task’s `taskId` (and `contextId`) automatically; no need to pass contextId.                           | Send Message with existing task context        |
 | `**task.cancel()**`         | Cancel the task. Returns updated task state.                                                                                                                                                                   | Cancel Task `POST /tasks/{id}:cancel`          |
-| `**task.subscribe()**`      | Subscribe to live updates (status changes, artifact updates). Returns an async iterable or event stream; server sends events until task reaches a terminal state. Optional: not all servers support streaming. | Subscribe to task `POST /tasks/{id}:subscribe` |
-
-
 **x402:** Any of these methods may return a result that includes `**x402Required`** (e.g. the server requires payment for that operation). Same handling as §4: caller checks `x402Required` and may call `x402Payment.pay()` to retry.
 
 **Task status / lifecycle**
@@ -148,7 +145,7 @@ For a conversation object `**convo`**:
 
 **Any** SDK method that performs an HTTP request to a server that might return **HTTP 402 Payment Required** should use the same response pattern described here. That includes:
 
-- **A2A:** `messageA2A`, `listTasks`, and every task-handle method (`query`, `message`, `cancel`, `subscribe` if it does HTTP).
+- **A2A:** `messageA2A`, `listTasks`, and every task-handle method (`query`, `message`, `cancel`).
 - **Future:** MCP tool/resource calls, or other HTTP-based agent operations. x402 can be extended later to other surfaces (e.g. **x402‑aware MCP endpoints**—tools, resources, or prompts that may return 402 and use the same payment flow).
 
 These methods use a **generic HTTP x402 handler** internally (§4.2). The SDK also exposes that handler so custom or future features can tap into the same 402 flow. On 402 the SDK does not throw; it returns a response object that may include **`x402Required`**.
@@ -234,7 +231,7 @@ Response objects are typed so the SDK and callers work with **MessageResponse** 
 - **TaskResponse** — Interface: **`taskId: string`**; **`contextId: string`**; **`task: AgentTask`**; optional task snapshot. Has `task` and `taskId`; use these to narrow from the union.
 - **Response union** — `messageA2A` returns **`MessageResponse | TaskResponse`**. Narrow by shape: e.g. `if ('task' in response)` then `response` is TaskResponse and use `response.task` to get the AgentTask.
 - **List tasks result** — list of tasks + optional `nextPageToken`. May include `x402Required` + `x402Payment`.
-- **AgentTask** (task handle) — has read-only `**taskId`** and `**contextId**` (strings); methods `query()`, `message()`, `cancel()`, and optionally `subscribe()`. Same type returned by `response.task` and `agent.task(taskId)`. Each method may return a result that includes `x402Required` + `x402Payment`.
+- **AgentTask** (task handle) — has read-only **`taskId`** and **`contextId`** (strings); methods `query()`, `message()`, `cancel()`. Same type returned by `response.task` and `agent.task(taskId)`. Each method may return a result that includes `x402Required` + `x402Payment`.
 - **x402Payment** — **`accepts`** (array of payment options; each has at least `price`, `token`, and optionally `network`, `scheme`, `description`, `maxAmountRequired`). When the endpoint accepts multiple chains/tokens/schemes, **`accepts`** has multiple entries. **`pay(accept?)`** — pass the chosen option when there are multiple, or call **`pay()`** when there is one. Top-level **`price`** / **`token`** / **`network`** may be present for single-option convenience.
 - **Conversation handle** — `history()`, `message(content)`. Obtained from listing (`sdk.xmtpConversations()` / `agent.xmtpConversations()`) or from `newDm(peerAddress)` (1:1, one per pair) or `newGroup([options])` (groups for multi-party or task-specific threads).
 
