@@ -31,6 +31,9 @@ import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
 } from './contracts.js';
+import { requestWithX402 } from './x402-request.js';
+import { buildEvmPayment } from './x402-payment.js';
+import type { X402RequestOptions, X402RequestResult } from './x402-types.js';
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -204,6 +207,25 @@ export class SDK {
       return new SubgraphClient(url);
     }
     return undefined;
+  }
+
+  /**
+   * Perform an HTTP request with built-in x402 (402 Payment Required) handling.
+   * On 2xx returns the parsed result; on 402 returns { x402Required: true, x402Payment } (no throw).
+   * Use x402Payment.pay() to pay and retry. See docs/sdk-messaging-tasks-x402-spec.md §4.
+   */
+  async request<T = Response>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
+    return requestWithX402(options, {
+      fetch: globalThis.fetch,
+      buildPayment: (accept, snapshot) => buildEvmPayment(accept, this._chainClient, snapshot),
+    });
+  }
+
+  /**
+   * Alias for request() for x402-specific usage.
+   */
+  async fetchWithX402<T = Response>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
+    return this.request(options);
   }
 
   identityRegistryAddress(): Address {

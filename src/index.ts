@@ -28,3 +28,13 @@ export type { TransactionMined, TransactionWaitOptions } from './core/transactio
 // Export contract definitions
 export * from './core/contracts.js';
 
+// x402 payment-required types and helpers
+export type {
+  X402Accept,
+  X402Payment,
+  X402RequestOptions,
+  X402RequiredResponse,
+  X402RequestResult,
+} from './core/x402-types.js';
+export { isX402Required, parse402Accepts } from './core/x402-types.js';
+
