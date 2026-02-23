@@ -28,6 +28,9 @@
     "test:coverage": "jest --coverage",
     "x402-server": "node tests/x402-server/server.mjs",
     "test:x402-integration": "RUN_X402_INTEGRATION=1 jest --testPathPattern=x402-integration",
+    "test:x402-anvil": "RUN_X402_ANVIL=1 jest --testPathPattern=x402-anvil",
+    "forge:build": "forge build",
+    "anvil:node": "anvil --port 8545",
     "lint": "eslint src",
     "format": "prettier --write src",
     "clean": "rm -rf dist"

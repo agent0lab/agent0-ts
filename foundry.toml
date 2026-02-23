@@ -1,0 +1,6 @@
+# Foundry config for x402 tests (anvil + forge build).
+# Requires: foundryup / forge / anvil on PATH.
+[profile.default]
+src = "contracts"
+out = "out"
+solc = "0.8.24"
