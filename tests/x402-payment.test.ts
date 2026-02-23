@@ -102,6 +102,15 @@ describe('buildEvmPayment', () => {
     expect(payload.network).toBe('eip155:84532');
   });
 
+  it('uses accept.maxAmountRequired when price not set', async () => {
+    const client = createMockChainClient();
+    const acceptNoPrice = { ...accept, price: undefined as unknown as string, maxAmountRequired: '999999' };
+    const base64 = await buildEvmPayment(acceptNoPrice, client);
+    const payload = decodePayload(base64);
+    const auth = (payload.payload as Record<string, unknown>).authorization as Record<string, unknown>;
+    expect(auth.value).toBe('999999');
+  });
+
   it('calls signTypedData with TransferWithAuthorization domain and message', async () => {
     const signTypedData = jest.fn().mockResolvedValue('0x' + 'b'.repeat(130));
     const client = createMockChainClient({ signTypedData });

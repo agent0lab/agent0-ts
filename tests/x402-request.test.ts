@@ -297,6 +297,24 @@ describe('x402 request handler (requestWithX402)', () => {
 
       await expect(result.x402Payment.pay()).rejects.toThrow(/no payment option/);
     });
+
+    it('pay(invalid index) rejects', async () => {
+      jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        mockResponse({ status: 402, body: { accepts: [{ price: '1', token: '0xT' }, { price: '2', token: '0xU' }] } })
+      );
+
+      const result = await requestWithX402(
+        { url: BASE_URL, method: 'GET', parseResponse },
+        { fetch: globalThis.fetch, buildPayment: async () => 'payload' }
+      );
+
+      expect(isX402Required(result)).toBe(true);
+      if (!isX402Required(result)) return;
+      expect(result.x402Payment.accepts).toHaveLength(2);
+
+      await expect(result.x402Payment.pay(99)).rejects.toThrow(/no payment option selected/);
+      await expect(result.x402Payment.pay(-1)).rejects.toThrow(/no payment option selected/);
+    });
   });
 
   describe('Payment with first request', () => {
@@ -385,6 +403,23 @@ describe('parse402Accepts', () => {
     const out = parse402Accepts({ paymentRequirements: { amount: '200', asset: '0xA', payTo: '0xD' } });
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ price: '200', token: '0xA', destination: '0xD' });
+  });
+
+  it('parses description and maxAmountRequired from accept entry', () => {
+    const body = {
+      accepts: [
+        { price: '100', token: '0xT', network: '1', description: 'Pay in ETH', maxAmountRequired: '200' },
+      ],
+    };
+    const out = parse402Accepts(body);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      price: '100',
+      token: '0xT',
+      network: '1',
+      description: 'Pay in ETH',
+      maxAmountRequired: '200',
+    });
   });
 
   it('returns [] for null or non-object', () => {
