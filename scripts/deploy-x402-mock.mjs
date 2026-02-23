@@ -39,36 +39,40 @@ async function main() {
   const publicClient = createPublicClient({ chain, transport });
   const walletClient = createWalletClient({ chain, transport, account });
 
-  const hash = await walletClient.deployContract({
-    abi,
-    bytecode,
-    account,
-  });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
-  const tokenAddress = receipt.contractAddress;
-  if (!tokenAddress) throw new Error('No contract address in receipt');
-
+  const payTo = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'; // anvil account #1
   const mintAmount = 10n ** 18n;
   const mintAbi = parseAbi(['function mint(address to, uint256 amount) external']);
-  const mintHash = await walletClient.writeContract({
-    address: tokenAddress,
-    abi: mintAbi,
-    functionName: 'mint',
-    args: [account.address, mintAmount],
-    account,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: mintHash });
+
+  const deployAndMint = async () => {
+    const hash = await walletClient.deployContract({ abi, bytecode, account });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    const address = receipt.contractAddress;
+    if (!address) throw new Error('No contract address in receipt');
+    const mintHash = await walletClient.writeContract({
+      address,
+      abi: mintAbi,
+      functionName: 'mint',
+      args: [account.address, mintAmount],
+      account,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: mintHash });
+    return address;
+  };
+
+  const token1 = await deployAndMint();
+  const token2 = await deployAndMint();
 
   const result = {
-    token: tokenAddress,
-    payTo: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', // anvil account #1
+    token: token1,
+    tokens: [token1, token2],
+    payTo,
     chainId: 31337,
     mintAmount: String(mintAmount),
   };
 
   mkdirSync(path.dirname(DEPLOY_RESULT_PATH), { recursive: true });
   writeFileSync(DEPLOY_RESULT_PATH, JSON.stringify(result, null, 2), 'utf8');
-  console.log('Deployed MockEIP3009:', tokenAddress, 'chainId: 31337', 'payTo:', result.payTo);
+  console.log('Deployed MockEIP3009 x2:', token1, token2, 'chainId: 31337', 'payTo:', payTo);
 }
 
 main().catch((e) => {

@@ -87,6 +87,7 @@ function runDeploy(): Promise<void> {
 
 interface DeployResult {
   token: string;
+  tokens?: string[];
   payTo: string;
   chainId: number;
   mintAmount: string;
@@ -117,15 +118,14 @@ describeAnvil('x402 Anvil integration (real chain + token + SDK, viem only)', ()
     await runDeploy();
 
     const deploy = readDeployResult();
-    accepts = [
-      {
-        price: '1000000',
-        token: deploy.token,
-        network: String(deploy.chainId),
-        scheme: 'exact',
-        destination: deploy.payTo,
-      },
-    ];
+    const tokenAddresses = deploy.tokens ?? [deploy.token];
+    accepts = tokenAddresses.map((token) => ({
+      price: '1000000',
+      token,
+      network: String(deploy.chainId),
+      scheme: 'exact' as const,
+      destination: deploy.payTo,
+    }));
     baseUrl = `http://localhost:${SERVER_PORT}`;
     serverProcess = spawn('node', [SERVER_PATH], {
       env: {
@@ -195,5 +195,25 @@ describeAnvil('x402 Anvil integration (real chain + token + SDK, viem only)', ()
 
     expect('x402Required' in result && result.x402Required).toBe(false);
     expect(result).toMatchObject({ success: true, data: 'resource' });
+  }, 15000);
+
+  it('multiple accepts (two tokens, one chain): pay(1) with second token → 200', async () => {
+    expect(accepts.length).toBeGreaterThanOrEqual(2);
+    const sdk = new SDK({
+      chainId: CHAIN_ID,
+      rpcUrl: RPC_URL,
+      privateKey: ANVIL_ACCOUNT_0_PRIVATE_KEY,
+    });
+
+    const result = await sdk.request({
+      url: baseUrl,
+      method: 'GET',
+      parseResponse,
+    });
+    expect('x402Required' in result && result.x402Required).toBe(true);
+    if (!('x402Required' in result) || !result.x402Required) return;
+
+    const paid = await result.x402Payment.pay(1);
+    expect(paid).toMatchObject({ success: true, data: 'resource' });
   }, 15000);
 });
