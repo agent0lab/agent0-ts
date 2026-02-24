@@ -8,7 +8,13 @@ import type {
   RegistrationFile,
   Endpoint,
 } from '../models/interfaces.js';
-import type { MessageResponse, TaskResponse, Part, MessageA2AOptions } from '../models/a2a.js';
+import type {
+  MessageResponse,
+  TaskResponse,
+  Part,
+  MessageA2AOptions,
+  A2APaymentRequired,
+} from '../models/a2a.js';
 import { sendMessage as sendMessageA2A } from './a2a-client.js';
 import type { AgentId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
@@ -219,17 +225,18 @@ export class Agent {
 
   /**
    * Send a message to the agent's A2A endpoint. Returns either a direct MessageResponse
-   * or a TaskResponse when the server creates a task. Per spec §2.1.
-   * Phase 1: no x402 (402 throws); no credential. Use agent.messageA2A(content, options).
+   * or a TaskResponse when the server creates a task. On HTTP 402, returns x402Required
+   * and x402Payment.pay() to pay and retry (per spec §2.1, §4).
    */
   async messageA2A(
     content: string | { parts: Part[] },
     options?: MessageA2AOptions
-  ): Promise<MessageResponse | TaskResponse> {
+  ): Promise<MessageResponse | TaskResponse | A2APaymentRequired<MessageResponse | TaskResponse>> {
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
     const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
-    return sendMessageA2A({ baseUrl, a2aVersion, content, options });
+    const x402Deps = this.sdk.getX402RequestDeps?.();
+    return sendMessageA2A({ baseUrl, a2aVersion, content, options }, x402Deps);
   }
 
   setENS(name: string, version: string = '1.0'): this {

@@ -41,15 +41,37 @@ export interface TaskState {
 }
 
 /**
+ * When an A2A request returns HTTP 402. Caller may call x402Payment.pay() to pay and retry.
+ * Compatible with X402RequiredResponse from core/x402-types (used by a2a-client).
+ */
+export interface A2APaymentRequired<T = unknown> {
+  x402Required: true;
+  x402Payment: {
+    pay(accept?: unknown): Promise<T>;
+    accepts: unknown[];
+    price?: string;
+    token?: string;
+    network?: string;
+  };
+}
+
+/** Result of task.query(): state or 402. */
+export type TaskQueryResult = { taskId: string; contextId: string; status?: TaskState; artifacts?: unknown[]; messages?: unknown[] };
+
+/** Result of task.cancel(): state or 402. */
+export type TaskCancelResult = { taskId: string; contextId: string; status?: TaskState };
+
+/**
  * Task handle: read-only taskId, contextId, and methods query, message, cancel.
  * Returned by response.task and by agent.loadTask(taskId).
+ * Methods may return 402 (A2APaymentRequired); use pay() to retry.
  */
 export interface AgentTask {
   readonly taskId: string;
   readonly contextId: string;
-  query(options?: { historyLength?: number }): Promise<{ taskId: string; contextId: string; status?: TaskState; artifacts?: unknown[]; messages?: unknown[] }>;
-  message(content: string | { parts: Part[] }): Promise<MessageResponse | TaskResponse>;
-  cancel(): Promise<{ taskId: string; contextId: string; status?: TaskState }>;
+  query(options?: { historyLength?: number }): Promise<TaskQueryResult | A2APaymentRequired<TaskQueryResult>>;
+  message(content: string | { parts: Part[] }): Promise<MessageResponse | TaskResponse | A2APaymentRequired<MessageResponse | TaskResponse>>;
+  cancel(): Promise<TaskCancelResult | A2APaymentRequired<TaskCancelResult>>;
 }
 
 /**

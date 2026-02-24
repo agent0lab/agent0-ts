@@ -239,11 +239,14 @@ describe('createTaskHandle', () => {
       `${baseUrl}/tasks/task-abc?historyLength=10`,
       expect.objectContaining({ method: 'GET', headers: expect.objectContaining({ 'A2A-Version': a2aVersion }) })
     );
-    expect(result.taskId).toBe(taskId);
-    expect(result.contextId).toBe(contextId);
-    expect(result.status).toEqual({ state: 'working' });
-    expect(result.artifacts).toEqual([]);
-    expect(result.messages).toEqual([]);
+    expect('x402Required' in result).toBe(false);
+    if (!('x402Required' in result)) {
+      expect(result.taskId).toBe(taskId);
+      expect(result.contextId).toBe(contextId);
+      expect(result.status).toEqual({ state: 'working' });
+      expect(result.artifacts).toEqual([]);
+      expect(result.messages).toEqual([]);
+    }
   });
 
   it('task.message() POSTs to message:send and returns MessageResponse', async () => {
@@ -272,7 +275,8 @@ describe('createTaskHandle', () => {
     expect(callBody.message.parts).toEqual([{ text: 'follow up' }]);
 
     expect('task' in result).toBe(false);
-    if (!('task' in result)) expect(result.content).toBe('Done');
+    expect('x402Required' in result).toBe(false);
+    if (!('task' in result) && !('x402Required' in result)) expect(result.content).toBe('Done');
   });
 
   it('task.message() can return TaskResponse (nested task)', async () => {
@@ -305,9 +309,12 @@ describe('createTaskHandle', () => {
       `${baseUrl}/tasks/task-abc:cancel`,
       expect.objectContaining({ method: 'POST', headers: expect.objectContaining({ 'A2A-Version': a2aVersion }) })
     );
-    expect(result.taskId).toBe(taskId);
-    expect(result.contextId).toBe(contextId);
-    expect(result.status).toEqual({ state: 'canceled' });
+    expect('x402Required' in result).toBe(false);
+    if (!('x402Required' in result)) {
+      expect(result.taskId).toBe(taskId);
+      expect(result.contextId).toBe(contextId);
+      expect(result.status).toEqual({ state: 'canceled' });
+    }
   });
 });
 
@@ -378,7 +385,8 @@ describe('Agent.messageA2A', () => {
       })
     );
     expect('task' in result).toBe(false);
-    if (!('task' in result)) {
+    expect('x402Required' in result).toBe(false);
+    if (!('task' in result) && !('x402Required' in result)) {
       expect(result.content).toBe('OK');
       expect(result.contextId).toBe('c1');
     }

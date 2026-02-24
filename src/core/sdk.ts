@@ -31,7 +31,7 @@ import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
 } from './contracts.js';
-import { requestWithX402 } from './x402-request.js';
+import { requestWithX402, type X402RequestDeps } from './x402-request.js';
 import { buildEvmPayment } from './x402-payment.js';
 import type { X402RequestOptions, X402RequestResult } from './x402-types.js';
 
@@ -745,6 +745,17 @@ export class SDK {
     }
     
     return {};
+  }
+
+  /**
+   * Returns deps for x402-aware requests (fetch + buildPayment).
+   * Used by A2A client so messageA2A and task methods can return 402 + pay() instead of throwing.
+   */
+  getX402RequestDeps(): X402RequestDeps {
+    return {
+      fetch: globalThis.fetch,
+      buildPayment: (accept, snapshot) => buildEvmPayment(accept, this._chainClient, snapshot),
+    };
   }
 
   // Expose clients for advanced usage
