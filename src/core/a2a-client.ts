@@ -40,7 +40,8 @@ function normalizeCredential(credential: string | CredentialObject): CredentialO
 
 /**
  * Apply credential to request using AgentCard securitySchemes and security (spec §2.5, OpenAPI 3 style).
- * Uses the first required scheme in security[]; credential object key must match that scheme name (e.g. apiKey, bearerAuth).
+ * Walks security[] in order and uses the first scheme for which the credential object has a string value (first-match).
+ * Credential object keys must match scheme names (e.g. apiKey, bearerAuth). String credential normalizes to { apiKey }.
  * Supported: apiKey (in: header|query|cookie + name), http (bearer → Authorization: Bearer; basic → Authorization: Basic base64(user:password)).
  */
 export function applyCredential(
@@ -50,36 +51,38 @@ export function applyCredential(
   const out: A2AAuth = { headers: {}, queryParams: {} };
   const obj = normalizeCredential(credential);
   const { securitySchemes = {}, security = [] } = auth;
-  const firstRequired = security[0];
-  if (!firstRequired || typeof firstRequired !== 'object') return out;
 
-  const schemeName = Object.keys(firstRequired)[0];
-  if (!schemeName) return out;
+  for (const entry of security) {
+    if (!entry || typeof entry !== 'object') continue;
+    const schemeName = Object.keys(entry)[0];
+    if (!schemeName) continue;
 
-  const scheme = securitySchemes[schemeName];
-  if (!scheme || typeof scheme !== 'object') return out;
+    const scheme = securitySchemes[schemeName];
+    if (!scheme || typeof scheme !== 'object') continue;
 
-  const value = obj[schemeName];
-  if (value == null || typeof value !== 'string') return out;
+    const value = obj[schemeName];
+    if (value == null || typeof value !== 'string' || value === '') continue;
 
-  if (scheme.type === 'apiKey') {
-    const { in: where, name } = scheme;
-    if (where === 'header') out.headers[name] = value;
-    else if (where === 'query') out.queryParams[name] = value;
-    else if (where === 'cookie') out.headers['Cookie'] = `${name}=${encodeURIComponent(value)}`;
-  } else if (scheme.type === 'http') {
-    if (scheme.scheme === 'bearer') {
-      out.headers['Authorization'] = `Bearer ${value}`;
-    } else if (scheme.scheme === 'basic') {
-      // value is "user:password"; encode for Basic auth (Node or browser)
-      const encoded =
-        /^[A-Za-z0-9+/]+=*$/.test(value) && !value.includes(':')
-          ? value
-          : typeof Buffer !== 'undefined'
-            ? Buffer.from(value, 'utf8').toString('base64')
-            : btoa(unescape(encodeURIComponent(value)));
-      out.headers['Authorization'] = `Basic ${encoded}`;
+    // First scheme with a value: apply it and return
+    if (scheme.type === 'apiKey') {
+      const { in: where, name } = scheme;
+      if (where === 'header') out.headers[name] = value;
+      else if (where === 'query') out.queryParams[name] = value;
+      else if (where === 'cookie') out.headers['Cookie'] = `${name}=${encodeURIComponent(value)}`;
+    } else if (scheme.type === 'http') {
+      if (scheme.scheme === 'bearer') {
+        out.headers['Authorization'] = `Bearer ${value}`;
+      } else if (scheme.scheme === 'basic') {
+        const encoded =
+          /^[A-Za-z0-9+/]+=*$/.test(value) && !value.includes(':')
+            ? value
+            : typeof Buffer !== 'undefined'
+              ? Buffer.from(value, 'utf8').toString('base64')
+              : btoa(unescape(encodeURIComponent(value)));
+        out.headers['Authorization'] = `Basic ${encoded}`;
+      }
     }
+    return out;
   }
 
   return out;

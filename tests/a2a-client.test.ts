@@ -217,7 +217,7 @@ describe('applyCredential', () => {
     expect(out.queryParams).toEqual({});
   });
 
-  it('uses first required security entry', () => {
+  it('uses first required security entry when credential has value for first', () => {
     const auth = {
       securitySchemes: {
         apiKey: { type: 'apiKey' as const, in: 'header' as const, name: 'X-API-Key' },
@@ -227,6 +227,58 @@ describe('applyCredential', () => {
     };
     const out = applyCredential({ apiKey: 'first' }, auth);
     expect(out.headers['X-API-Key']).toBe('first');
+    expect(out.headers['Authorization']).toBeUndefined();
+  });
+
+  it('uses second scheme when credential has value only for second (first-match)', () => {
+    const auth = {
+      securitySchemes: {
+        apiKey: { type: 'apiKey' as const, in: 'header' as const, name: 'X-API-Key' },
+        bearerAuth: { type: 'http' as const, scheme: 'bearer' as const },
+      },
+      security: [{ apiKey: [] }, { bearerAuth: [] }] as Array<Record<string, string[]>>,
+    };
+    const out = applyCredential({ bearerAuth: 'jwt-token-only' }, auth);
+    expect(out.headers['Authorization']).toBe('Bearer jwt-token-only');
+    expect(out.headers['X-API-Key']).toBeUndefined();
+  });
+
+  it('uses first scheme when credential has values for multiple schemes', () => {
+    const auth = {
+      securitySchemes: {
+        apiKey: { type: 'apiKey' as const, in: 'query' as const, name: 'key' },
+        bearerAuth: { type: 'http' as const, scheme: 'bearer' as const },
+      },
+      security: [{ apiKey: [] }, { bearerAuth: [] }] as Array<Record<string, string[]>>,
+    };
+    const out = applyCredential({ apiKey: 'q', bearerAuth: 'jwt' }, auth);
+    expect(out.queryParams['key']).toBe('q');
+    expect(out.headers['Authorization']).toBeUndefined();
+  });
+
+  it('returns empty when credential has no value for any of multiple schemes', () => {
+    const auth = {
+      securitySchemes: {
+        apiKey: { type: 'apiKey' as const, in: 'header' as const, name: 'X-API-Key' },
+        bearerAuth: { type: 'http' as const, scheme: 'bearer' as const },
+      },
+      security: [{ apiKey: [] }, { bearerAuth: [] }] as Array<Record<string, string[]>>,
+    };
+    const out = applyCredential({ otherKey: 'ignored' }, auth);
+    expect(out.headers).toEqual({});
+    expect(out.queryParams).toEqual({});
+  });
+
+  it('string credential uses apiKey when apiKey is second in security (first-match)', () => {
+    const auth = {
+      securitySchemes: {
+        bearerAuth: { type: 'http' as const, scheme: 'bearer' as const },
+        apiKey: { type: 'apiKey' as const, in: 'header' as const, name: 'X-API-Key' },
+      },
+      security: [{ bearerAuth: [] }, { apiKey: [] }] as Array<Record<string, string[]>>,
+    };
+    const out = applyCredential('my-api-key', auth);
+    expect(out.headers['X-API-Key']).toBe('my-api-key');
     expect(out.headers['Authorization']).toBeUndefined();
   });
 });
