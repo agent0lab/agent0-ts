@@ -11,6 +11,7 @@ import {
   XMTPAlreadyConnectedError,
   XMTPLoadError,
   XMTPMaxInstallationsError,
+  XMTPReceiverNotRegisteredError,
   XMTPWalletRequiredError,
 } from './xmtp-errors.js';
 
@@ -24,8 +25,24 @@ function hexToBytes(hex: `0x${string}`): Uint8Array {
   return out;
 }
 
-function toIdentifier(address: string): Identifier {
+/** Build XMTP Identifier from wallet address (for canMessage, createDm, etc.). */
+export function toIdentifier(address: string): Identifier {
   return { identifier: address, identifierKind: IDENTIFIER_KIND_ETHEREUM };
+}
+
+/**
+ * Ensure the peer has a registered inbox; throw XMTPReceiverNotRegisteredError if not.
+ */
+export async function ensurePeerCanMessage(
+  client: InstanceType<typeof Client>,
+  peerAddress: string
+): Promise<void> {
+  const identifier = toIdentifier(peerAddress);
+  const map = await client.canMessage([identifier]);
+  const can = map.get(peerAddress) ?? map.get(identifier.identifier) ?? false;
+  if (!can) {
+    throw new XMTPReceiverNotRegisteredError();
+  }
 }
 
 export type XmtpClientOptions = {

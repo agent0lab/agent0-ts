@@ -34,16 +34,24 @@ import {
 import { requestWithX402, type X402RequestDeps } from './x402-request.js';
 import { buildEvmPayment } from './x402-payment.js';
 import type { X402RequestOptions, X402RequestResult } from './x402-types.js';
-import type { XMTPInstallationKey } from '../models/xmtp.js';
-import type { XMTPInboxInfo } from '../models/xmtp.js';
+import type {
+  XMTPConversationHandle,
+  XMTPConversationSummary,
+  XMTPInboxInfo,
+  XMTPInstallationKey,
+  XMTPMessage,
+} from '../models/xmtp.js';
 import {
   loadXMTPInboxFromKey,
   registerXMTPInboxWithSigner,
   getXMTPInboxInfoFromState,
+  toIdentifier,
+  ensurePeerCanMessage,
   type XMTPClientWrapperState,
   type XmtpClientOptions,
 } from './xmtp-client.js';
-import { XMTPAlreadyConnectedError } from './xmtp-errors.js';
+import { XMTPAlreadyConnectedError, XMTPWalletRequiredError } from './xmtp-errors.js';
+import { Client as XMTPClient, isText } from '@xmtp/node-sdk';
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -826,6 +834,101 @@ export class SDK {
   getXMTPInboxInfo(): XMTPInboxInfo | undefined {
     if (!this._xmtpState) return undefined;
     return getXMTPInboxInfoFromState(this._xmtpState);
+  }
+
+  /**
+   * Ensure an XMTP inbox is loaded: use existing, or load from config key, or auto-register when wallet connected.
+   */
+  private async _ensureXMTPInbox(): Promise<void> {
+    if (this._xmtpState) return;
+    if (this._xmtpInstallationKeyFromConfig) {
+      await this.loadXMTPInbox();
+      return;
+    }
+    const address = await this._chainClient.getAddress();
+    if (!address) {
+      throw new XMTPWalletRequiredError();
+    }
+    await this.registerXMTPInbox();
+  }
+
+  /**
+   * List XMTP conversations (ensure inbox first; auto-register if wallet connected).
+   */
+  async XMTPConversations(): Promise<XMTPConversationSummary[]> {
+    await this._ensureXMTPInbox();
+    const client = this._xmtpState!.client;
+    await client.conversations.sync();
+    const list = await client.conversations.list();
+    const summaries: XMTPConversationSummary[] = [];
+    const dmInboxIds: string[] = [];
+    for (const conv of list) {
+      const peerInboxId = (conv as { peerInboxId?: string }).peerInboxId;
+      if (peerInboxId) dmInboxIds.push(peerInboxId);
+    }
+    let peerAddressByInboxId: Map<string, string> = new Map();
+    if (dmInboxIds.length > 0) {
+      const states = await XMTPClient.fetchInboxStates(dmInboxIds, this._xmtpEnv);
+      for (const s of states) {
+        const addr = s.recoveryIdentifier?.identifier ?? s.identifiers?.[0]?.identifier;
+        if (addr) peerAddressByInboxId.set(s.inboxId, addr);
+      }
+    }
+    for (const conv of list) {
+      const peerInboxId = (conv as { peerInboxId?: string }).peerInboxId;
+      if (peerInboxId) {
+        let lastActivity: Date | undefined;
+        try {
+          const last = await (conv as { lastMessage?: () => Promise<unknown> }).lastMessage?.();
+          if (last && typeof (last as { sentAt?: Date }).sentAt === 'object') {
+            lastActivity = (last as { sentAt: Date }).sentAt;
+          }
+        } catch {
+          // ignore
+        }
+        summaries.push({
+          peerAddress: peerAddressByInboxId.get(peerInboxId),
+          peerInboxId,
+          lastActivity,
+        });
+      }
+    }
+    return summaries;
+  }
+
+  /**
+   * Send a text message to a peer (ensure inbox first; receiver must have registered inbox).
+   */
+  async messageXMTP(peerAddress: string, content: string): Promise<void> {
+    await this._ensureXMTPInbox();
+    const client = this._xmtpState!.client;
+    await ensurePeerCanMessage(client, peerAddress);
+    const dm = await client.conversations.createDmWithIdentifier(toIdentifier(peerAddress));
+    await dm.sendText(content);
+  }
+
+  /**
+   * Load a conversation with a peer (ensure inbox first; peer must have registered inbox).
+   */
+  async loadXMTPConversation(peerAddress: string): Promise<XMTPConversationHandle> {
+    await this._ensureXMTPInbox();
+    const client = this._xmtpState!.client;
+    await ensurePeerCanMessage(client, peerAddress);
+    const dm = await client.conversations.createDmWithIdentifier(toIdentifier(peerAddress));
+    return {
+      history: async (options?: { limit?: number; before?: string }): Promise<XMTPMessage[]> => {
+        const msgs = await dm.messages({ limit: options?.limit });
+        return msgs.map((m) => ({
+          id: m.id,
+          content: isText(m) ? (m.content as string) : (m.fallback ?? String(m.content ?? '')),
+          senderInboxId: m.senderInboxId,
+          sentAt: m.sentAt,
+        }));
+      },
+      message: async (content: string) => {
+        await dm.sendText(content);
+      },
+    };
   }
 
   // Expose clients for advanced usage

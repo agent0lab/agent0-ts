@@ -24,3 +24,35 @@ export interface XMTPInboxInfo {
   /** Inbox ID. */
   inboxId: string;
 }
+
+/**
+ * Conversation handle from loadXMTPConversation or agent.loadXMTPConversation.
+ */
+export interface XMTPConversationHandle {
+  /** Fetch message history from the network (optional pagination). */
+  history(options?: { limit?: number; before?: string }): Promise<XMTPMessage[]>;
+  /** Send a message. */
+  message(content: string): Promise<void>;
+}
+
+/**
+ * Simple message shape for history.
+ */
+export interface XMTPMessage {
+  id: string;
+  content: string;
+  senderInboxId?: string;
+  sentAt: Date;
+}
+
+/**
+ * Summary of an XMTP conversation (e.g. from XMTPConversations()).
+ */
+export interface XMTPConversationSummary {
+  /** Peer wallet address (for DMs). */
+  peerAddress?: string;
+  /** Peer inbox ID. */
+  peerInboxId: string;
+  /** Last activity if available. */
+  lastActivity?: Date;
+}
