@@ -26,6 +26,7 @@ import {
   createTaskHandle,
   applyCredential,
 } from './a2a-client.js';
+import type { XMTPConversationHandle } from '../models/xmtp.js';
 import type { AgentId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
 import type { SDK } from './sdk.js';
@@ -250,6 +251,32 @@ export class Agent {
     const auth = this._getA2aAuthFromMeta(ep?.meta);
     const x402Deps = this.sdk.getX402RequestDeps?.();
     return sendMessageA2A({ baseUrl, a2aVersion, content, options, auth }, x402Deps);
+  }
+
+  /**
+   * Send a message from the loaded inbox to this agent's XMTP address.
+   * Resolves the agent's wallet via getWallet() and delegates to sdk.messageXMTP.
+   * Fails if the agent has no wallet set or the agent's wallet has no registered XMTP inbox.
+   */
+  async messageXMTP(content: string): Promise<void> {
+    const agentAddress = await this.getWallet();
+    if (!agentAddress) {
+      throw new Error('Agent has no wallet set; cannot message via XMTP.');
+    }
+    return this.sdk.messageXMTP(agentAddress, content);
+  }
+
+  /**
+   * Get the loaded inbox's conversation with this agent.
+   * Resolves the agent's wallet via getWallet() and delegates to sdk.loadXMTPConversation.
+   * Fails if the agent has no wallet set or the agent's wallet has no registered XMTP inbox.
+   */
+  async loadXMTPConversation(): Promise<XMTPConversationHandle> {
+    const agentAddress = await this.getWallet();
+    if (!agentAddress) {
+      throw new Error('Agent has no wallet set; cannot load XMTP conversation.');
+    }
+    return this.sdk.loadXMTPConversation(agentAddress);
   }
 
   /** Build AgentCardAuth from endpoint meta (securitySchemes + security from crawler). */
