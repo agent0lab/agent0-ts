@@ -108,11 +108,13 @@ export class Agent {
 
   /**
    * Read the verified agent wallet from the Identity Registry (on-chain).
-   *
-   * Internally calls the contract function `getAgentWallet(agentId)`.
-   * Returns `undefined` if unset/cleared (zero address).
+   * When registrationFile.walletAddress is set (e.g. from discovery or for testing), returns it
+   * without a chain read so agents can be used with a known wallet and XMTP without chain.
    */
   async getWallet(): Promise<Address | undefined> {
+    if (this.registrationFile.walletAddress) {
+      return this.registrationFile.walletAddress;
+    }
     if (!this.registrationFile.agentId) {
       throw new Error('Agent must be registered before reading wallet from chain.');
     }

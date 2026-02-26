@@ -3,7 +3,9 @@
  * Mocks @xmtp/node-sdk to avoid network and real wallet.
  */
 
-import { SDK } from '../src/index.js';
+import { SDK, Agent } from '../src/index.js';
+import type { RegistrationFile } from '../src/models/interfaces.js';
+import { TrustModel } from '../src/models/enums.js';
 import {
   XMTPLoadError,
   XMTPAlreadyConnectedError,
@@ -22,9 +24,12 @@ const mockFetchInboxStates = jest.fn().mockResolvedValue([]);
 const mockBuild = jest.fn();
 const mockCreate = jest.fn();
 
+const mockDmSync = jest.fn().mockResolvedValue(undefined);
+
 function createMockDm(peerInboxId: string) {
   return {
     peerInboxId,
+    sync: mockDmSync,
     sendText: mockSendText,
     messages: mockMessages,
     lastMessage: jest.fn().mockResolvedValue(undefined),
@@ -229,5 +234,62 @@ describe('XMTP Phase 2 — loadXMTPConversation', () => {
     const sdk = new SDK({ chainId: 1, rpcUrl: 'https://eth.llamarpc.com', xmtpInstallationKey: key });
     mockCanMessage.mockResolvedValueOnce(new Map([['0xpeer', false]]));
     await expect(sdk.loadXMTPConversation('0xpeer')).rejects.toThrow(XMTPReceiverNotRegisteredError);
+  });
+});
+
+function minimalRegistrationFile(walletAddress: string): RegistrationFile {
+  return {
+    name: 'Test Agent',
+    description: '',
+    endpoints: [],
+    trustModels: [TrustModel.REPUTATION],
+    owners: [],
+    operators: [],
+    active: false,
+    x402support: false,
+    metadata: {},
+    updatedAt: Math.floor(Date.now() / 1000),
+    walletAddress: walletAddress as `0x${string}`,
+  };
+}
+
+describe('XMTP Phase 3 — Agent messageXMTP / loadXMTPConversation', () => {
+  it('agent.messageXMTP(content) uses registrationFile.walletAddress and sends via SDK', async () => {
+    const key = JSON.stringify({ version: 1, walletAddress: '0x1234567890123456789012345678901234567890' });
+    const sdk = new SDK({ chainId: 1, rpcUrl: 'https://eth.llamarpc.com', xmtpInstallationKey: key });
+    const agentWallet = '0xabcd000000000000000000000000000000000000';
+    mockCanMessage.mockResolvedValue(new Map([[agentWallet, true]]));
+    const regFile = minimalRegistrationFile(agentWallet);
+    const agent = new Agent(sdk, regFile);
+    await agent.messageXMTP('Hello agent');
+    expect(mockCreateDmWithIdentifier).toHaveBeenCalledWith(expect.objectContaining({ identifier: agentWallet }));
+    expect(mockSendText).toHaveBeenCalledWith('Hello agent');
+  });
+
+  it('agent.loadXMTPConversation() returns handle using registrationFile.walletAddress', async () => {
+    const key = JSON.stringify({ version: 1, walletAddress: '0x1234567890123456789012345678901234567890' });
+    const sdk = new SDK({ chainId: 1, rpcUrl: 'https://eth.llamarpc.com', xmtpInstallationKey: key });
+    const agentWallet = '0xabcd000000000000000000000000000000000000';
+    mockCanMessage.mockResolvedValue(new Map([[agentWallet, true]]));
+    mockMessages.mockResolvedValue([{ id: 'm1', content: 'Hi', senderInboxId: 'x', sentAt: new Date(), fallback: 'Hi' }]);
+    const regFile = minimalRegistrationFile(agentWallet);
+    const agent = new Agent(sdk, regFile);
+    const conv = await agent.loadXMTPConversation();
+    expect(conv.history).toBeDefined();
+    expect(conv.message).toBeDefined();
+    const history = await conv.history({ limit: 5 });
+    expect(history).toHaveLength(1);
+    expect(history[0].content).toBe('Hi');
+    await conv.message('Reply');
+    expect(mockSendText).toHaveBeenCalledWith('Reply');
+  });
+
+  it('agent.messageXMTP throws when registrationFile has no walletAddress and no agentId', async () => {
+    const key = JSON.stringify({ version: 1, walletAddress: '0x1234567890123456789012345678901234567890' });
+    const sdk = new SDK({ chainId: 1, rpcUrl: 'https://eth.llamarpc.com', xmtpInstallationKey: key });
+    const regFile = minimalRegistrationFile('0xab');
+    delete (regFile as Partial<RegistrationFile>).walletAddress;
+    const agent = new Agent(sdk, regFile);
+    await expect(agent.messageXMTP('Hi')).rejects.toThrow(/wallet|registered/);
   });
 });

@@ -38,7 +38,7 @@ async function main() {
 
   console.log('Loading SDK...');
   const distPath = pathToFileURL(join(__dirname, '..', 'dist', 'index.js')).href;
-  const { SDK, XMTPReceiverNotRegisteredError } = await import(distPath);
+  const { SDK, Agent, XMTPReceiverNotRegisteredError } = await import(distPath);
 
   const sdkAlice = new SDK({
     chainId: CHAIN_ID,
@@ -82,10 +82,33 @@ async function main() {
   await convBobToAlice.message('Second message from Bob');
   console.log('   OK');
 
+  console.log('5. Alice → Agent(Bob): agent.messageXMTP + agent.loadXMTPConversation() (live)...');
+  const regFileBob = {
+    name: 'Bob',
+    description: 'Test agent',
+    endpoints: [],
+    trustModels: ['reputation'],
+    owners: [],
+    operators: [],
+    active: false,
+    x402support: false,
+    metadata: {},
+    updatedAt: Math.floor(Date.now() / 1000),
+    walletAddress: addrBob,
+  };
+  const agentBob = new Agent(sdkAlice, regFileBob);
+  await agentBob.messageXMTP('Hello agent, from Alice via Agent');
+  const convToAgent = await agentBob.loadXMTPConversation();
+  await convToAgent.message('Second message to agent');
+  const histToAgent = await convToAgent.history({ limit: 10 });
+  ok(histToAgent.length >= 1, 'agent conversation has messages');
+  ok(histToAgent.some((m) => m.content?.includes('Hello agent') || m.content?.includes('Second message to agent')), 'Alice sees messages to agent');
+  console.log('   OK — messages:', histToAgent.length);
+
   // Allow time for messages to sync before reading inboxes
   await new Promise((r) => setTimeout(r, 3000));
 
-  console.log('5. Alice: XMTPConversations() + load conversation with Bob, check history...');
+  console.log('6. Alice: XMTPConversations() + load conversation with Bob, check history...');
   const listAlice = await sdkAlice.XMTPConversations();
   ok(Array.isArray(listAlice) && listAlice.length >= 1, 'Alice has conversations');
   const convAlice = await sdkAlice.loadXMTPConversation(addrBob);
@@ -95,7 +118,7 @@ async function main() {
   ok(fromBob.length >= 1, 'Alice sees at least one message from Bob');
   console.log('   OK — messages:', historyAlice.length, 'from Bob:', fromBob.length);
 
-  console.log('6. Bob: XMTPConversations() + load conversation with Alice, check history...');
+  console.log('7. Bob: XMTPConversations() + load conversation with Alice, check history...');
   const listBob = await sdkBob.XMTPConversations();
   ok(Array.isArray(listBob) && listBob.length >= 1, 'Bob has conversations');
   const convBob = await sdkBob.loadXMTPConversation(addrAlice);
@@ -105,7 +128,7 @@ async function main() {
   ok(fromAlice.length >= 1, 'Bob sees at least one message from Alice');
   console.log('   OK — messages:', historyBob.length, 'from Alice:', fromAlice.length);
 
-  console.log('7. messageXMTP(unregistered) throws XMTPReceiverNotRegisteredError...');
+  console.log('8. messageXMTP(unregistered) throws XMTPReceiverNotRegisteredError...');
   const unregistered = '0x0000000000000000000000000000000000000001';
   try {
     await sdkAlice.messageXMTP(unregistered, 'Hi');
@@ -115,7 +138,7 @@ async function main() {
   }
   console.log('   OK');
 
-  console.log('8. loadXMTPConversation(unregistered) throws...');
+  console.log('9. loadXMTPConversation(unregistered) throws...');
   try {
     await sdkAlice.loadXMTPConversation(unregistered);
     throw new Error('expected throw');
@@ -124,7 +147,7 @@ async function main() {
   }
   console.log('   OK');
 
-  console.log('\nAll XMTP integration steps passed (2 wallets, messaging, inbox load).');
+  console.log('\nAll XMTP integration steps passed (2 wallets, Agent messaging, inbox load).');
 }
 
 main().catch((err) => {
