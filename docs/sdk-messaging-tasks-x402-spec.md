@@ -144,24 +144,23 @@ When **credential** is provided in options (string or credential object), the SD
 - A wallet **need not** be connected to use XMTP when the user has an **installation key** and loads an existing inbox (e.g. **`sdk.loadXMTPInbox(installationKey)`** or an installation key provided at config). Sending, listing conversations, and agent XMTP methods (**`agent.messageXMTP(content)`**, **`agent.loadXMTPConversation()`**) use the loaded inbox and the agent's wallet address (e.g. from **`agent.getWallet()`**); no signer is required. A wallet **is** required only when **registering** a new inbox (**`sdk.registerXMTPInbox()`**), to sign the registration.
 - The agent may have a wallet (e.g. via `agent.getWallet()`). There is one conversation per pair of addresses (1:1 DM). Alternatives may be specified later.
 - When a wallet is used for XMTP (registering or messaging as/with an agent), that wallet must be on the XMTP network (have a registered XMTP identity).
-- The SDK is either **connected to an inbox** (via **`sdk.loadXMTPInbox()`**, either automatically when an installation key is given at config or manually by the user) or not. When not connected, XMTP methods are unavailable until the user loads an inbox or registers a new one.
+- The SDK is either **connected to an inbox** (via **`sdk.loadXMTPInbox()`**, either automatically when an installation key is given at config or manually by the user, or by automatic registration when a messaging method is used without an inbox — see below) or not.
 
 ### 3.2 Inbox connection and registration
 
 **Optional installation key at config**
 
-- The SDK accepts an **optional XMTP installation key** (or keys) parameter (e.g. at construction or via a setter). When provided, the SDK **automatically** calls **`sdk.loadXMTPInbox()`** (with that key) so the inbox is connected at init. When not provided, the user must call **`sdk.loadXMTPInbox(installationKey)`** manually after init (with a key they persisted from a previous register), or call **`sdk.registerXMTPInbox()`** to create and connect a new inbox.
+- The SDK accepts an **optional XMTP installation key** (or keys) parameter (e.g. at construction or via a setter). When provided, the SDK **automatically** calls **`sdk.loadXMTPInbox()`** (with that key) so the inbox is connected at init. When not provided, the user may call **`sdk.loadXMTPInbox(installationKey)`** manually (with a key they persisted from a previous register), or call **`sdk.registerXMTPInbox()`** to create and connect a new inbox. **If the user calls a messaging or conversation method (e.g. `sdk.messageXMTP`, `sdk.XMTPConversations()`, `sdk.loadXMTPConversation`, or the agent XMTP methods) without having set up an inbox**, the SDK **may automatically** register a new inbox (when a wallet is connected) and then proceed; if no wallet is connected, the SDK errors.
 
 **`sdk.loadXMTPInbox(installationKey?)`**
 
 - Connects the SDK to an XMTP inbox using the given installation key(s). If an installation key was provided at SDK config, the SDK may call this automatically at init; the user can also call it **manually** after the SDK is already initialized to connect an inbox (e.g. after obtaining a key from storage). When called with a key, the SDK validates that an inbox with those keys exists (and that the keys are correct); if not, it errors. When already connected to an inbox, calling **`loadXMTPInbox`** again with a different key may switch to that inbox or error per implementation; calling with the same key is a no-op.
 - **Errors** if the provided key(s) are invalid or no inbox exists for them.
 
-**`sdk.registerXMTPInbox(installationKeys?)`**
+**`sdk.registerXMTPInbox()`**
 
-- Use when the **SDK is not already connected to an XMTP inbox**. Creates a new installation and registers it with XMTP. **Optional parameter `installationKeys`**: when provided, the user supplies the installation key(s) for the new inbox (e.g. their own generated keys); when omitted, the SDK generates key(s) randomly. In both cases the SDK signs with the connected wallet and registers with XMTP. **Returns** the **installation key(s)** used (either the user-provided or SDK-generated ones) so the caller can persist them and pass them to **`loadXMTPInbox()`** on future runs; the SDK does not persist them. Requires a connected wallet.
-- The SDK validates keys where applicable: e.g. when user provides **installationKeys**, they must be valid and not already associated with an existing inbox (or the SDK errors). When the SDK generates keys, it ensures they are valid and unique for the new installation.
-- **Errors** if the SDK is already connected to an inbox. Errors if user-provided **installationKeys** are invalid or already in use. **Errors** if the wallet has already reached the maximum number of installations allowed by XMTP (the user must revoke an existing installation elsewhere before creating a new one).
+- Use when the **SDK is not already connected to an XMTP inbox**. Creates a new installation and registers it with XMTP. The SDK **generates** installation key(s) and signs with the connected wallet. **Returns** the **installation key(s)** so the caller can persist them and pass them to **`loadXMTPInbox()`** on future runs; the SDK does not persist them. Requires a connected wallet.
+- **Errors** if the SDK is already connected to an inbox. **Errors** if the wallet has already reached the maximum number of installations allowed by XMTP (the user must revoke an existing installation elsewhere before creating a new one).
 - The wallet may already have an inbox on the XMTP network (from another app or device); this method creates a **new** installation so this SDK instance can connect. If the wallet is at max installations, the method errors (see above).
 
 **`sdk.getXMTPInstallationKey()`** *(optional)*
@@ -178,14 +177,14 @@ When **credential** is provided in options (string or credential object), the SD
 
 ### 3.3 SDK: connected wallet
 
-- **`sdk.XMTPConversations()`** — List conversations for the **connected wallet**. Returns array of conversation handles or summary objects (e.g. peer address, last activity).
-- **`sdk.messageXMTP(peerAddress, content)`** — Send a message to that address. **Fails** if the receiver (`peerAddress`) has no registered XMTP inbox.
-- **`sdk.loadXMTPConversation(peerAddress)`** — Get the conversation with that peer. Returns a handle with **`history([options])`** and **`message(content)`**. **Fails** if the peer wallet has no registered XMTP inbox.
+- **`sdk.XMTPConversations()`** — List conversations for the loaded inbox. If no inbox is connected, the SDK may **automatically** register a new inbox (when a wallet is connected) and then return the list; otherwise errors. Returns array of conversation handles or summary objects (e.g. peer address, last activity).
+- **`sdk.messageXMTP(peerAddress, content)`** — Send a message to that address. If no inbox is connected, the SDK may **automatically** register a new inbox (when a wallet is connected) and then send; otherwise errors. **Fails** if the receiver (`peerAddress`) has no registered XMTP inbox.
+- **`sdk.loadXMTPConversation(peerAddress)`** — Get the conversation with that peer. If no inbox is connected, the SDK may **automatically** register a new inbox (when a wallet is connected) and then load the conversation; otherwise errors. Returns a handle with **`history([options])`** and **`message(content)`**. **Fails** if the peer wallet has no registered XMTP inbox.
 
 ### 3.4 Messaging an agent via XMTP
 
-- **`agent.messageXMTP(content)`** — Send a message from the **loaded inbox** to this agent's XMTP address. Resolves the agent's wallet address (e.g. **`agent.getWallet()`**) and sends via **`sdk.messageXMTP(agentAddress, content)`**. Requires the agent to have a wallet set. **Fails** if the agent's wallet has no registered XMTP inbox. No SDK signer required when an inbox is loaded by installation key.
-- **`agent.loadXMTPConversation()`** — Get the loaded inbox's conversation with this agent. Resolves the agent's wallet address and returns a handle with **`history([options])`** and **`message(content)`**. **Fails** if the agent's wallet has no registered XMTP inbox.
+- **`agent.messageXMTP(content)`** — Send a message from the loaded inbox to this agent's XMTP address. If no inbox is connected, the SDK may **automatically** register a new inbox (when a wallet is connected) and then send; otherwise errors. Resolves the agent's wallet address (e.g. **`agent.getWallet()`**) and sends via **`sdk.messageXMTP(agentAddress, content)`**. Requires the agent to have a wallet set. **Fails** if the agent's wallet has no registered XMTP inbox.
+- **`agent.loadXMTPConversation()`** — Get the loaded inbox's conversation with this agent. If no inbox is connected, the SDK may **automatically** register a new inbox (when a wallet is connected) and then load the conversation; otherwise errors. Resolves the agent's wallet address and returns a handle with **`history([options])`** and **`message(content)`**. **Fails** if the agent's wallet has no registered XMTP inbox.
 
 **Conversation handle** (from **`sdk.loadXMTPConversation(peerAddress)`** or **`agent.loadXMTPConversation()`**): **`history([options])`** — past messages (fetched from network), optional pagination; **`message(content)`** — send a message.
 
@@ -193,7 +192,7 @@ When **credential** is provided in options (string or credential object), the SD
 
 - XMTP client not initialized; wallet missing when required (e.g. for **registerXMTPInbox** only); network/auth errors — thrown or surfaced per SDK convention.
 - **`loadXMTPInbox(key)`** errors if the key(s) are invalid or no inbox exists for them.
-- **`registerXMTPInbox()`** errors if the SDK is already connected to an inbox. Errors if optional **installationKeys** are invalid or already in use. Errors if the wallet has reached the maximum number of XMTP installations (user must revoke one elsewhere first).
+- **`registerXMTPInbox()`** errors if the SDK is already connected to an inbox. Errors if the wallet has reached the maximum number of XMTP installations (user must revoke one elsewhere first).
 - **`sdk.messageXMTP(peerAddress, content)`**, **`sdk.loadXMTPConversation(peerAddress)`**, **`agent.messageXMTP(content)`**, and **`agent.loadXMTPConversation()`** error if the **receiver (or peer) wallet has no registered XMTP inbox**.
 
 **XMTP mapping**
