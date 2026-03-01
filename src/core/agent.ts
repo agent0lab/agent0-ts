@@ -48,6 +48,9 @@ export class Agent {
   private _dirtyMetadata = new Set<string>();
   private _lastRegisteredWallet?: Address;
   private _lastRegisteredEns?: string;
+  /** Base URL from agent card (supportedInterfaces[0].url or url) when fetched; avoids path-stripping heuristics. */
+  private _cachedA2aBaseUrl?: string;
+  private _a2aBaseUrlResolved = false;
 
   constructor(private sdk: SDK, registrationFile: RegistrationFile) {
     this.registrationFile = registrationFile;
@@ -221,10 +224,36 @@ export class Agent {
   }
 
   /**
-   * Resolve A2A base URL from endpoint value (agent card URL or base).
-   * Used for POST /message:send and GET /tasks/{id}, etc.
+   * Fetch agent card once and cache base URL from card when present (A2A spec: supportedInterfaces[0].url or url).
+   * Prefer card-declared URL over deriving from endpoint value.
+   */
+  private async _ensureA2aBaseUrlResolved(): Promise<void> {
+    if (this._a2aBaseUrlResolved) return;
+    this._a2aBaseUrlResolved = true;
+    const endpoint = this.a2aEndpoint;
+    if (!endpoint || !endpoint.startsWith('http')) return;
+    try {
+      const res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), redirect: 'follow' });
+      if (!res.ok) return;
+      const data = (await res.json()) as Record<string, unknown>;
+      const fromInterface = Array.isArray(data.supportedInterfaces) && data.supportedInterfaces.length > 0
+        ? (data.supportedInterfaces[0] as Record<string, unknown>)?.url
+        : undefined;
+      const url = (typeof fromInterface === 'string' ? fromInterface : undefined)
+        ?? (typeof data.url === 'string' ? data.url : undefined);
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        this._cachedA2aBaseUrl = url.replace(/\/$/, '');
+      }
+    } catch {
+      // Ignore; _getA2aBaseUrl will use fallback derivation
+    }
+  }
+
+  /**
+   * Resolve A2A base URL: prefer cached value from agent card (supportedInterfaces[0].url or url), else derive from endpoint value.
    */
   private _getA2aBaseUrl(): string {
+    if (this._cachedA2aBaseUrl) return this._cachedA2aBaseUrl;
     const endpoint = this.a2aEndpoint;
     if (!endpoint) throw new Error('Agent has no A2A endpoint');
     try {
@@ -276,6 +305,7 @@ export class Agent {
     content: string | { parts: Part[] },
     options?: MessageA2AOptions
   ): Promise<MessageResponse | TaskResponse | A2APaymentRequired<MessageResponse | TaskResponse>> {
+    await this._ensureA2aBaseUrlResolved();
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
     const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
@@ -332,6 +362,7 @@ export class Agent {
   async listTasks(
     options?: ListTasksOptions
   ): Promise<TaskSummary[] | A2APaymentRequired<TaskSummary[]>> {
+    await this._ensureA2aBaseUrlResolved();
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
     const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
@@ -352,6 +383,7 @@ export class Agent {
       payment?: string;
     }
   ): Promise<AgentTask | A2APaymentRequired<AgentTask>> {
+    await this._ensureA2aBaseUrlResolved();
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
     const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
