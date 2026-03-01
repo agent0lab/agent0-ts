@@ -49,10 +49,12 @@ export async function requestWithX402<T = Response>(
     body,
   };
 
-  const doFetch = async (paymentPayload?: string): Promise<Response> => {
+  /** x402 spec: V1 uses X-PAYMENT header; V2 uses PAYMENT-SIGNATURE. */
+  const doFetch = async (paymentPayload?: string, paymentHeaderName?: string): Promise<Response> => {
     const reqHeaders: Record<string, string> = { ...snapshot.headers };
     if (paymentPayload !== undefined) {
-      reqHeaders['PAYMENT-SIGNATURE'] = paymentPayload;
+      const headerName = paymentHeaderName ?? 'PAYMENT-SIGNATURE';
+      reqHeaders[headerName] = paymentPayload;
     }
     return deps.fetch(url, {
       method: snapshot.method,
@@ -92,7 +94,8 @@ export async function requestWithX402<T = Response>(
           throw new Error('x402: no payment option selected (empty accepts or invalid index)');
         }
         const payload = await deps.buildPayment(chosen, { ...snapshot, x402Version });
-        const retryResponse = await doFetch(payload);
+        const paymentHeaderName = x402Version === 1 ? 'X-PAYMENT' : 'PAYMENT-SIGNATURE';
+        const retryResponse = await doFetch(payload, paymentHeaderName);
         if (!retryResponse.ok) {
           let body = '';
           try {
