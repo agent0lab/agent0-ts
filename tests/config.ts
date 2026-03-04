@@ -39,6 +39,10 @@ export const CLIENT_PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY || '';
 export const AGENT0_API_KEY = process.env.AGENT0_API_KEY || '';
 export const AGENT0_TELEMETRY_ENDPOINT = process.env.AGENT0_TELEMETRY_ENDPOINT || '';
 
+// Supabase (for telemetry DB assertions in integration tests; service role bypasses RLS)
+export const SUPABASE_URL = process.env.SUPABASE_URL || '';
+export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
 /**
  * Print current configuration (hiding sensitive values).
  */
@@ -52,6 +56,8 @@ export function printConfig(): void {
   console.log(`  AGENT_ID: ${AGENT_ID}`);
   console.log(`  AGENT0_API_KEY: ${AGENT0_API_KEY ? '***' : 'NOT SET'}`);
   console.log(`  AGENT0_TELEMETRY_ENDPOINT: ${AGENT0_TELEMETRY_ENDPOINT || '(default)'}`);
-  console.log();
+  console.log(`  SUPABASE_URL: ${SUPABASE_URL ? '***' : 'NOT SET'}`);
+  console.log(`  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? '***' : 'NOT SET'}`);
+  console.log('');
 }
 
