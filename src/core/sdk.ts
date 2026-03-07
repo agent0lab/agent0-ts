@@ -36,6 +36,19 @@ export interface SDKConfig {
   chainId: ChainId;
   rpcUrl: string;
   /**
+   * If true (default), the SDK will attempt MegaFuel sponsorship on BNB chain (56) and
+   * automatically fall back to normal RPC submission when sponsorship is unavailable.
+   */
+  sponsorWhenAvailable?: boolean;
+  /**
+   * Optional MegaFuel endpoint override. Defaults to BSC MegaFuel mainnet URL on chain 56.
+   */
+  megaFuelUrl?: string;
+  /**
+   * Optional User-Agent header used for MegaFuel RPC calls.
+   */
+  megaFuelUserAgent?: string;
+  /**
    * Backwards-compatible alias for `privateKey` (accepts a hex private key string).
    */
   signer?: string;
@@ -81,6 +94,9 @@ export class SDK {
     this._chainClient = new ViemChainClient({
       chainId: config.chainId,
       rpcUrl: config.rpcUrl,
+      sponsorWhenAvailable: config.sponsorWhenAvailable ?? true,
+      megaFuelUrl: config.megaFuelUrl,
+      megaFuelUserAgent: config.megaFuelUserAgent,
       privateKey,
       walletProvider: config.walletProvider,
     });

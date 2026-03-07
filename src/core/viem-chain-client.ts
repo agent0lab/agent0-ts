@@ -21,6 +21,9 @@ import { normalizeEcdsaSignature } from '../utils/signatures.js';
 export type ViemChainClientConfig = {
   chainId: number;
   rpcUrl: string;
+  sponsorWhenAvailable?: boolean;
+  megaFuelUrl?: string;
+  megaFuelUserAgent?: string;
   /**
    * Browser path: injected wallet provider (EIP-1193), usually selected via ERC-6963.
    */
@@ -30,6 +33,10 @@ export type ViemChainClientConfig = {
    */
   privateKey?: string;
 };
+
+const BSC_TESTNET_CHAIN_ID = 97;
+const DEFAULT_BSC_MEGAFUEL_URL = 'https://bsc-megafuel-testnet.nodereal.io';
+const DEFAULT_MEGAFUEL_USER_AGENT = 'agent0-sdk-ts/1.x';
 
 function normalizeHexKey(key: string): Hex {
   const k = key.trim();
@@ -45,6 +52,10 @@ function toSdkAddress(addr: string): Address {
   return addr as Address;
 }
 
+function toRpcHex(value: bigint): `0x${string}` {
+  return `0x${value.toString(16)}` as `0x${string}`;
+}
+
 function toViemTxOptions(options?: TransactionOptions): Record<string, unknown> {
   if (!options) return {};
   const out: Record<string, unknown> = {};
@@ -58,6 +69,9 @@ function toViemTxOptions(options?: TransactionOptions): Record<string, unknown> 
 export class ViemChainClient implements ChainClient {
   public readonly chainId: number;
   public readonly rpcUrl: string;
+  private readonly sponsorWhenAvailable: boolean;
+  private readonly megaFuelUrl?: string;
+  private readonly megaFuelUserAgent: string;
 
   private readonly publicClient: ReturnType<typeof createPublicClient>;
   private readonly receiptClient?: ReturnType<typeof createPublicClient>;
@@ -67,6 +81,12 @@ export class ViemChainClient implements ChainClient {
   constructor(config: ViemChainClientConfig) {
     this.chainId = config.chainId;
     this.rpcUrl = config.rpcUrl;
+    this.sponsorWhenAvailable = config.sponsorWhenAvailable ?? true;
+    this.megaFuelUserAgent = config.megaFuelUserAgent ?? DEFAULT_MEGAFUEL_USER_AGENT;
+    this.megaFuelUrl =
+      this.chainId === BSC_TESTNET_CHAIN_ID
+        ? (config.megaFuelUrl ?? DEFAULT_BSC_MEGAFUEL_URL).replace(/\/+$/, '')
+        : (config.megaFuelUrl ? config.megaFuelUrl.replace(/\/+$/, '') : undefined);
 
     // viem requires a `chain` to be set for some wallet-client actions (e.g. writeContract)
     // when using an EIP-1193 wallet provider transport. We construct a minimal chain object
@@ -192,6 +212,11 @@ export class ViemChainClient implements ChainClient {
       throw new Error('No signer available. Configure walletProvider (browser) or privateKey (server).');
     }
 
+    if (this.shouldAttemptSponsorship()) {
+      const sponsoredHash = await this.trySponsoredWriteContract(args);
+      if (sponsoredHash) return sponsoredHash;
+    }
+
     // Ensure account exists / is connected
     // IMPORTANT:
     // - If we have a local private key account, pass the ACCOUNT OBJECT so viem signs locally and uses eth_sendRawTransaction.
@@ -230,6 +255,11 @@ export class ViemChainClient implements ChainClient {
     if (!this.walletClient) {
       throw new Error('No signer available. Configure walletProvider (browser) or privateKey (server).');
     }
+
+    if (this.shouldAttemptSponsorship()) {
+      const sponsoredHash = await this.trySponsoredSendTransaction(args);
+      if (sponsoredHash) return sponsoredHash;
+    }
     const accountForViem = (this.account ?? ((await this.ensureAddress()) as unknown as ViemAddress)) as any;
     const hash = (await (this.walletClient as any).sendTransaction({
       to: toViemAddress(args.to),
@@ -238,6 +268,154 @@ export class ViemChainClient implements ChainClient {
       ...toViemTxOptions(args.options),
     })) as Hex;
     return hash as `0x${string}`;
+  }
+
+  private shouldAttemptSponsorship(): boolean {
+    return Boolean(
+      this.sponsorWhenAvailable &&
+        this.chainId === BSC_TESTNET_CHAIN_ID &&
+        this.account &&
+        this.megaFuelUrl
+    );
+  }
+
+  private async trySponsoredWriteContract(args: {
+    address: Address;
+    abi: readonly unknown[];
+    functionName: string;
+    args?: readonly unknown[];
+    options?: TransactionOptions;
+  }): Promise<`0x${string}` | undefined> {
+    try {
+      const data = encodeFunctionData({
+        abi: args.abi as any,
+        functionName: args.functionName as any,
+        args: (args.args ?? []) as any,
+      }) as `0x${string}`;
+      return await this.trySponsoredSendRawTransaction({
+        to: args.address,
+        data,
+        options: args.options,
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async trySponsoredSendTransaction(args: {
+    to: Address;
+    data: `0x${string}`;
+    options?: TransactionOptions;
+  }): Promise<`0x${string}` | undefined> {
+    try {
+      return await this.trySponsoredSendRawTransaction(args);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async trySponsoredSendRawTransaction(args: {
+    to: Address;
+    data: `0x${string}`;
+    options?: TransactionOptions;
+  }): Promise<`0x${string}` | undefined> {
+    if (!this.account || !this.megaFuelUrl) return undefined;
+
+    const from = this.account.address as ViemAddress;
+    const gas =
+      args.options?.gasLimit ??
+      (await this.publicClient.estimateGas({
+        account: from,
+        to: toViemAddress(args.to),
+        data: args.data as Hex,
+      }));
+
+    const sponsorable = await this.isMegaFuelSponsorable({
+      to: args.to,
+      from: from as unknown as Address,
+      value: 0n,
+      data: args.data,
+      gas,
+    });
+    if (!sponsorable) return undefined;
+
+    const nonce = await this.getMegaFuelNonce(from as unknown as Address);
+    const signedTx = await this.account.signTransaction({
+      to: toViemAddress(args.to),
+      data: args.data as Hex,
+      chainId: this.chainId,
+      nonce,
+      gas,
+      gasPrice: 0n,
+      type: 'legacy',
+    });
+
+    const txHash = await this.megaFuelRpc<string>(
+      'eth_sendRawTransaction',
+      [signedTx],
+      { 'User-Agent': this.megaFuelUserAgent }
+    );
+    if (!txHash || typeof txHash !== 'string' || !txHash.startsWith('0x')) {
+      return undefined;
+    }
+    return txHash as `0x${string}`;
+  }
+
+  private async isMegaFuelSponsorable(tx: {
+    to: Address;
+    from: Address;
+    value: bigint;
+    data: `0x${string}`;
+    gas: bigint;
+  }): Promise<boolean> {
+    const result = await this.megaFuelRpc<any>('pm_isSponsorable', [
+      {
+        to: tx.to,
+        from: tx.from,
+        value: toRpcHex(tx.value),
+        data: tx.data,
+        gas: toRpcHex(tx.gas),
+      },
+    ]);
+    const sponsorable = result?.sponsorable ?? result?.Sponsorable;
+    return sponsorable === true;
+  }
+
+  private async getMegaFuelNonce(address: Address): Promise<number> {
+    const hexNonce = await this.megaFuelRpc<string>('eth_getTransactionCount', [address, 'pending']);
+    if (typeof hexNonce !== 'string' || !hexNonce.startsWith('0x')) {
+      throw new Error('Invalid nonce response from MegaFuel');
+    }
+    return Number(BigInt(hexNonce));
+  }
+
+  private async megaFuelRpc<T = unknown>(
+    method: string,
+    params: unknown[],
+    headers?: Record<string, string>
+  ): Promise<T> {
+    if (!this.megaFuelUrl) throw new Error('MegaFuel URL is not configured');
+    const res = await fetch(this.megaFuelUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(headers ?? {}),
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method,
+        params,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`MegaFuel RPC HTTP ${res.status}`);
+    }
+    const body = (await res.json()) as { result?: T; error?: { message?: string } };
+    if (body.error) {
+      throw new Error(body.error.message || `MegaFuel RPC error in ${method}`);
+    }
+    return body.result as T;
   }
 
   async waitForTransaction(args: WaitForTransactionArgs): Promise<ChainReceipt> {

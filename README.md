@@ -72,6 +72,9 @@ import { SDK } from 'agent0-sdk';
 const sdk = new SDK({
   chainId: 11155111, // Ethereum Sepolia testnet (use 1 for Ethereum Mainnet)
   rpcUrl: process.env.RPC_URL!,
+  // On BNB mainnet (56), sponsorship is attempted by default when available.
+  // Set to false to force normal RPC submission.
+  sponsorWhenAvailable: true,
   privateKey: process.env.PRIVATE_KEY ?? process.env.AGENT_PRIVATE_KEY, // Optional: for write operations
   ipfs: 'pinata', // Options: 'pinata', 'filecoinPin', 'node'
   pinataJwt: process.env.PINATA_JWT // For Pinata
