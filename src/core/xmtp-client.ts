@@ -111,7 +111,7 @@ export async function buildXmtpEoaSigner(chainClient: ChainClient): Promise<{
   };
 }
 
-const DEFAULT_ENV: 'local' | 'dev' | 'production' = 'dev';
+const DEFAULT_ENV: 'local' | 'dev' | 'production' = 'production';
 
 /**
  * Load an existing XMTP inbox from a previously saved installation key.

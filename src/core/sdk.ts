@@ -82,7 +82,7 @@ export interface SDKConfig {
    */
   xmtpInstallationKey?: XMTPInstallationKey;
   /**
-   * XMTP network environment (default: 'dev').
+   * XMTP network environment (default: 'production').
    */
   xmtpEnv?: XmtpClientOptions['env'];
   /**
