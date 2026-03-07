@@ -508,6 +508,16 @@ export const DEFAULT_REGISTRIES: Record<ChainId, Record<string, string>> = {
     REPUTATION: '0x8004B663056A597Dffe9eCcC1965A193B7388713',
     // VALIDATION: not deployed in defaults yet
   },
+  421614: {
+    // Arbitrum Sepolia
+    IDENTITY: '0x8004A818BFB912233c491871b3d84c89A494BD9e',
+    REPUTATION: '0x8004B663056A597Dffe9eCcC1965A193B7388713'
+  },
+  42161: {
+    // Arbitrum One
+    IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+    REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63'
+  }
 };
 
 /**
@@ -522,5 +532,7 @@ export const DEFAULT_SUBGRAPH_URLS: Record<ChainId, string> = {
   84532:
     'https://gateway.thegraph.com/api/536c6d8572876cabea4a4ad0fa49aa57/subgraphs/id/4yYAvQLFjBhBtdRCY7eUWo181VNoTSLLFd5M7FXQAi6u', // Base Sepolia
   137: 'https://gateway.thegraph.com/api/782d61ed390e625b8867995389699b4c/subgraphs/id/9q16PZv1JudvtnCAf44cBoxg82yK9SSsFvrjCY9xnneF', // Polygon Mainnet
+  421614: "https://gateway.thegraph.com/api/4d3e61e064765d1001ee86baba46a907/subgraphs/id/6WuFQqo3FR5F76fCR4Bkfnymu64S5iu2tgX7JZsxQxg9", // Arbitrum Sepolia
+  42161: "https://gateway.thegraph.com/api/61fa508eec436e052c9159527d4c8bb1/subgraphs/id/HZ6yKjjbYpkLTXLJBxfe4HWN3jxkLfLNJXh4zeVj1t9L" // Arbitrum One
 };
 
