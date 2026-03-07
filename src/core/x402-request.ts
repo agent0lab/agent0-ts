@@ -23,19 +23,19 @@ export interface X402RequestDeps {
 }
 
 /**
- * Default parser when parseResponse is omitted: return the Response.
+ * Default parser when parseResponse is omitted: parse response body as JSON (res.json()).
  */
-async function defaultParseResponse(res: Response): Promise<Response> {
-  return res;
+async function defaultParseResponse(res: Response): Promise<unknown> {
+  return res.json();
 }
 
 /**
  * Perform a single HTTP request with built-in 402 handling.
- * - 2xx: return parsed result (or raw Response if no parseResponse).
+ * - 2xx: return parsed result (default: JSON body; or use parseResponse for custom parsing).
  * - 402: do not throw; return { x402Required: true, x402Payment } with pay(accept?) that retries once.
  * - Other status or network error: throw.
  */
-export async function requestWithX402<T = Response>(
+export async function requestWithX402<T = unknown>(
   options: X402RequestOptions<T>,
   deps: X402RequestDeps
 ): Promise<X402RequestResult<T>> {

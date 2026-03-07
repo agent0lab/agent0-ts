@@ -58,7 +58,7 @@ export interface X402RequestOptions<T = unknown> {
   headers?: Record<string, string>;
   body?: string | ArrayBuffer | Uint8Array;
   /**
-   * Optional parser for 2xx response body. If omitted, raw Response or default parse is used.
+   * Optional parser for 2xx response body. If omitted, the body is parsed as JSON (res.json()).
    */
   parseResponse?: (response: Response) => Promise<T>;
   /**
