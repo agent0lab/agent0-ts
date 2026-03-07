@@ -25,6 +25,8 @@ import {
   getTask as getTaskA2A,
   createTaskHandle,
   applyCredential,
+  normalizeInterfaces,
+  pickInterface,
 } from './a2a-client.js';
 import type { XMTPConversationHandle } from '../models/xmtp.js';
 import type { AgentId, Address, URI } from '../models/types.js';
@@ -48,9 +50,17 @@ export class Agent {
   private _dirtyMetadata = new Set<string>();
   private _lastRegisteredWallet?: Address;
   private _lastRegisteredEns?: string;
-  /** Base URL from agent card (supportedInterfaces[0].url or url) when fetched; avoids path-stripping heuristics. */
+  /** Base URL from agent card (chosen interface url) when fetched; avoids path-stripping heuristics. */
   private _cachedA2aBaseUrl?: string;
+  /** Protocol version from chosen interface when card is fetched. */
+  private _cachedA2aVersion?: string;
+  /** Binding from chosen interface (HTTP+JSON, JSONRPC, or AUTO when card does not declare protocolBinding). */
+  private _cachedA2aBinding?: 'HTTP+JSON' | 'JSONRPC' | 'GRPC' | 'AUTO';
+  /** Tenant from chosen interface when card is fetched. */
+  private _cachedA2aTenant?: string;
   private _a2aBaseUrlResolved = false;
+  /** When set, used as A2A base URL instead of resolving from card (e.g. from discovery). */
+  private _a2aBaseUrlOverride?: string;
 
   constructor(private sdk: SDK, registrationFile: RegistrationFile) {
     this.registrationFile = registrationFile;
@@ -226,6 +236,8 @@ export class Agent {
   /**
    * Fetch agent card once and cache base URL from card when present (A2A spec: supportedInterfaces[0].url or url).
    * Prefer card-declared URL over deriving from endpoint value.
+   * Discovery fallback: if endpoint is a host/base (no card path), try /.well-known/agent-card.json then /.well-known/agent.json on 404.
+   * Card fallbacks: supportedInterfaces[0].url → url → additionalInterfaces[0].url (0.3-style).
    */
   private async _ensureA2aBaseUrlResolved(): Promise<void> {
     if (this._a2aBaseUrlResolved) return;
@@ -233,16 +245,59 @@ export class Agent {
     const endpoint = this.a2aEndpoint;
     if (!endpoint || !endpoint.startsWith('http')) return;
     try {
-      const res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), redirect: 'follow' });
-      if (!res.ok) return;
-      const data = (await res.json()) as Record<string, unknown>;
-      const fromInterface = Array.isArray(data.supportedInterfaces) && data.supportedInterfaces.length > 0
-        ? (data.supportedInterfaces[0] as Record<string, unknown>)?.url
-        : undefined;
-      const url = (typeof fromInterface === 'string' ? fromInterface : undefined)
-        ?? (typeof data.url === 'string' ? data.url : undefined);
-      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-        this._cachedA2aBaseUrl = url.replace(/\/$/, '');
+      let data: Record<string, unknown> | null = null;
+      const pathname = new URL(endpoint).pathname || '';
+      const looksLikeCardUrl = /\/(\.well-known\/)?(agent-card|agent)\.json$/i.test(pathname);
+
+      if (looksLikeCardUrl) {
+        const res = await fetch(endpoint, { signal: AbortSignal.timeout(5000), redirect: 'follow' });
+        if (res.ok) data = (await res.json()) as Record<string, unknown>;
+      } else {
+        const base = endpoint.replace(/\/+$/, '');
+        const cardPaths = ['/.well-known/agent-card.json', '/.well-known/agent.json'];
+        for (const p of cardPaths) {
+          const res = await fetch(`${base}${p}`, { signal: AbortSignal.timeout(5000), redirect: 'follow' });
+          if (res.ok) {
+            data = (await res.json()) as Record<string, unknown>;
+            break;
+          }
+          if (res.status !== 404) break;
+        }
+      }
+
+      if (data) {
+        const interfaces = normalizeInterfaces(data as Record<string, unknown>);
+        const chosen = pickInterface(interfaces, ['HTTP+JSON', 'JSONRPC']);
+        if (chosen) {
+          this._cachedA2aBaseUrl = chosen.url;
+          this._cachedA2aVersion = chosen.version;
+          this._cachedA2aBinding = chosen.binding;
+          this._cachedA2aTenant = chosen.tenant;
+        } else {
+          const fromInterface = Array.isArray(data.supportedInterfaces) && data.supportedInterfaces.length > 0
+            ? (data.supportedInterfaces[0] as Record<string, unknown>)?.url
+            : undefined;
+          const fromAdditional = Array.isArray(data.additionalInterfaces) && data.additionalInterfaces.length > 0
+            ? (data.additionalInterfaces[0] as Record<string, unknown>)?.url
+            : undefined;
+          const url = (typeof fromInterface === 'string' ? fromInterface : undefined)
+            ?? (typeof data.url === 'string' ? data.url : undefined)
+            ?? (typeof fromAdditional === 'string' ? fromAdditional : undefined);
+          if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            this._cachedA2aBaseUrl = url.replace(/\/$/, '');
+          }
+          const versionFromInterface = Array.isArray(data.supportedInterfaces) && data.supportedInterfaces.length > 0
+            ? (data.supportedInterfaces[0] as Record<string, unknown>)?.protocolVersion
+            : undefined;
+          const versionFromAdditional = Array.isArray(data.additionalInterfaces) && data.additionalInterfaces.length > 0
+            ? (data.additionalInterfaces[0] as Record<string, unknown>)?.protocolVersion
+            : undefined;
+          const version = (typeof versionFromInterface === 'string' ? versionFromInterface : undefined)
+            ?? (typeof versionFromAdditional === 'string' ? versionFromAdditional : undefined)
+            ?? (typeof data.protocolVersion === 'string' ? data.protocolVersion : undefined)
+            ?? (typeof data.version === 'string' ? data.version : undefined);
+          if (version) this._cachedA2aVersion = version;
+        }
       }
     } catch {
       // Ignore; _getA2aBaseUrl will use fallback derivation
@@ -250,18 +305,28 @@ export class Agent {
   }
 
   /**
-   * Resolve A2A base URL: prefer cached value from agent card (supportedInterfaces[0].url or url), else derive from endpoint value.
+   * Override A2A base URL (e.g. from discovery). Use when you know the working base from another source.
+   */
+  setA2aBaseUrlOverride(baseUrl: string): this {
+    this._a2aBaseUrlOverride = baseUrl.replace(/\/+$/, '');
+    return this;
+  }
+
+  /**
+   * Resolve A2A base URL: prefer override, then cached value from agent card (supportedInterfaces[0].url or url), else derive from endpoint value.
+   * Strip both well-known card paths (agent-card.json and agent.json) so derivation matches discovery fallbacks.
    */
   private _getA2aBaseUrl(): string {
+    if (this._a2aBaseUrlOverride) return this._a2aBaseUrlOverride;
     if (this._cachedA2aBaseUrl) return this._cachedA2aBaseUrl;
     const endpoint = this.a2aEndpoint;
     if (!endpoint) throw new Error('Agent has no A2A endpoint');
     try {
       const u = new URL(endpoint);
       let pathname = u.pathname;
-      // Strip only agent-card path suffix so path prefixes (e.g. /v1, /v2) are preserved.
-      if (pathname.endsWith('/.well-known/agent-card.json') || pathname.endsWith('agent-card.json')) {
-        pathname = pathname.replace(/\/(\.well-known\/)?agent-card\.json$/i, '') || '/';
+      // Strip well-known card suffix so path prefixes (e.g. /v1, /v2) are preserved; support both standard paths.
+      if (/\/(\.well-known\/)?(agent-card|agent)\.json$/i.test(pathname)) {
+        pathname = pathname.replace(/\/(\.well-known\/)?(agent-card|agent)\.json$/i, '') || '/';
       }
       if (!pathname || pathname === '/') pathname = '';
       u.pathname = pathname;
@@ -308,10 +373,14 @@ export class Agent {
     await this._ensureA2aBaseUrlResolved();
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
-    const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
+    const a2aVersion = this._cachedA2aVersion ?? (ep?.meta?.version as string) ?? '0.3';
     const auth = this._getA2aAuthFromMeta(ep?.meta);
     const x402Deps = this.sdk.getX402RequestDeps?.();
-    return sendMessageA2A({ baseUrl, a2aVersion, content, options, auth }, x402Deps);
+    const binding = this._cachedA2aBinding;
+    return sendMessageA2A(
+      { baseUrl, a2aVersion, content, options, auth, tenant: this._cachedA2aTenant, binding },
+      x402Deps
+    );
   }
 
   /**
@@ -365,10 +434,10 @@ export class Agent {
     await this._ensureA2aBaseUrlResolved();
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
-    const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
+    const a2aVersion = this._cachedA2aVersion ?? (ep?.meta?.version as string) ?? '0.3';
     const auth = this._getA2aAuthFromMeta(ep?.meta);
     const x402Deps = this.sdk.getX402RequestDeps?.();
-    return listTasksA2A({ baseUrl, a2aVersion, options, auth }, x402Deps);
+    return listTasksA2A({ baseUrl, a2aVersion, options, auth, tenant: this._cachedA2aTenant }, x402Deps);
   }
 
   /**
@@ -386,13 +455,21 @@ export class Agent {
     await this._ensureA2aBaseUrlResolved();
     const baseUrl = this._getA2aBaseUrl();
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.A2A);
-    const a2aVersion = (ep?.meta?.version as string) ?? '0.3';
+    const a2aVersion = this._cachedA2aVersion ?? (ep?.meta?.version as string) ?? '0.3';
     const cardAuth = this._getA2aAuthFromMeta(ep?.meta);
     const resolvedAuth =
       options?.credential != null && cardAuth ? applyCredential(options.credential, cardAuth) : undefined;
     const x402Deps = this.sdk.getX402RequestDeps?.();
 
-    const result = await getTaskA2A(baseUrl, a2aVersion, taskId, resolvedAuth, x402Deps, options?.payment);
+    const result = await getTaskA2A(
+      baseUrl,
+      a2aVersion,
+      taskId,
+      resolvedAuth,
+      x402Deps,
+      options?.payment,
+      this._cachedA2aTenant
+    );
 
     if ('x402Required' in result && result.x402Required) {
       const original = result as A2APaymentRequired<TaskSummary>;
@@ -408,7 +485,8 @@ export class Agent {
               summary.taskId,
               summary.contextId,
               x402Deps,
-              resolvedAuth
+              resolvedAuth,
+              this._cachedA2aTenant
             );
           },
         },
@@ -422,7 +500,8 @@ export class Agent {
       summary.taskId,
       summary.contextId,
       x402Deps,
-      resolvedAuth
+      resolvedAuth,
+      this._cachedA2aTenant
     );
   }
 
