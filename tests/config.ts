@@ -35,6 +35,14 @@ export const AGENT_ID = process.env.AGENT_ID || '11155111:374';
 // Load from environment variable for security
 export const CLIENT_PRIVATE_KEY = process.env.CLIENT_PRIVATE_KEY || '';
 
+// Telemetry / API key (for local ingest and SDK integration tests)
+export const AGENT0_API_KEY = process.env.AGENT0_API_KEY || '';
+export const AGENT0_TELEMETRY_ENDPOINT = process.env.AGENT0_TELEMETRY_ENDPOINT || '';
+
+// Supabase (for telemetry DB assertions in integration tests; service role bypasses RLS)
+export const SUPABASE_URL = process.env.SUPABASE_URL || '';
+export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
 /**
  * Print current configuration (hiding sensitive values).
  */
@@ -46,6 +54,10 @@ export function printConfig(): void {
   console.log(`  PINATA_JWT: ${PINATA_JWT ? '***' : 'NOT SET'}`);
   console.log(`  SUBGRAPH_URL: ${SUBGRAPH_URL.substring(0, 50)}...`);
   console.log(`  AGENT_ID: ${AGENT_ID}`);
-  console.log();
+  console.log(`  AGENT0_API_KEY: ${AGENT0_API_KEY ? '***' : 'NOT SET'}`);
+  console.log(`  AGENT0_TELEMETRY_ENDPOINT: ${AGENT0_TELEMETRY_ENDPOINT || '(default)'}`);
+  console.log(`  SUPABASE_URL: ${SUPABASE_URL ? '***' : 'NOT SET'}`);
+  console.log(`  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? '***' : 'NOT SET'}`);
+  console.log('');
 }
 

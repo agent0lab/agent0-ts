@@ -427,6 +427,7 @@ export class Agent {
       signature?: string | Uint8Array;
     }
   ): Promise<TransactionHandle<RegistrationFile> | undefined> {
+    const start = Date.now();
     if (!this.registrationFile.agentId) {
       throw new Error(
         'Agent must be registered before setting agentWallet on-chain. ' +
@@ -454,6 +455,14 @@ export class Agent {
         this.registrationFile.walletAddress = newWallet;
         this.registrationFile.walletChainId = chainId;
         this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+        const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile);
+        this.sdk.emitTelemetryEvent({
+          eventType: 'agent.wallet.set',
+          success: true,
+          durationMs: Date.now() - start,
+          timestamp: Date.now(),
+          payload,
+        });
         return undefined;
       }
     } catch {
@@ -677,10 +686,17 @@ export class Agent {
     });
 
     return new TransactionHandle(txHash as Hex, this.sdk.chainClient, async () => {
-      // Update local registration file only after confirmation to avoid lying on reverts.
       this.registrationFile.walletAddress = newWallet;
       this.registrationFile.walletChainId = chainId;
       this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+      const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile);
+      this.sdk.emitTelemetryEvent({
+        eventType: 'agent.wallet.set',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload,
+      });
       return this.registrationFile;
     });
   }
@@ -692,6 +708,7 @@ export class Agent {
    * Returns txHash (or "" if it was already unset).
    */
   async unsetWallet(): Promise<TransactionHandle<RegistrationFile> | undefined> {
+    const start = Date.now();
     if (!this.registrationFile.agentId) {
       throw new Error(
         'Agent must be registered before unsetting agentWallet on-chain. ' +
@@ -706,13 +723,21 @@ export class Agent {
     const { tokenId } = parseAgentId(this.registrationFile.agentId);
     const identityRegistryAddress = this.sdk.identityRegistryAddress();
 
-    // Optional short-circuit if already unset (best-effort).
     try {
       const currentWallet = await this.getWallet();
       if (!currentWallet) {
         this.registrationFile.walletAddress = undefined;
         this.registrationFile.walletChainId = undefined;
         this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+        const chainId = await this.sdk.chainId();
+        const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile);
+        this.sdk.emitTelemetryEvent({
+          eventType: 'agent.wallet.unset',
+          success: true,
+          durationMs: Date.now() - start,
+          timestamp: Date.now(),
+          payload,
+        });
         return undefined;
       }
     } catch {
@@ -730,6 +755,15 @@ export class Agent {
       this.registrationFile.walletAddress = undefined;
       this.registrationFile.walletChainId = undefined;
       this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+      const chainId = await this.sdk.chainId();
+      const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile);
+      this.sdk.emitTelemetryEvent({
+        eventType: 'agent.wallet.unset',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload,
+      });
       return this.registrationFile;
     });
   }
@@ -837,7 +871,7 @@ export class Agent {
    * Register agent on-chain with IPFS flow
    */
   async registerIPFS(): Promise<TransactionHandle<RegistrationFile>> {
-    // Validate basic info
+    const start = Date.now();
     if (!this.registrationFile.name || !this.registrationFile.description) {
       throw new Error('Agent must have name and description before registration');
     }
@@ -868,22 +902,27 @@ export class Agent {
       });
 
       return new TransactionHandle(txHash as Hex, this.sdk.chainClient, async () => {
-        // Best-effort metadata updates (may involve additional txs)
         if (this._dirtyMetadata.size > 0) {
           try {
             await this._updateMetadataOnChain();
           } catch {
-            // Preserve previous behavior: ignore failures/timeouts and continue.
+            // ignore
           }
         }
-
-        // Clear dirty flags
         this._lastRegisteredWallet = this.walletAddress;
         this._lastRegisteredEns = this.ensEndpoint;
         this._dirtyMetadata.clear();
-
         this.registrationFile.agentURI = `ipfs://${ipfsCid}`;
         this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+        const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile) as Record<string, unknown>;
+        payload.fieldsChanged = ['agentURI'];
+        this.sdk.emitTelemetryEvent({
+          eventType: 'agent.updated',
+          success: true,
+          durationMs: Date.now() - start,
+          timestamp: Date.now(),
+          payload,
+        });
         return this.registrationFile;
       });
     } else {
@@ -932,6 +971,15 @@ export class Agent {
 
         this.registrationFile.agentURI = `ipfs://${ipfsCid}`;
         this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+        const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile) as Record<string, unknown>;
+        payload.registrationType = 'ipfs';
+        this.sdk.emitTelemetryEvent({
+          eventType: 'agent.registered',
+          success: true,
+          durationMs: Date.now() - start,
+          timestamp: Date.now(),
+          payload,
+        });
         return this.registrationFile;
       });
     }
@@ -1001,6 +1049,7 @@ export class Agent {
   async transfer(
     newOwner: Address
   ): Promise<TransactionHandle<{ txHash: string; from: Address; to: Address; agentId: AgentId }>> {
+    const start = Date.now();
     if (!this.registrationFile.agentId) {
       throw new Error('Agent must be registered before transfer');
     }
@@ -1035,10 +1084,18 @@ export class Agent {
       args: [currentOwner, checksumAddress, BigInt(tokenId)],
     });
     return new TransactionHandle(txHash as Hex, this.sdk.chainClient, async () => {
-      // transfer resets agentWallet on-chain; reflect that locally after confirmation
       this.registrationFile.walletAddress = undefined;
       this.registrationFile.walletChainId = undefined;
       this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+      const chainId = await this.sdk.chainId();
+      const payload = this.sdk.getAgentSnapshotForTelemetry(chainId, this.registrationFile.agentId!, this.registrationFile);
+      this.sdk.emitTelemetryEvent({
+        eventType: 'agent.transferred',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload,
+      });
       return {
         txHash,
         from: currentOwner,

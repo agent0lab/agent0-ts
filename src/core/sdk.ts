@@ -32,6 +32,7 @@ import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
 } from './contracts.js';
+import { TelemetryClient, categorizeError, type TelemetryEvent } from './telemetry.js';
 
 export interface SDKConfig {
   chainId: ChainId;
@@ -65,6 +66,14 @@ export interface SDKConfig {
   subgraphUrl?: string;
   subgraphOverrides?: Record<ChainId, string>;
   /**
+   * Optional API key for telemetry. When set, SDK methods emit events to the ingest endpoint.
+   */
+  apiKey?: string;
+  /**
+   * Optional telemetry ingest URL. Defaults to production Supabase edge function.
+   */
+  telemetryEndpoint?: string;
+  /**
    * Max decoded bytes for ERC-8004 JSON base64 data URIs (on-chain registration files).
    * Default: 256 KiB.
    */
@@ -84,6 +93,7 @@ export class SDK {
   private readonly _chainId: ChainId;
   private readonly _subgraphUrls: Record<ChainId, string> = {};
   private readonly _hasSignerConfig: boolean;
+  private readonly _telemetry?: TelemetryClient;
   private readonly _registrationDataUriMaxBytes: number;
 
   constructor(config: SDKConfig) {
@@ -146,6 +156,20 @@ export class SDK {
       (chainId) => this.getSubgraphClient(chainId),
       this._chainId
     );
+
+    if (config.apiKey) {
+      this._telemetry = new TelemetryClient({
+        apiKey: config.apiKey,
+        endpoint: config.telemetryEndpoint,
+      });
+    }
+  }
+
+  /**
+   * Emit a single telemetry event (for use by Agent and SDK methods). No-op if telemetry is disabled.
+   */
+  emitTelemetryEvent(event: TelemetryEvent): void {
+    this._telemetry?.emit([event]);
   }
 
   /**
@@ -280,41 +304,54 @@ export class SDK {
    * Load an existing agent (hydrates from registration file if registered)
    */
   async loadAgent(agentId: AgentId): Promise<Agent> {
-    // Parse agent ID
-    const { chainId, tokenId } = parseAgentId(agentId);
-
-    const currentChainId = await this.chainId();
-    if (chainId !== currentChainId) {
-      throw new Error(`Agent ${agentId} is not on current chain ${currentChainId}`);
-    }
-
-    // Get agent URI from contract
-    let agentURI: string;
+    const start = Date.now();
     try {
-      agentURI = await this._chainClient.readContract<string>({
-        address: this.identityRegistryAddress(),
-        abi: IDENTITY_REGISTRY_ABI,
-        functionName: 'tokenURI',
-        args: [BigInt(tokenId)],
+      const { chainId, tokenId } = parseAgentId(agentId);
+      const currentChainId = await this.chainId();
+      if (chainId !== currentChainId) {
+        throw new Error(`Agent ${agentId} is not on current chain ${currentChainId}`);
+      }
+      let agentURI: string;
+      try {
+        agentURI = await this._chainClient.readContract<string>({
+          address: this.identityRegistryAddress(),
+          abi: IDENTITY_REGISTRY_ABI,
+          functionName: 'tokenURI',
+          args: [BigInt(tokenId)],
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to load agent ${agentId}: ${errorMessage}`);
+      }
+      let registrationFile: RegistrationFile;
+      if (!agentURI || agentURI === '') {
+        registrationFile = this._createEmptyRegistrationFile();
+      } else {
+        registrationFile = await this._loadRegistrationFile(agentURI);
+      }
+      registrationFile.agentId = agentId;
+      registrationFile.agentURI = agentURI || undefined;
+      const agent = new Agent(this, registrationFile);
+      this.emitTelemetryEvent({
+        eventType: 'agent.loaded',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: this.getAgentSnapshotForTelemetry(chainId, agentId, registrationFile),
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to load agent ${agentId}: ${errorMessage}`);
+      return agent;
+    } catch (err) {
+      const { chainId } = parseAgentId(agentId);
+      this.emitTelemetryEvent({
+        eventType: 'agent.loaded',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId, agentId },
+      });
+      throw err;
     }
-
-    // Load registration file - handle empty URI (agent registered without URI yet)
-    let registrationFile: RegistrationFile;
-    if (!agentURI || agentURI === '') {
-      // Agent registered but no URI set yet - create empty registration file
-      registrationFile = this._createEmptyRegistrationFile();
-    } else {
-      registrationFile = await this._loadRegistrationFile(agentURI);
-    }
-    
-    registrationFile.agentId = agentId;
-    registrationFile.agentURI = agentURI || undefined;
-
-    return new Agent(this, registrationFile);
   }
 
   /**
@@ -322,34 +359,54 @@ export class SDK {
    * Supports both default chain and explicit chain specification via chainId:tokenId format
    */
   async getAgent(agentId: AgentId): Promise<AgentSummary | null> {
-    // Parse agentId to extract chainId if present
-    // If no colon, assume it's just tokenId on default chain
+    const start = Date.now();
     let parsedChainId: number;
     let formattedAgentId: string;
-    
     if (agentId.includes(':')) {
       const parsed = parseAgentId(agentId);
       parsedChainId = parsed.chainId;
-      formattedAgentId = agentId; // Already in correct format
+      formattedAgentId = agentId;
     } else {
-      // No colon - use default chain
       parsedChainId = this._chainId;
       formattedAgentId = formatAgentId(this._chainId, parseInt(agentId, 10));
     }
-    
-    // Determine which chain to query
     const targetChainId = parsedChainId !== this._chainId ? parsedChainId : undefined;
-    
-    // Get subgraph client for the target chain (or use default)
     const subgraphClient = targetChainId
       ? this.getSubgraphClient(targetChainId)
       : this._subgraphClient;
-    
     if (!subgraphClient) {
-      throw new Error(`Subgraph client required for getAgent on chain ${targetChainId || this._chainId}`);
+      const err = new Error(`Subgraph client required for getAgent on chain ${targetChainId ?? this._chainId}`);
+      this.emitTelemetryEvent({
+        eventType: 'agent.fetched',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: parsedChainId, agentId: formattedAgentId, found: false },
+      });
+      throw err;
     }
-    
-    return subgraphClient.getAgentById(formattedAgentId);
+    try {
+      const result = await subgraphClient.getAgentById(formattedAgentId);
+      this.emitTelemetryEvent({
+        eventType: 'agent.fetched',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: parsedChainId, agentId: formattedAgentId, found: result != null },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'agent.fetched',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: parsedChainId, agentId: formattedAgentId, found: false },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -360,7 +417,89 @@ export class SDK {
     filters: SearchFilters = {},
     options: SearchOptions = {}
   ): Promise<AgentSummary[]> {
-    return this._indexer.searchAgents(filters, options);
+    const start = Date.now();
+    try {
+      const results = await this._indexer.searchAgents(filters, options);
+      const payload: Record<string, unknown> = this._telemetrySearchPayload(filters, options, results);
+      payload.results = results.slice(0, 100).map((a) => a.agentId);
+      this.emitTelemetryEvent({
+        eventType: 'search.query',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload,
+      });
+      return results;
+    } catch (err) {
+      const payload: Record<string, unknown> = this._telemetrySearchPayload(filters, options, []);
+      payload.results = [];
+      this.emitTelemetryEvent({
+        eventType: 'search.query',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload,
+      });
+      throw err;
+    }
+  }
+
+  private _telemetrySearchPayload(
+    filters: SearchFilters,
+    options: SearchOptions,
+    _results: AgentSummary[]
+  ): Record<string, unknown> {
+    const toUnix = (v: Date | string | number | undefined): number | undefined => {
+      if (v === undefined) return undefined;
+      if (typeof v === 'number') return v < 1e12 ? v : Math.floor(v / 1000);
+      const d = typeof v === 'string' ? new Date(v) : v;
+      return Math.floor(d.getTime() / 1000);
+    };
+    const p: Record<string, unknown> = {};
+    if (filters.chains !== undefined) p.chains = filters.chains;
+    if (filters.agentIds?.length) p.agentIds = filters.agentIds;
+    if (filters.name !== undefined) p.name = filters.name;
+    if (filters.description !== undefined) p.description = filters.description;
+    if (filters.keyword !== undefined) p.keyword = filters.keyword;
+    if (filters.owners?.length) p.owners = filters.owners;
+    if (filters.operators?.length) p.operators = filters.operators;
+    if (filters.hasRegistrationFile !== undefined) p.hasRegistrationFile = filters.hasRegistrationFile;
+    if (filters.hasWeb !== undefined) p.hasWeb = filters.hasWeb;
+    if (filters.hasMCP !== undefined) p.hasMCP = filters.hasMCP;
+    if (filters.hasA2A !== undefined) p.hasA2A = filters.hasA2A;
+    if (filters.hasOASF !== undefined) p.hasOASF = filters.hasOASF;
+    if (filters.hasEndpoints !== undefined) p.hasEndpoints = filters.hasEndpoints;
+    if (filters.webContains !== undefined) p.webContains = filters.webContains;
+    if (filters.mcpContains !== undefined) p.mcpContains = filters.mcpContains;
+    if (filters.a2aContains !== undefined) p.a2aContains = filters.a2aContains;
+    if (filters.ensContains !== undefined) p.ensContains = filters.ensContains;
+    if (filters.didContains !== undefined) p.didContains = filters.didContains;
+    if (filters.walletAddress !== undefined) p.agentWallet = { address: filters.walletAddress };
+    if (filters.supportedTrust?.length) p.supportedTrust = filters.supportedTrust;
+    if (filters.a2aSkills?.length) p.a2aSkills = filters.a2aSkills;
+    if (filters.mcpTools?.length) p.mcpTools = filters.mcpTools;
+    if (filters.mcpPrompts?.length) p.mcpPrompts = filters.mcpPrompts;
+    if (filters.mcpResources?.length) p.mcpResources = filters.mcpResources;
+    if (filters.oasfSkills?.length) p.oasfSkills = filters.oasfSkills;
+    if (filters.oasfDomains?.length) p.oasfDomains = filters.oasfDomains;
+    if (filters.active !== undefined) p.active = filters.active;
+    if (filters.x402support !== undefined) p.x402support = filters.x402support;
+    const rFrom = toUnix(filters.registeredAtFrom);
+    const rTo = toUnix(filters.registeredAtTo);
+    const uFrom = toUnix(filters.updatedAtFrom);
+    const uTo = toUnix(filters.updatedAtTo);
+    if (rFrom !== undefined) p.registeredAtFrom = rFrom;
+    if (rTo !== undefined) p.registeredAtTo = rTo;
+    if (uFrom !== undefined) p.updatedAtFrom = uFrom;
+    if (uTo !== undefined) p.updatedAtTo = uTo;
+    if (filters.hasMetadataKey !== undefined) p.hasMetadataKey = filters.hasMetadataKey;
+    if (filters.metadataValue !== undefined) p.metadataValue = filters.metadataValue;
+    if (filters.feedback !== undefined) p.feedback = filters.feedback;
+    if (options.sort?.length) p.sort = options.sort;
+    if (options.semanticMinScore !== undefined) p.semanticMinScore = options.semanticMinScore;
+    if (options.semanticTopK !== undefined) p.semanticTopK = options.semanticTopK;
+    return p;
   }
 
   /**
@@ -423,18 +562,80 @@ export class SDK {
     endpoint?: string,
     feedbackFile?: FeedbackFileInput
   ): Promise<TransactionHandle<Feedback>> {
-    // Update feedback manager with registries
+    const start = Date.now();
     this._feedbackManager.setReputationRegistryAddress(this.reputationRegistryAddress());
     this._feedbackManager.setIdentityRegistryAddress(this.identityRegistryAddress());
-
-    return this._feedbackManager.giveFeedback(agentId, value, tag1, tag2, endpoint, feedbackFile);
+    const valueNum = typeof value === 'string' ? parseInt(value, 10) : value;
+    try {
+      const result = await this._feedbackManager.giveFeedback(agentId, value, tag1, tag2, endpoint, feedbackFile);
+      this.emitTelemetryEvent({
+        eventType: 'feedback.given',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: {
+          chainId: this._chainId,
+          agentId,
+          value: valueNum,
+          tag1,
+          tag2,
+          hasEndpoint: endpoint != null && endpoint !== '',
+          endpoint: endpoint ?? undefined,
+          hasOffchainFile: feedbackFile != null,
+          hasText: feedbackFile?.text != null,
+          hasContext: feedbackFile?.context != null,
+          hasProofOfPayment: feedbackFile?.proofOfPayment != null,
+          // Spec-aligned feedback file fields (1.6+)
+          mcpTool: feedbackFile?.mcpTool,
+          mcpPrompt: feedbackFile?.mcpPrompt,
+          mcpResource: feedbackFile?.mcpResource,
+          a2aSkills: feedbackFile?.a2aSkills,
+          a2aContextId: feedbackFile?.a2aContextId,
+          a2aTaskId: feedbackFile?.a2aTaskId,
+          oasfSkills: feedbackFile?.oasfSkills,
+          oasfDomains: feedbackFile?.oasfDomains,
+        },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'feedback.given',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, value: valueNum, tag1, tag2 },
+      });
+      throw err;
+    }
   }
 
   /**
    * Read feedback
    */
   async getFeedback(agentId: AgentId, clientAddress: Address, feedbackIndex: number): Promise<Feedback> {
-    return this._feedbackManager.getFeedback(agentId, clientAddress, feedbackIndex);
+    const start = Date.now();
+    try {
+      const result = await this._feedbackManager.getFeedback(agentId, clientAddress, feedbackIndex);
+      this.emitTelemetryEvent({
+        eventType: 'feedback.fetched',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, feedbackIndex, found: true },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'feedback.fetched',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, feedbackIndex, found: false },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -481,7 +682,44 @@ export class SDK {
       minValue: options.minValue,
       maxValue: options.maxValue,
     };
-    return this._feedbackManager.searchFeedback(params);
+    const start = Date.now();
+    try {
+      const result = await this._feedbackManager.searchFeedback(params);
+      const singleAgentId = agents?.length === 1 ? agents[0] : filters.agentId;
+      this.emitTelemetryEvent({
+        eventType: 'feedback.searched',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: {
+          chainId: this._chainId,
+          agentId: singleAgentId,
+          agentCount: agents?.length,
+          tags: filters.tags,
+          reviewers: filters.reviewers,
+          capabilities: filters.capabilities,
+          skills: filters.skills,
+          tasks: filters.tasks,
+          names: filters.names,
+          includeRevoked: filters.includeRevoked,
+          minValue: options.minValue,
+          maxValue: options.maxValue,
+          resultCount: result.length,
+          isZeroResults: result.length === 0,
+        },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'feedback.searched',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId: filters.agentId, agentCount: agents?.length },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -493,20 +731,70 @@ export class SDK {
     feedbackIndex: number,
     response: { uri: URI; hash: string }
   ): Promise<TransactionHandle<Feedback>> {
-    // Update feedback manager with registries
+    const start = Date.now();
     this._feedbackManager.setReputationRegistryAddress(this.reputationRegistryAddress());
-
-    return this._feedbackManager.appendResponse(agentId, clientAddress, feedbackIndex, response.uri, response.hash);
+    try {
+      const result = await this._feedbackManager.appendResponse(
+        agentId,
+        clientAddress,
+        feedbackIndex,
+        response.uri,
+        response.hash
+      );
+      this.emitTelemetryEvent({
+        eventType: 'feedback.response.appended',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: {
+          chainId: this._chainId,
+          agentId,
+          clientAddress,
+          feedbackIndex,
+          responseUri: response.uri,
+        },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'feedback.response.appended',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, clientAddress, feedbackIndex },
+      });
+      throw err;
+    }
   }
 
   /**
    * Revoke feedback
    */
   async revokeFeedback(agentId: AgentId, feedbackIndex: number): Promise<TransactionHandle<Feedback>> {
-    // Update feedback manager with registries
+    const start = Date.now();
     this._feedbackManager.setReputationRegistryAddress(this.reputationRegistryAddress());
-
-    return this._feedbackManager.revokeFeedback(agentId, feedbackIndex);
+    try {
+      const result = await this._feedbackManager.revokeFeedback(agentId, feedbackIndex);
+      this.emitTelemetryEvent({
+        eventType: 'feedback.revoked',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, feedbackIndex },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'feedback.revoked',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, feedbackIndex },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -517,10 +805,36 @@ export class SDK {
     tag1?: string,
     tag2?: string
   ): Promise<{ count: number; averageValue: number }> {
-    // Update feedback manager with registries
+    const start = Date.now();
     this._feedbackManager.setReputationRegistryAddress(this.reputationRegistryAddress());
-
-    return this._feedbackManager.getReputationSummary(agentId, tag1, tag2);
+    try {
+      const result = await this._feedbackManager.getReputationSummary(agentId, tag1, tag2);
+      this.emitTelemetryEvent({
+        eventType: 'reputation.summary.fetched',
+        success: true,
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: {
+          chainId: this._chainId,
+          agentId,
+          tag1,
+          tag2,
+          count: result.count,
+          averageValue: result.averageValue,
+        },
+      });
+      return result;
+    } catch (err) {
+      this.emitTelemetryEvent({
+        eventType: 'reputation.summary.fetched',
+        success: false,
+        errorType: categorizeError(err),
+        durationMs: Date.now() - start,
+        timestamp: Date.now(),
+        payload: { chainId: this._chainId, agentId, tag1, tag2 },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -539,6 +853,36 @@ export class SDK {
       metadata: {},
       updatedAt: Math.floor(Date.now() / 1000),
     };
+  }
+
+  /** Build v2 agent snapshot payload for telemetry (chainId, agentId, name, description, endpoints, etc.). Public for use by Agent. */
+  getAgentSnapshotForTelemetry(chainId: number, agentId: AgentId, reg: RegistrationFile): Record<string, unknown> {
+    const metadata =
+      reg.metadata && typeof reg.metadata === 'object' && !Array.isArray(reg.metadata)
+        ? Object.entries(reg.metadata).map(([key, value]) => ({ key, value: String(value) }))
+        : [];
+    const payload: Record<string, unknown> = {
+      chainId,
+      agentId,
+      name: reg.name,
+      description: reg.description,
+      endpoints: reg.endpoints,
+      trustModels: reg.trustModels,
+      owners: reg.owners,
+      operators: reg.operators,
+      active: reg.active,
+      x402support: reg.x402support,
+      metadata,
+      updatedAt: reg.updatedAt,
+    };
+    if (reg.image !== undefined) payload.image = reg.image;
+    if (reg.walletAddress !== undefined || reg.walletChainId !== undefined) {
+      payload.agentWallet = {
+        ...(reg.walletAddress !== undefined && { address: reg.walletAddress }),
+        ...(reg.walletChainId !== undefined && { chainId: reg.walletChainId }),
+      };
+    }
+    return payload;
   }
 
   /**
