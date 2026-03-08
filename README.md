@@ -14,11 +14,23 @@ Agent0 SDK enables you to:
 - **Cross-chain registration** - One-line registration with IPFS nodes, Pinata, Filecoin, or HTTP URIs
 - **Public indexing** - Subgraph indexing both on-chain and IPFS data for fast search and retrieval
 
-## Release (1.5.3)
+## Release (1.6.0)
 
-This release includes the unified agent discovery/search API.
+This release aligns feedback files with the deployed subgraph schema and removes legacy feedback fields.
 
-For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.5.3.md` (and prior notes in `release_notes/`).
+It also updates the TypeScript SDK IPFS backends:
+
+- **`ipfs: 'node'` (Kubo daemon)** now uses `kubo-rpc-client` (maintained) instead of the deprecated `ipfs-http-client` package. Your `ipfsNodeUrl` should point at a running Kubo HTTP RPC API (for example `http://localhost:5001` or `http://localhost:5001/api/v0`).
+- **New: `ipfs: 'helia'` (embedded)** runs an in-process Helia node (no external daemon) for `add/get/pin/unpin` operations.
+
+It also adds **fully on-chain agent registration files** per [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004), via `data:application/json;base64,...` `agentURI` (ERC-721 `tokenURI`):
+
+- **Read support**: `SDK.loadAgent()` auto-detects and decodes ERC-8004 JSON base64 `data:` URIs (tolerant of optional params like `;charset=utf-8`).
+- **Write support**: new `Agent.registerOnChain()` publishes the registration file fully on-chain by encoding it into a `data:` URI and writing it via `register(...)` / `setAgentURI(...)`.
+- **Safety**: `loadAgent()` enforces a max decoded size for `data:` URIs (default **256 KiB**). Override with `registrationDataUriMaxBytes` in `SDKConfig`.
+- **Backwards compatible**: `registerIPFS()` and `registerHTTP()` continue to work unchanged.
+
+For breaking changes and migration notes, see `release_notes/RELEASE_NOTES_1.6.0.md` (and prior notes in `release_notes/`).
 
 **Bug reports & feedback:** GitHub: [Report issues](https://github.com/agent0lab/agent0-ts/issues) | Telegram: [Agent0 channel](https://t.me/agent0kitchen) | Email: team@ag0.xyz
 
@@ -41,7 +53,7 @@ npm install agent0-sdk
 To install a specific version explicitly:
 
 ```bash
-npm install agent0-sdk@1.5.3
+npm install agent0-sdk@1.6.0
 ```
 
 **Note:** This package is an ESM (ECMAScript Module) package. Use `import` statements in your code:
@@ -73,7 +85,7 @@ const sdk = new SDK({
   chainId: 11155111, // Ethereum Sepolia testnet (use 1 for Ethereum Mainnet)
   rpcUrl: process.env.RPC_URL!,
   privateKey: process.env.PRIVATE_KEY ?? process.env.AGENT_PRIVATE_KEY, // Optional: for write operations
-  ipfs: 'pinata', // Options: 'pinata', 'filecoinPin', 'node'
+  ipfs: 'pinata', // Options: 'pinata', 'filecoinPin', 'node' (Kubo daemon), 'helia' (embedded)
   pinataJwt: process.env.PINATA_JWT // For Pinata
   // Subgraph URL auto-defaults from DEFAULT_SUBGRAPH_URLS
 });
@@ -135,6 +147,30 @@ agent.setActive(true);
 const registrationFile = await agent.registerIPFS();
 console.log(`Agent registered: ${registrationFile.agentId}`); // e.g., "11155111:123"
 console.log(`Agent URI: ${registrationFile.agentURI}`); // e.g., "ipfs://Qm..."
+```
+
+### 2b. Fully on-chain registration (EIP-8004 `data:` URI)
+
+ERC-8004 allows storing the entire registration JSON **directly on-chain** by setting `agentURI`/`tokenURI` to a base64 JSON data URI (e.g. `data:application/json;base64,...`).
+
+```typescript
+// Register (or update) with a fully on-chain registration file (data URI)
+const tx = await agent.registerOnChain();
+const { result: registrationFile } = await tx.waitConfirmed({ timeoutMs: 180_000 });
+console.log(`Agent URI (on-chain data): ${registrationFile.agentURI}`);
+```
+
+Notes:
+
+- **Gas**: data URIs can be expensive; keep registration files compact.
+- **Size limit**: `loadAgent()` enforces a default max decoded size of **256 KiB** for data URIs. Override with:
+
+```typescript
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: process.env.RPC_URL!,
+  registrationDataUriMaxBytes: 512 * 1024,
+});
 ```
 
 ### 3. Load and Edit Agent
@@ -229,10 +265,10 @@ const summary = await sdk.getReputationSummary('1:123'); // Ethereum Mainnet
 ```typescript
 // Optional: prepare an OFF-CHAIN feedback file (only needed for rich fields)
 const feedbackFile = sdk.prepareFeedbackFile({
-  capability: 'tools',
-  name: 'code_generation',
-  skill: 'python',
-  context: { sessionId: 'abc' },
+  text: 'Great agent!',
+  mcpTool: 'code_generation',
+  a2aSkills: ['python'],
+  a2aContextId: 'session:abc',
 });
 
 // Give feedback (on-chain fields are passed directly)
@@ -249,7 +285,7 @@ const { receipt, result: feedback } = await tx.waitConfirmed();
 
 // Search feedback
 const feedbackResults = await sdk.searchFeedback(
-  { agentId: '11155111:123', capabilities: ['tools'] },
+  { agentId: '11155111:123', capabilities: ['code_generation'] }, // capabilities filters by feedbackFile.mcpTool
   { minValue: 80, maxValue: 100 }
 );
 
@@ -270,16 +306,24 @@ const sdk = new SDK({
   filecoinPrivateKey: 'your-filecoin-private-key'
 });
 
-// Option 2: IPFS Node
+// Option 2: Embedded Helia (no daemon required)
+const sdk = new SDK({
+  chainId: 11155111,
+  rpcUrl: '...',
+  signer: privateKey,
+  ipfs: 'helia',
+});
+
+// Option 3: IPFS Node (Kubo daemon HTTP RPC API)
 const sdk = new SDK({
   chainId: 11155111,
   rpcUrl: '...',
   signer: privateKey,
   ipfs: 'node',
-  ipfsNodeUrl: 'https://ipfs.infura.io:5001'
+  ipfsNodeUrl: 'http://localhost:5001'
 });
 
-// Option 3: Pinata (free for ERC-8004 agents)
+// Option 4: Pinata (free for ERC-8004 agents)
 const sdk = new SDK({
   chainId: 11155111,
   rpcUrl: '...',
@@ -288,7 +332,7 @@ const sdk = new SDK({
   pinataJwt: 'your-pinata-jwt-token'
 });
 
-// Option 4: HTTP registration (no IPFS)
+// Option 5: HTTP registration (no IPFS)
 const sdk = new SDK({ chainId: 11155111, rpcUrl: '...', signer: privateKey });
 const regTx = await agent.registerHTTP('https://example.com/agent-registration.json');
 await regTx.waitConfirmed();

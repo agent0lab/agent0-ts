@@ -5,7 +5,7 @@
  * Flow:
  * 1. Create and register a new agent (so the test doesn't rely on a hardcoded agentId)
  * 2. Client submits one or more feedback entries
- * 3. Verify feedback data consistency (value, tags, capability, skill)
+ * 3. Verify feedback data consistency (value, tags, mcpTool, a2aSkills)
  * 4. Wait for blockchain finalization
  * 5. Verify feedback can be retrieved and searched
  */
@@ -37,23 +37,21 @@ function generateFeedbackData(index: number) {
     ['problem_solving', 'enterprise'],
     ['communication', 'enterprise'],
   ];
-
-  const capabilities = [
+  const mcpTools = [
     'data_analysis',
     'code_generation',
     'natural_language_understanding',
     'problem_solving',
     'communication',
   ];
-
   const skills = ['python', 'javascript', 'machine_learning', 'web_development', 'cloud_computing'];
 
   return {
     value: scores[Math.floor(Math.random() * scores.length)],
     tags: tagsSets[Math.floor(Math.random() * tagsSets.length)],
-    capability: capabilities[Math.floor(Math.random() * capabilities.length)],
-    skill: skills[Math.floor(Math.random() * skills.length)],
-    context: 'enterprise',
+    mcpTool: mcpTools[Math.floor(Math.random() * mcpTools.length)],
+    a2aSkills: [skills[Math.floor(Math.random() * skills.length)]],
+    a2aContextId: 'enterprise',
   };
 }
 
@@ -150,11 +148,11 @@ describeMaybe('Agent Feedback Flow with IPFS Pin', () => {
       const tag2 = feedbackData.tags[1];
       const endpoint = 'https://example.com/feedback'; // optional on-chain field
 
-      // Prepare off-chain feedback file (rich fields stored off-chain)
+      // Prepare off-chain feedback file (spec-aligned fields)
       const feedbackFile = clientSdk.prepareFeedbackFile({
-        capability: feedbackData.capability,
-        skill: feedbackData.skill,
-        context: { context: feedbackData.context },
+        mcpTool: feedbackData.mcpTool,
+        a2aSkills: feedbackData.a2aSkills,
+        a2aContextId: feedbackData.a2aContextId,
       });
 
       // Submit feedback - this will fail if client wallet has insufficient funds
@@ -198,8 +196,8 @@ describeMaybe('Agent Feedback Flow with IPFS Pin', () => {
 
       expect(feedback.value).toBe(feedbackData.value);
       expect(feedback.tags).toEqual(feedbackData.tags);
-      expect(feedback.capability).toBe(feedbackData.capability);
-      expect(feedback.skill).toBe(feedbackData.skill);
+      expect(feedback.mcpTool).toBe(feedbackData.mcpTool);
+      expect(feedback.a2aSkills).toEqual(feedbackData.a2aSkills);
       expect(feedback.fileURI).toBeTruthy();
       clientFeedbackId = feedback.idString;
 

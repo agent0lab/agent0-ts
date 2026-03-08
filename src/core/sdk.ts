@@ -17,6 +17,7 @@ import type { AgentId, ChainId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
 import { formatAgentId, parseAgentId } from '../utils/id-format.js';
 import { IPFS_GATEWAYS, TIMEOUTS } from '../utils/constants.js';
+import { decodeErc8004JsonDataUri, isErc8004JsonDataUri } from '../utils/data-uri.js';
 import type { ChainClient, EIP1193Provider as Eip1193Provider } from './chain-client.js';
 import { ViemChainClient } from './viem-chain-client.js';
 import { IPFSClient, type IPFSClientConfig } from './ipfs-client.js';
@@ -50,7 +51,14 @@ export interface SDKConfig {
   walletProvider?: Eip1193Provider;
   registryOverrides?: Record<ChainId, Record<string, Address>>;
   // IPFS configuration
-  ipfs?: 'node' | 'filecoinPin' | 'pinata';
+  /**
+   * IPFS provider selection:
+   * - `node`: connect to a running Kubo daemon via HTTP RPC API (`ipfsNodeUrl` required)
+   * - `helia`: run an embedded Helia node in-process (no daemon required)
+   * - `pinata`: pin via Pinata
+   * - `filecoinPin`: (placeholder) Filecoin pinning integration
+   */
+  ipfs?: 'node' | 'helia' | 'filecoinPin' | 'pinata';
   ipfsNodeUrl?: string;
   filecoinPrivateKey?: string;
   pinataJwt?: string;
@@ -65,6 +73,11 @@ export interface SDKConfig {
    * Optional telemetry ingest URL. Defaults to production Supabase edge function.
    */
   telemetryEndpoint?: string;
+  /**
+   * Max decoded bytes for ERC-8004 JSON base64 data URIs (on-chain registration files).
+   * Default: 256 KiB.
+   */
+  registrationDataUriMaxBytes?: number;
 }
 
 /**
@@ -81,9 +94,11 @@ export class SDK {
   private readonly _subgraphUrls: Record<ChainId, string> = {};
   private readonly _hasSignerConfig: boolean;
   private readonly _telemetry?: TelemetryClient;
+  private readonly _registrationDataUriMaxBytes: number;
 
   constructor(config: SDKConfig) {
     this._chainId = config.chainId;
+    this._registrationDataUriMaxBytes = config.registrationDataUriMaxBytes ?? 256 * 1024;
 
     // Initialize Chain client (viem-only)
     const privateKey = config.privateKey ?? config.signer;
@@ -172,6 +187,8 @@ export class SDK {
         throw new Error("ipfsNodeUrl is required when ipfs='node'");
       }
       ipfsConfig.url = config.ipfsNodeUrl;
+    } else if (config.ipfs === 'helia') {
+      ipfsConfig.embeddedHeliaEnabled = true;
     } else if (config.ipfs === 'filecoinPin') {
       if (!config.filecoinPrivateKey) {
         throw new Error("filecoinPrivateKey is required when ipfs='filecoinPin'");
@@ -185,7 +202,9 @@ export class SDK {
       ipfsConfig.pinataEnabled = true;
       ipfsConfig.pinataJwt = config.pinataJwt;
     } else {
-      throw new Error(`Invalid ipfs value: ${config.ipfs}. Must be 'node', 'filecoinPin', or 'pinata'`);
+      throw new Error(
+        `Invalid ipfs value: ${config.ipfs}. Must be 'node', 'helia', 'filecoinPin', or 'pinata'`
+      );
     }
 
     return new IPFSClient(ipfsConfig);
@@ -904,8 +923,12 @@ export class SDK {
         }
         rawData = await response.json();
       } else if (tokenUri.startsWith('data:')) {
-        // Data URIs are not supported
-        throw new Error(`Data URIs are not supported. Expected HTTP(S) or IPFS URI, got: ${tokenUri}`);
+        if (!isErc8004JsonDataUri(tokenUri)) {
+          throw new Error(
+            `Unsupported data URI. Expected data:application/json;...;base64,... per ERC-8004, got: ${tokenUri.slice(0, 64)}...`
+          );
+        }
+        rawData = decodeErc8004JsonDataUri(tokenUri, { maxBytes: this._registrationDataUriMaxBytes });
       } else if (!tokenUri || tokenUri.trim() === '') {
         // Empty URI - return empty registration file (agent registered without URI)
         return this._createEmptyRegistrationFile();

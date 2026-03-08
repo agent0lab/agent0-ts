@@ -5,3 +5,7 @@ scalar BigInt
 scalar BigDecimal
 scalar Bytes
 
+# Used by The Graph's timeseries/aggregation schema features
+scalar Int8
+scalar Timestamp
+
