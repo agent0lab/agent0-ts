@@ -1,6 +1,5 @@
 /**
  * x402 payment-required types and 402 response parsing.
- * Aligns with docs/sdk-messaging-tasks-x402-spec.md §4 and §5.
  */
 
 /**

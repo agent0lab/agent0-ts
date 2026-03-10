@@ -1,5 +1,5 @@
 /**
- * A2A (Agent-to-Agent) types per docs/sdk-messaging-tasks-x402-spec.md §2 and §5.
+ * A2A (Agent-to-Agent) types.
  */
 
 /** Credential as object; string is normalized to { apiKey: string }. */

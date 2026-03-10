@@ -1,7 +1,6 @@
 /**
  * Generic HTTP request with x402 (402 Payment Required) handling.
- * Used by sdk.request() and by future A2A/MCP methods.
- * See docs/sdk-messaging-tasks-x402-spec.md §4.2.
+ * Used by sdk.request() and by A2A methods.
  */
 
 import type { X402Accept, X402Payment, X402RequestOptions, X402RequiredResponse, X402RequestResult } from './x402-types.js';

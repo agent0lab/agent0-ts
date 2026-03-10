@@ -251,7 +251,7 @@ export class SDK {
   /**
    * Perform an HTTP request with built-in x402 (402 Payment Required) handling.
    * On 2xx returns the parsed result (default: JSON body); on 402 returns { x402Required: true, x402Payment } (no throw).
-   * Use x402Payment.pay() to pay and retry. See docs/sdk-messaging-tasks-x402-spec.md §4.
+   * Use x402Payment.pay() to pay and retry.
    */
   async request<T = object>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
     return requestWithX402(options, {
