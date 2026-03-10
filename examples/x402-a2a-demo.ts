@@ -58,7 +58,7 @@ async function runPureA2A(sdk: SDK): Promise<void> {
   const msg = (await agent.messageA2A('Hello, this is a demo message.')) as MessageResponse | TaskResponse;
   console.log('messageA2A:', JSON.stringify(msg, null, 2));
 
-  if ('task' in msg && msg.task) {
+  if ('task' in msg) {
     const task = msg.task;
     console.log('task.query():', JSON.stringify(await task.query(), null, 2));
     await task.message('Follow-up message.');

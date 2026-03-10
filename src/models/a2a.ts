@@ -59,7 +59,7 @@ export interface Part {
 
 /**
  * Direct message response from an A2A server (no task created).
- * No `task` or `taskId`; discriminate from TaskResponse by shape.
+ * No `task` or `taskId`; discriminate from TaskResponse by 'task' in msg.
  * Has x402Required?: false so you can use if (result.x402Required) to detect 402.
  */
 export interface MessageResponse {
