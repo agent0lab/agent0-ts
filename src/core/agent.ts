@@ -39,6 +39,8 @@ import { validateSkill, validateDomain } from './oasf-validator.js';
 import type { ChainReceipt } from './chain-client.js';
 import { IDENTITY_REGISTRY_ABI } from './contracts.js';
 import { normalizeEcdsaSignature, recoverTypedDataSigner } from '../utils/signatures.js';
+import { buildErc8004RegistrationJson } from '../utils/registration-json.js';
+import { encodeErc8004JsonDataUri } from '../utils/data-uri.js';
 import { TransactionHandle } from './transaction-handle.js';
 
 /**
@@ -1078,6 +1080,32 @@ export class Agent {
 
     this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
     return this;
+  }
+
+  /**
+   * Register agent on-chain with a fully on-chain ERC-8004 registration file (data URI).
+   *
+   * This encodes the registration JSON as:
+   *   data:application/json;base64,...
+   *
+   * Backwards compatible: does not change `registerIPFS()` / `registerHTTP()`.
+   */
+  async registerOnChain(): Promise<TransactionHandle<RegistrationFile>> {
+    // Validate basic info
+    if (!this.registrationFile.name || !this.registrationFile.description) {
+      throw new Error('Agent must have name and description before registration');
+    }
+
+    const chainId = await this.sdk.chainId();
+    const identityRegistryAddress = this.sdk.identityRegistryAddress();
+    const erc8004Json = buildErc8004RegistrationJson(this.registrationFile, {
+      chainId,
+      identityRegistryAddress,
+    });
+    const dataUri = encodeErc8004JsonDataUri(erc8004Json as Record<string, unknown>);
+
+    // Delegate to existing write paths to preserve receipt parsing + state updates.
+    return this.registerHTTP(dataUri);
   }
 
   /**

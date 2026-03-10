@@ -791,6 +791,14 @@ export class SubgraphClient {
             id
             feedbackId
             text
+            mcpTool
+            mcpPrompt
+            mcpResource
+            a2aSkills
+            a2aContextId
+            a2aTaskId
+            oasfSkills
+            oasfDomains
             proofOfPaymentFromAddress
             proofOfPaymentToAddress
             proofOfPaymentChainId
@@ -846,6 +854,14 @@ export class SubgraphClient {
               id
               feedbackId
               text
+              mcpTool
+              mcpPrompt
+              mcpResource
+              a2aSkills
+              a2aContextId
+              a2aTaskId
+              oasfSkills
+              oasfDomains
               proofOfPaymentFromAddress
               proofOfPaymentToAddress
               proofOfPaymentChainId

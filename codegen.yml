@@ -13,6 +13,8 @@ generates:
         BigDecimal: 'number'
         Bytes: 'string'
         ID: 'string'
+        Int8: 'bigint'
+        Timestamp: 'number'
       # Use enums instead of string unions where possible
       enumsAsTypes: true
       # Export generated types

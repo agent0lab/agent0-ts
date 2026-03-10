@@ -2,6 +2,8 @@
  * Validation utilities
  */
 
+import { isErc8004JsonDataUri } from './data-uri.js';
+
 /**
  * Validate Ethereum address format
  */
@@ -36,6 +38,9 @@ export function isValidAgentId(agentId: string): boolean {
 export function isValidURI(uri: string): boolean {
   if (!uri || typeof uri !== 'string') {
     return false;
+  }
+  if (uri.startsWith('data:')) {
+    return isErc8004JsonDataUri(uri);
   }
   try {
     const url = new URL(uri);

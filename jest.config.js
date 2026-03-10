@@ -7,6 +7,8 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: {
+        module: 'NodeNext',
+        moduleResolution: 'NodeNext',
         types: ['jest', 'node'],
       },
       useESM: true,
@@ -26,7 +28,8 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(ipfs-http-client)/)',
+    // Allow ESM dependencies we import (directly or via dynamic import) to be loaded correctly in Jest.
+    'node_modules/(?!(helia|@helia|multiformats|kubo-rpc-client)/)',
   ],
 };
 

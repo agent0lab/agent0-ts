@@ -1,6 +1,6 @@
 {
   "name": "agent0-sdk",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "description": "TypeScript SDK for agent portability, discovery and trust based on ERC-8004",
   "type": "module",
   "main": "dist/index.js",
@@ -66,8 +66,12 @@
     "access": "public"
   },
   "dependencies": {
+    "@helia/unixfs": "^4.0.0",
     "graphql-request": "^6.1.0",
-    "ipfs-http-client": "^60.0.1",
+    "helia": "^5.0.0",
+    "kubo-rpc-client": "^6.1.0",
+    "multiformats": "^13.0.0",
+    "undici": "^6.23.0",
     "viem": "^2.37.5"
   },
   "devDependencies": {
