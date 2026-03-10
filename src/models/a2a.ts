@@ -60,8 +60,10 @@ export interface Part {
 /**
  * Direct message response from an A2A server (no task created).
  * No `task` or `taskId`; discriminate from TaskResponse by shape.
+ * Has x402Required?: false so you can use if (result.x402Required) to detect 402.
  */
 export interface MessageResponse {
+  x402Required?: false;
   content?: string;
   parts?: Part[];
   contextId?: string;
@@ -99,6 +101,7 @@ export type TaskCancelResult = { taskId: string; contextId: string; status?: Tas
 
 /** Summary of a task returned by listTasks. */
 export interface TaskSummary {
+  x402Required?: false;
   taskId: string;
   contextId: string;
   status?: TaskState;
@@ -132,8 +135,10 @@ export interface AgentTask {
 /**
  * Response when the server created a task.
  * Discriminate from MessageResponse by 'task' in response.
+ * Has x402Required?: false so you can use if (result.x402Required) to detect 402.
  */
 export interface TaskResponse {
+  x402Required?: false;
   taskId: string;
   contextId: string;
   task: AgentTask;

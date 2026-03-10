@@ -78,14 +78,29 @@ export interface X402RequiredResponse<T> {
 
 /**
  * Result of sdk.request(): either the parsed success value or the 402 response object.
+ * Success branch is typed with x402Required?: false so you can always read result.x402Required
+ * (undefined/false on success, true on 402) and use if (result.x402Required) to narrow.
  */
-export type X402RequestResult<T> = T | X402RequiredResponse<T>;
+export type X402RequestResult<T> = (T & { x402Required?: false }) | X402RequiredResponse<T>;
 
 /**
  * Type guard: result is 402 response.
  */
 export function isX402Required<T>(result: X402RequestResult<T>): result is X402RequiredResponse<T> {
   return typeof result === 'object' && result !== null && 'x402Required' in result && (result as X402RequiredResponse<T>).x402Required === true;
+}
+
+/** True if the accept is EVM (eip155:* or numeric network). Used to filter out Solana etc. */
+function isEvmAccept(a: X402Accept): boolean {
+  const n = a.network;
+  if (n == null || n === '') return true;
+  const s = String(n);
+  return /^eip155:\d+$/.test(s) || /^\d+$/.test(s);
+}
+
+/** Filter accepts to EVM-only (Solana and other non-EVM options removed). Applied when building 402 response. */
+export function filterEvmAccepts(accepts: X402Accept[]): X402Accept[] {
+  return accepts.filter(isEvmAccept);
 }
 
 /**

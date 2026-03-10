@@ -328,7 +328,7 @@ export class SDK {
    * On 2xx returns the parsed result (default: JSON body); on 402 returns { x402Required: true, x402Payment } (no throw).
    * Use x402Payment.pay() to pay and retry. See docs/sdk-messaging-tasks-x402-spec.md §4.
    */
-  async request<T = unknown>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
+  async request<T = object>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
     return requestWithX402(options, {
       fetch: globalThis.fetch,
       buildPayment: (accept, snapshot) =>
@@ -339,7 +339,7 @@ export class SDK {
   /**
    * Alias for request() for x402-specific usage.
    */
-  async fetchWithX402<T = unknown>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
+  async fetchWithX402<T = object>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>> {
     return this.request(options);
   }
 

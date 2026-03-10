@@ -18,7 +18,6 @@
 import './_env';
 import {
   SDK,
-  isX402Required,
   type MessageResponse,
   type TaskResponse,
   type AgentTask,
@@ -38,9 +37,9 @@ async function runPureX402(sdk: SDK): Promise<void> {
 
   const result = await sdk.request({ url: X402_SEARCH_URL, method: 'GET' });
 
-  if (isX402Required(result)) {
-    // This API returns two payment options; index 1 is Base (EVM). We pay then get the same JSON shape.
-    const paid = await result.x402Payment.pay(result.x402Payment.accepts[1]);
+  if (result.x402Required) {
+    // accepts are already EVM-only (Solana filtered out when 402 is received). pay(index) = first, second, … EVM option.
+    const paid = await result.x402Payment.pay(0);
     console.log(JSON.stringify(paid, null, 2));
   } else {
     console.log(JSON.stringify(result, null, 2));
@@ -84,7 +83,7 @@ async function runA2AWithX402(sdk: SDK): Promise<void> {
   const agent = await sdk.loadAgent('84532:1301');
 
   const result = await agent.messageA2A('Hello, please charge me once.');
-  if (!('x402Required' in result) || !result.x402Required) {
+  if (!result.x402Required) {
     console.log(JSON.stringify(result, null, 2));
     return;
   }

@@ -28,6 +28,7 @@ import {
   normalizeInterfaces,
   pickInterface,
 } from './a2a-client.js';
+import type { X402Accept } from './x402-types.js';
 import type { XMTPConversationHandle } from '../models/xmtp.js';
 import type { AgentId, Address, URI } from '../models/types.js';
 import { EndpointType, TrustModel } from '../models/enums.js';
@@ -471,14 +472,13 @@ export class Agent {
       this._cachedA2aTenant
     );
 
-    if ('x402Required' in result && result.x402Required) {
-      const original = result as A2APaymentRequired<TaskSummary>;
+    if (result.x402Required) {
       return {
         x402Required: true,
         x402Payment: {
-          ...original.x402Payment,
-          pay: async (accept?: unknown) => {
-            const summary = await original.x402Payment.pay(accept);
+          ...result.x402Payment,
+          pay: async (accept?: X402Accept | number) => {
+            const summary = await result.x402Payment.pay(accept);
             return createTaskHandle(
               baseUrl,
               a2aVersion,

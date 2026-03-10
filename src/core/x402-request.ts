@@ -5,7 +5,7 @@
  */
 
 import type { X402Accept, X402Payment, X402RequestOptions, X402RequiredResponse, X402RequestResult } from './x402-types.js';
-import { parse402FromBody, parse402FromHeader, parse402FromWWWAuthenticate } from './x402-types.js';
+import { filterEvmAccepts, parse402FromBody, parse402FromHeader, parse402FromWWWAuthenticate } from './x402-types.js';
 
 /** Snapshot of the original request so pay() can retry the same request with PAYMENT-SIGNATURE. */
 export interface RequestSnapshot {
@@ -90,6 +90,7 @@ export async function requestWithX402<T = unknown>(
       accepts = parsed.accepts;
       if (x402Version === undefined && parsed.x402Version !== undefined) x402Version = parsed.x402Version;
     }
+    accepts = filterEvmAccepts(accepts);
     const singleAccept = accepts.length === 1 ? accepts[0]! : undefined;
 
     const x402Payment: X402Payment<T> = {
