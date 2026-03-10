@@ -3,7 +3,7 @@
  * Mocked ChainClient; assert PAYMENT-SIGNATURE payload shape (base64 JSON, expected keys).
  */
 
-import { buildEvmPayment } from '../src/core/x402-payment.js';
+import { buildEvmPayment, checkEvmBalance } from '../src/core/x402-payment.js';
 import type { ChainClient } from '../src/core/chain-client.js';
 import type { X402Accept } from '../src/core/x402-types.js';
 
@@ -163,5 +163,52 @@ describe('buildEvmPayment', () => {
     });
 
     await expect(buildEvmPayment(accept, client)).rejects.toThrow('No signer available');
+  });
+});
+
+describe('checkEvmBalance', () => {
+  const accept: X402Accept = {
+    price: '1000000',
+    token: TOKEN,
+    network: 'eip155:84532',
+    destination: DEST,
+  };
+
+  it('returns true when balance >= price', async () => {
+    const client = createMockChainClient();
+    (client.readContract as jest.Mock).mockResolvedValue(BigInt(2000000));
+    const result = await checkEvmBalance(accept, client);
+    expect(result).toBe(true);
+    expect(client.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: 'balanceOf', args: [FROM] })
+    );
+  });
+
+  it('returns true when balance equals price', async () => {
+    const client = createMockChainClient();
+    (client.readContract as jest.Mock).mockResolvedValue(BigInt(1000000));
+    const result = await checkEvmBalance(accept, client);
+    expect(result).toBe(true);
+  });
+
+  it('returns false when balance < price', async () => {
+    const client = createMockChainClient();
+    (client.readContract as jest.Mock).mockResolvedValue(BigInt(500000));
+    const result = await checkEvmBalance(accept, client);
+    expect(result).toBe(false);
+  });
+
+  it('returns false when readContract throws', async () => {
+    const client = createMockChainClient();
+    (client.readContract as jest.Mock).mockRejectedValue(new Error('Contract not found'));
+    const result = await checkEvmBalance(accept, client);
+    expect(result).toBe(false);
+  });
+
+  it('returns false when ensureAddress returns undefined', async () => {
+    const client = createMockChainClient();
+    (client.ensureAddress as jest.Mock).mockResolvedValue(undefined);
+    const result = await checkEvmBalance(accept, client);
+    expect(result).toBe(false);
   });
 });

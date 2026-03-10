@@ -86,6 +86,8 @@ export interface A2APaymentRequired<T = unknown> {
   x402Required: true;
   x402Payment: {
     pay(accept?: unknown): Promise<T>;
+    /** When present: pays using first accept with sufficient token balance. */
+    payFirst?(): Promise<T>;
     accepts: unknown[];
     price?: string;
     token?: string;

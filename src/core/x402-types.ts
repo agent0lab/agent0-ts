@@ -46,6 +46,11 @@ export interface X402Payment<T = unknown> {
    * Resolves to the same shape as a successful request (no x402Required).
    */
   pay(accept?: X402Accept | number): Promise<T>;
+  /**
+   * When present (deps provided checkBalance): pays using the first accept for which
+   * the signer has sufficient token balance on that chain. Throws if none have sufficient balance.
+   */
+  payFirst?(): Promise<T>;
 }
 
 /**

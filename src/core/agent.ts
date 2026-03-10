@@ -466,6 +466,20 @@ export class Agent {
               this._cachedA2aTenant
             );
           },
+          payFirst: result.x402Payment.payFirst
+            ? async () => {
+                const summary = await result.x402Payment.payFirst!();
+                return createTaskHandle(
+                  baseUrl,
+                  a2aVersion,
+                  summary.taskId,
+                  summary.contextId,
+                  x402Deps,
+                  resolvedAuth,
+                  this._cachedA2aTenant
+                );
+              }
+            : undefined,
         },
       };
     }

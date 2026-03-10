@@ -21,6 +21,11 @@ const VERSION_ABI = [
   { inputs: [], name: 'version', outputs: [{ internalType: 'string', name: '', type: 'string' }], stateMutability: 'view', type: 'function' },
 ] as const;
 
+/** ERC-20 balanceOf for balance checks (payFirst). */
+const BALANCE_OF_ABI = [
+  { inputs: [{ internalType: 'address', name: 'account', type: 'address' }], name: 'balanceOf', outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }], stateMutability: 'view', type: 'function' },
+] as const;
+
 /** EIP-3009 TransferWithAuthorization type for EIP-712. */
 const TRANSFER_WITH_AUTHORIZATION_TYPES = [
   { name: 'from', type: 'address' },
@@ -73,6 +78,32 @@ function destinationAddress(accept: X402Accept, chainClient: ChainClient): strin
 function valueAmount(accept: X402Accept): string {
   const v = accept.price ?? accept.maxAmountRequired ?? '0';
   return String(v);
+}
+
+/**
+ * Check whether the signer has sufficient token balance for the given accept on the given chain.
+ * Returns true if balance >= accept.price, false otherwise or on any error (e.g. no signer, RPC failure, invalid token).
+ * Used by payFirst() to pick the first accept with sufficient balance.
+ */
+export async function checkEvmBalance(
+  accept: X402Accept,
+  chainClient: ChainClient
+): Promise<boolean> {
+  try {
+    const token = tokenAddress(accept, chainClient);
+    const signer = await chainClient.ensureAddress();
+    if (!signer) return false;
+    const balance = await chainClient.readContract<bigint>({
+      address: token as `0x${string}`,
+      abi: [...BALANCE_OF_ABI],
+      functionName: 'balanceOf',
+      args: [signer as `0x${string}`],
+    });
+    const price = BigInt(valueAmount(accept));
+    return balance >= price;
+  } catch {
+    return false;
+  }
 }
 
 /**

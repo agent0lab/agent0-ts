@@ -232,6 +232,100 @@ describe('x402 request handler (requestWithX402)', () => {
     });
   });
 
+  describe('402 + payFirst()', () => {
+    it('payFirst is undefined when deps do not provide checkBalance', async () => {
+      jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        mockResponse({ status: 402, body: { accepts: [{ price: '1000000', token: '0xT', destination: '0xD' }] } })
+      );
+      const result = await requestWithX402(
+        { url: BASE_URL, method: 'GET', parseResponse },
+        { fetch: globalThis.fetch, buildPayment: async () => 'mock' }
+      );
+      expect(isX402Required(result)).toBe(true);
+      if (!isX402Required(result)) return;
+      expect(result.x402Payment.payFirst).toBeUndefined();
+    });
+
+    it('payFirst() uses first accept with sufficient balance and returns result', async () => {
+      const acceptsBody = {
+        accepts: [
+          { price: '1000000', token: '0xA', destination: '0xD1' },
+          { price: '2000000', token: '0xB', destination: '0xD2' },
+        ],
+      };
+      const checkBalance = jest.fn().mockResolvedValueOnce(true).mockResolvedValue(false);
+      const buildPayment = jest.fn().mockResolvedValue('payload');
+      jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(mockResponse({ status: 402, body: acceptsBody }))
+        .mockResolvedValueOnce(mockResponse({ status: 200, body: successBody }));
+
+      const result = await requestWithX402(
+        { url: BASE_URL, method: 'GET', parseResponse },
+        { fetch: globalThis.fetch, buildPayment, checkBalance }
+      );
+
+      expect(isX402Required(result)).toBe(true);
+      if (!isX402Required(result)) return;
+      expect(result.x402Payment.payFirst).toBeDefined();
+
+      const paid = await result.x402Payment.payFirst!();
+      expect(paid).toEqual(successBody);
+      expect(checkBalance).toHaveBeenCalledTimes(1);
+      expect(checkBalance).toHaveBeenCalledWith(expect.objectContaining({ token: '0xA' }));
+      expect(buildPayment).toHaveBeenCalledWith(expect.objectContaining({ token: '0xA' }), expect.any(Object));
+    });
+
+    it('payFirst() uses second accept when first has insufficient balance', async () => {
+      const acceptsBody = {
+        accepts: [
+          { price: '1000000', token: '0xA', destination: '0xD1' },
+          { price: '2000000', token: '0xB', destination: '0xD2' },
+        ],
+      };
+      const checkBalance = jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      const buildPayment = jest.fn().mockResolvedValue('payload');
+      jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(mockResponse({ status: 402, body: acceptsBody }))
+        .mockResolvedValueOnce(mockResponse({ status: 200, body: successBody }));
+
+      const result = await requestWithX402(
+        { url: BASE_URL, method: 'GET', parseResponse },
+        { fetch: globalThis.fetch, buildPayment, checkBalance }
+      );
+
+      expect(isX402Required(result)).toBe(true);
+      if (!isX402Required(result)) return;
+
+      const paid = await result.x402Payment.payFirst!();
+      expect(paid).toEqual(successBody);
+      expect(checkBalance).toHaveBeenCalledTimes(2);
+      expect(buildPayment).toHaveBeenCalledWith(expect.objectContaining({ token: '0xB' }), expect.any(Object));
+    });
+
+    it('payFirst() throws when no accept has sufficient balance', async () => {
+      const acceptsBody = {
+        accepts: [
+          { price: '1000000', token: '0xA', destination: '0xD1' },
+          { price: '2000000', token: '0xB', destination: '0xD2' },
+        ],
+      };
+      const checkBalance = jest.fn().mockResolvedValue(false);
+      jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(mockResponse({ status: 402, body: acceptsBody }));
+
+      const result = await requestWithX402(
+        { url: BASE_URL, method: 'GET', parseResponse },
+        { fetch: globalThis.fetch, buildPayment: async () => 'payload', checkBalance }
+      );
+
+      expect(isX402Required(result)).toBe(true);
+      if (!isX402Required(result)) return;
+      await expect(result.x402Payment.payFirst!()).rejects.toThrow('x402: no accept with sufficient balance');
+      expect(checkBalance).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('pay() failures', () => {
     it('retry returns 402 again then pay() rejects', async () => {
       jest

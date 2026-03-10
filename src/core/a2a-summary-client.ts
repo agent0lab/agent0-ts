@@ -129,6 +129,20 @@ export class A2AClientFromSummary implements A2AClient {
               resolved.tenant
             );
           },
+          payFirst: result.x402Payment.payFirst
+            ? async () => {
+                const summary = await result.x402Payment.payFirst!();
+                return createTaskHandle(
+                  resolved.baseUrl,
+                  resolved.a2aVersion,
+                  summary.taskId,
+                  summary.contextId,
+                  x402Deps,
+                  resolvedAuth,
+                  resolved.tenant
+                );
+              }
+            : undefined,
         },
       };
     }
