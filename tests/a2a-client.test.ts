@@ -205,6 +205,16 @@ describe('pickInterface', () => {
     expect(picked?.url).toBe('https://jsonrpc.com');
   });
 
+  it('prefers preferredBindings order over card order when version ties (card lists HTTP+JSON first)', () => {
+    const ifaces: NormalizedInterface[] = [
+      { url: 'https://httpjson.com', binding: 'HTTP+JSON', version: '0.3' },
+      { url: 'https://jsonrpc.com', binding: 'JSONRPC', version: '0.3' },
+    ];
+    const picked = pickInterface(ifaces, ['JSONRPC', 'HTTP+JSON']);
+    expect(picked?.binding).toBe('JSONRPC');
+    expect(picked?.url).toBe('https://jsonrpc.com');
+  });
+
   it('returns null when no interface matches allowed bindings', () => {
     const ifaces: NormalizedInterface[] = [
       { url: 'https://grpc.com', binding: 'GRPC', version: '0.3' },
