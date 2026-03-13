@@ -88,6 +88,7 @@
 
 - **Load agents across chains**
   - `SDK.loadAgent()` can now load agents from chains other than the SDK's primary chain, provided an RPC URL is available for the target chain.
+  - This also means `loadAgent()` no longer fails just because the caller passes a cross-chain `chainId:agentId`.
   - This supports mixed-chain read flows without creating a separate SDK instance per chain.
 
 ### 4. Examples, tests, and infrastructure
