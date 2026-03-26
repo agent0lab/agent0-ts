@@ -35,7 +35,6 @@ npm-debug.log*
 # Testing
 coverage/
 .nyc_output/
-tests/.x402-deploy-result.json
 
 # Temporary files
 *.tmp
