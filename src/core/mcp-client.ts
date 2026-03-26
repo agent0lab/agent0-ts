@@ -87,6 +87,8 @@ export class MCPClient implements MCPHandle {
   private _initialized = false;
   private _sessionId?: string;
   private _protocolVersion: string;
+  /** From last `initialize` result; used to skip prompts/resources RPC when the server did not advertise them. */
+  private _serverCaps: Record<string, unknown> | undefined;
   private _toolsCache: MCPTool[] | null = null;
   private _dynamicTools: Record<string, (args?: Record<string, unknown>, options?: MCPAuthOptions) => Promise<MCPMaybePaid<unknown>>> = {};
 
@@ -188,6 +190,10 @@ export class MCPClient implements MCPHandle {
     if ('x402Required' in initResult && initResult.x402Required) return initResult as X402RequiredResponse<unknown>;
     const initialized = initResult as MCPInitializeResult;
     this._protocolVersion = initialized.protocolVersion ?? this._protocolVersion;
+    const caps = initialized.capabilities;
+    this._serverCaps =
+      caps !== undefined && caps !== null && typeof caps === 'object' ? (caps as Record<string, unknown>) : undefined;
+
     const initializedNotif: JsonRpcRequest = { jsonrpc: '2.0', method: 'notifications/initialized' };
     const notifHeaders = this._baseHeaders(auth);
     if (this._x402Deps) {
@@ -216,6 +222,12 @@ export class MCPClient implements MCPHandle {
     return null;
   }
 
+  /** If we parsed server capabilities, only call feature X when that key was present (MCP omits unsupported primitives). */
+  private _advertises(feature: 'prompts' | 'resources'): boolean {
+    if (this._serverCaps === undefined) return true;
+    return Object.prototype.hasOwnProperty.call(this._serverCaps, feature);
+  }
+
   async initialize(options?: MCPAuthOptions): Promise<MCPMaybePaid<MCPInitializeResult>> {
     const res = await this._ensureInitialized(options);
     if (res && 'x402Required' in res && res.x402Required) return castX402<MCPInitializeResult>(res);
@@ -233,7 +245,7 @@ export class MCPClient implements MCPHandle {
     do {
       const page = await this._postJsonRpc<{ tools?: MCPTool[]; nextCursor?: string }>(
         'tools/list',
-        cursor ? { cursor } : undefined,
+        cursor ? { cursor } : {},
         options
       );
       if ('x402Required' in page && page.x402Required) return castX402<MCPTool[]>(page);
@@ -264,12 +276,13 @@ export class MCPClient implements MCPHandle {
     list: async (options?: MCPAuthOptions): Promise<MCPMaybePaid<MCPPrompt[]>> => {
       const init = await this._ensureInitialized(options);
       if (init && 'x402Required' in init && init.x402Required) return castX402<MCPPrompt[]>(init);
+      if (!this._advertises('prompts')) return [];
       const out: MCPPrompt[] = [];
       let cursor: string | undefined;
       do {
         const page = await this._postJsonRpc<{ prompts?: MCPPrompt[]; nextCursor?: string }>(
           'prompts/list',
-          cursor ? { cursor } : undefined,
+          cursor ? { cursor } : {},
           options
         );
         if ('x402Required' in page && page.x402Required) return castX402<MCPPrompt[]>(page);
@@ -282,6 +295,9 @@ export class MCPClient implements MCPHandle {
     get: async (name: string, args?: Record<string, unknown>, options?: MCPAuthOptions): Promise<MCPMaybePaid<MCPPromptGetResult>> => {
       const init = await this._ensureInitialized(options);
       if (init && 'x402Required' in init && init.x402Required) return castX402<MCPPromptGetResult>(init);
+      if (!this._advertises('prompts')) {
+        throw new Error('MCP server did not advertise prompts capability');
+      }
       return this._postJsonRpc<MCPPromptGetResult>('prompts/get', { name, arguments: args ?? {} }, options);
     },
   };
@@ -290,12 +306,13 @@ export class MCPClient implements MCPHandle {
     list: async (options?: MCPAuthOptions): Promise<MCPMaybePaid<MCPResource[]>> => {
       const init = await this._ensureInitialized(options);
       if (init && 'x402Required' in init && init.x402Required) return castX402<MCPResource[]>(init);
+      if (!this._advertises('resources')) return [];
       const out: MCPResource[] = [];
       let cursor: string | undefined;
       do {
         const page = await this._postJsonRpc<{ resources?: MCPResource[]; nextCursor?: string }>(
           'resources/list',
-          cursor ? { cursor } : undefined,
+          cursor ? { cursor } : {},
           options
         );
         if ('x402Required' in page && page.x402Required) return castX402<MCPResource[]>(page);
@@ -313,6 +330,9 @@ export class MCPClient implements MCPHandle {
       if (init && 'x402Required' in init && init.x402Required) {
         return castX402<{ contents: Array<{ uri: string; [key: string]: unknown }> }>(init);
       }
+      if (!this._advertises('resources')) {
+        throw new Error('MCP server did not advertise resources capability');
+      }
       return this._postJsonRpc<{ contents: Array<{ uri: string; [key: string]: unknown }> }>(
         'resources/read',
         { uri },
@@ -323,12 +343,13 @@ export class MCPClient implements MCPHandle {
       list: async (options?: MCPAuthOptions): Promise<MCPMaybePaid<MCPResourceTemplate[]>> => {
         const init = await this._ensureInitialized(options);
         if (init && 'x402Required' in init && init.x402Required) return castX402<MCPResourceTemplate[]>(init);
+        if (!this._advertises('resources')) return [];
         const out: MCPResourceTemplate[] = [];
         let cursor: string | undefined;
         do {
           const page = await this._postJsonRpc<{ resourceTemplates?: MCPResourceTemplate[]; nextCursor?: string }>(
             'resources/templates/list',
-            cursor ? { cursor } : undefined,
+            cursor ? { cursor } : {},
             options
           );
           if ('x402Required' in page && page.x402Required) return castX402<MCPResourceTemplate[]>(page);
@@ -359,6 +380,7 @@ export class MCPClient implements MCPHandle {
   resetSession(): void {
     this._sessionId = undefined;
     this._initialized = false;
+    this._serverCaps = undefined;
     this._toolsCache = null;
   }
 }
