@@ -25,7 +25,10 @@ import { SubgraphClient } from './subgraph-client.js';
 import { FeedbackManager } from './feedback-manager.js';
 import { AgentIndexer } from './indexer.js';
 import { Agent } from './agent.js';
-import { A2AClientFromSummary } from './a2a-summary-client.js';
+import { A2AClientFromSummary, A2AClientFromUrl } from './a2a-summary-client.js';
+import { MCPClientFromSummary } from './mcp-summary-client.js';
+import type { MCPClientOptions } from '../models/mcp.js';
+import { createMCPHandle } from './mcp-client.js';
 import type { TransactionHandle } from './transaction-handle.js';
 import {
   DEFAULT_REGISTRIES,
@@ -487,11 +490,33 @@ export class SDK {
    * When given an AgentSummary, returns an A2AClientFromSummary that resolves the agent card from summary.a2a on first use.
    * Use this to treat agents and summaries interchangeably for A2A.
    */
-  createA2AClient(agentOrSummary: Agent | AgentSummary): Agent | A2AClientFromSummary {
+  createA2AClient(agentOrSummary: Agent | AgentSummary | string): Agent | A2AClientFromSummary | A2AClientFromUrl {
     if (agentOrSummary instanceof Agent) {
       return agentOrSummary;
     }
+    if (typeof agentOrSummary === 'string') {
+      return new A2AClientFromUrl(this, agentOrSummary);
+    }
     return new A2AClientFromSummary(this, agentOrSummary);
+  }
+
+  /**
+   * Create an MCP client from a loaded Agent or an AgentSummary.
+   * - Agent: returns agent.mcp handle
+   * - AgentSummary: returns summary-backed MCP client, resolved lazily from summary.mcp
+   */
+  createMCPClient(
+    agentOrSummary: Agent | AgentSummary | string,
+    options: MCPClientOptions = {}
+  ): import('../models/mcp.js').MCPHandle {
+    if (typeof agentOrSummary === 'string') {
+      return createMCPHandle(agentOrSummary, options, this.getX402RequestDeps());
+    }
+    if (agentOrSummary instanceof Agent) {
+      if (options.sessionId) agentOrSummary.mcp.setSessionId(options.sessionId);
+      return agentOrSummary.mcp;
+    }
+    return new MCPClientFromSummary(this, agentOrSummary, options);
   }
 
   /**

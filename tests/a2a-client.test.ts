@@ -23,6 +23,7 @@ import { EndpointType, TrustModel } from '../src/models/enums.js';
 import { Agent } from '../src/core/agent.js';
 import { SDK } from '../src/core/sdk.js';
 import { A2AClientFromSummary } from '../src/core/a2a-summary-client.js';
+import { A2AClientFromUrl } from '../src/core/a2a-summary-client.js';
 import type { AgentSummary } from '../src/models/interfaces.js';
 
 function mockResponse(init: {
@@ -1710,5 +1711,25 @@ describe('createA2AClient / A2AClientFromSummary', () => {
     };
     const client = new A2AClientFromSummary(mockSdk, summary);
     await expect(client.messageA2A('hi')).rejects.toThrow('Agent summary has no A2A endpoint');
+  });
+
+  it('createA2AClient(url) returns URL-backed client and resolves on first call', async () => {
+    const sdk = new SDK({ chainId: 84532, rpcUrl: 'https://base-sepolia.drpc.org' });
+    const baseUrl = 'https://a2a.example.com';
+    const cardBody = {
+      supportedInterfaces: [{ url: `${baseUrl}/`, protocolBinding: 'HTTP+JSON', protocolVersion: '0.3' }],
+    };
+    const messageBody = { message: { content: 'OK', contextId: 'c1' } };
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(mockResponse({ status: 200, body: cardBody }))
+      .mockResolvedValueOnce(mockResponse({ status: 200, body: messageBody }));
+
+    const client = sdk.createA2AClient(baseUrl);
+    expect(client).toBeInstanceOf(A2AClientFromUrl);
+    const result = await client.messageA2A('ping');
+    expect(fetchSpy).toHaveBeenNthCalledWith(1, `${baseUrl}/.well-known/agent-card.json`, expect.any(Object));
+    expect(fetchSpy).toHaveBeenNthCalledWith(2, `${baseUrl}/v1/message:send`, expect.any(Object));
+    expect('x402Required' in result).toBe(false);
   });
 });

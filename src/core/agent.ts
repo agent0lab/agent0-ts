@@ -19,6 +19,7 @@ import type {
   TaskSummary,
   AgentTask,
 } from '../models/a2a.js';
+import type { MCPHandle } from '../models/mcp.js';
 import {
   sendMessage as sendMessageA2A,
   listTasks as listTasksA2A,
@@ -42,6 +43,7 @@ import { normalizeEcdsaSignature, recoverTypedDataSigner } from '../utils/signat
 import { buildErc8004RegistrationJson } from '../utils/registration-json.js';
 import { encodeErc8004JsonDataUri } from '../utils/data-uri.js';
 import { TransactionHandle } from './transaction-handle.js';
+import { createMCPHandle } from './mcp-client.js';
 
 /**
  * Agent class for managing individual agents
@@ -63,6 +65,7 @@ export class Agent {
   private _a2aInterfaceResolved = false;
   /** When set, used as A2A base URL instead of resolving from card (e.g. from discovery). */
   private _a2aBaseUrlOverride?: string;
+  private _mcpHandle?: MCPHandle;
 
   constructor(private sdk: SDK, registrationFile: RegistrationFile) {
     this.registrationFile = registrationFile;
@@ -105,6 +108,23 @@ export class Agent {
   get mcpEndpoint(): string | undefined {
     const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.MCP);
     return ep?.value;
+  }
+
+  get mcp(): MCPHandle {
+    if (this._mcpHandle) return this._mcpHandle;
+    const endpoint = this.mcpEndpoint;
+    if (!endpoint || (!endpoint.startsWith('http://') && !endpoint.startsWith('https://'))) {
+      throw new Error('Agent has no MCP endpoint');
+    }
+    const ep = this.registrationFile.endpoints.find((e) => e.type === EndpointType.MCP);
+    this._mcpHandle = createMCPHandle(
+      endpoint,
+      {
+        protocolVersion: typeof ep?.meta?.version === 'string' ? (ep.meta.version as string) : '2025-06-18',
+      },
+      this.sdk.getX402RequestDeps?.()
+    );
+    return this._mcpHandle;
   }
 
   get a2aEndpoint(): string | undefined {
@@ -206,6 +226,7 @@ export class Agent {
     };
     this.registrationFile.endpoints.push(mcpEndpoint);
     this.registrationFile.updatedAt = Math.floor(Date.now() / 1000);
+    this._mcpHandle = undefined;
 
     return this;
   }
