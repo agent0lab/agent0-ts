@@ -213,6 +213,18 @@ console.log(`Found ${multiChainResults.length} agents across chains`);
 const agentSummary = await sdk.getAgent('11155111:123'); // explicit chainId:agentId
 ```
 
+### 4b. Create MCP/A2A Clients Directly from URL
+
+```typescript
+// MCP: URL is treated as the direct MCP endpoint
+const mcp = sdk.createMCPClient('https://mcp.example.com/mcp');
+const tools = await mcp.listTools();
+
+// A2A: URL can be an agent-card URL or base URL (discovery is applied)
+const a2a = sdk.createA2AClient('https://a2a.example.com');
+const reply = await a2a.messageA2A('hello');
+```
+
 ### 4a. Multi-Chain Search
 
 ```typescript

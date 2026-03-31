@@ -291,5 +291,21 @@ describe('MCP summary/sdk/agent wiring', () => {
     await client.listTools();
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
+
+  it('sdk.createMCPClient(url) returns direct MCP handle', async () => {
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        mockResponse({ status: 200, body: { jsonrpc: '2.0', id: '1', result: { protocolVersion: '2025-06-18' } } })
+      )
+      .mockResolvedValueOnce(mockResponse({ status: 202, body: {} }))
+      .mockResolvedValueOnce(
+        mockResponse({ status: 200, body: { jsonrpc: '2.0', id: '2', result: { tools: [] } } })
+      );
+    const sdk = new SDK({ chainId: 84532, rpcUrl: 'https://base-sepolia.drpc.org' });
+    const client = sdk.createMCPClient('https://mcp.example.com/mcp');
+    await client.listTools();
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
 });
 

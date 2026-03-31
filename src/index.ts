@@ -14,6 +14,7 @@ export { SDK } from './core/sdk.js';
 export type { SDKConfig } from './core/sdk.js';
 export { Agent } from './core/agent.js';
 export { A2AClientFromSummary } from './core/a2a-summary-client.js';
+export { A2AClientFromUrl } from './core/a2a-summary-client.js';
 export { MCPClient } from './core/mcp-client.js';
 export { MCPClientFromSummary } from './core/mcp-summary-client.js';
 export { ViemChainClient } from './core/viem-chain-client.js';
